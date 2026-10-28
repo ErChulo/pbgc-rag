@@ -89,3 +89,20 @@ test('graph nodes, edges and human approvals cannot refer to foreign evidence', 
   proposal(c); approve(c); delete c.rules[0].approval.confirmedByHuman;
   assert.equal(A.validateCase(c).valid, false);
 });
+test('graph package contract requires unique edge ids and exact case/record provenance', () => {
+  const make = () => {
+    const c = fixture(); const s = c.sources[0], recordId = s.records[0].id;
+    c.graph = { caseId: c.id, nodes: [{ id: 'a', caseId: c.id, sourceId: s.id, recordId }, { id: 'b', caseId: c.id }], edges: [{ id: 'ab', caseId: c.id, from: 'a', to: 'b', type: 'supports', sourceId: s.id, recordId }] };
+    return c;
+  };
+  assert.equal(A.validateCase(make()).valid, true);
+  for (const mutate of [c => delete c.graph.edges[0].id, c => c.graph.edges.push({ ...c.graph.edges[0] }), c => delete c.graph.edges[0].recordId, c => c.graph.caseId = 'foreign', c => c.graph.nodes[0].caseId = 'foreign', c => c.graph.edges[0].caseId = 'foreign']) {
+    const c = make(); mutate(c); assert.equal(A.validateCase(c).valid, false);
+  }
+});
+test('imported rules cannot omit evidence or duplicate evidence references', () => {
+  const c = fixture(); const r = proposal(c);
+  r.sourceRecordIds = []; assert.equal(A.validateCase(c).valid, false);
+  r.sourceRecordIds = [c.sources[0].records[0].id, c.sources[0].records[0].id];
+  assert.equal(A.validateCase(c).valid, false);
+});

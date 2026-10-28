@@ -42,7 +42,7 @@
     if (!Array.isArray(c.sources) || c.sources.length > LIMITS.sources) errors.push('Sources are missing or exceed limits.');
     if (!Array.isArray(c.rules) || c.rules.length > LIMITS.rules) errors.push('Rules are missing or exceed limits.');
     if (!Array.isArray(c.calculations) || c.calculations.length > 10000) errors.push('Calculations are missing or exceed limits.');
-    if (!plain(c.graph) || !Array.isArray(c.graph.nodes) || !Array.isArray(c.graph.edges) || c.graph.nodes.length > 100000 || c.graph.edges.length > 200000) errors.push('Graph is missing or exceeds limits.');
+    if (!plain(c.graph) || !Array.isArray(c.graph.nodes) || !Array.isArray(c.graph.edges) || c.graph.nodes.length > 10000 || c.graph.edges.length > 50000) errors.push('Graph is missing or exceeds limits.');
     const sourceIds = new Set(), recordIds = new Set(), recordSource = new Map(); let count = 0;
     for (const s of Array.isArray(c.sources) ? c.sources.slice(0, LIMITS.sources) : []) {
       if (!plain(s)) { errors.push('Source must be an object.'); continue; }
@@ -58,21 +58,25 @@
         recordIds.add(r.id); recordSource.set(r.id, s.id);
       }
     }
-    const nodes = new Set();
+    if (plain(c.graph) && c.graph.caseId !== undefined && c.graph.caseId !== c.id) errors.push('Graph case identity does not match this case.');
+    const nodes = new Set(), edgeIds = new Set();
     for (const n of c.graph && Array.isArray(c.graph.nodes) ? c.graph.nodes : []) {
       if (!plain(n) || !str(n.id, 300) || nodes.has(n.id)) errors.push('Graph node identity is invalid or duplicated.');
       else nodes.add(n.id);
+      if (plain(n) && n.caseId !== undefined && n.caseId !== c.id) errors.push('Graph node belongs to a different case.');
       if (plain(n) && n.sourceId !== undefined && !sourceIds.has(n.sourceId)) errors.push('Graph node source evidence is outside this case.');
       if (plain(n) && n.recordId !== undefined && (!recordIds.has(n.recordId) || (n.sourceId !== undefined && recordSource.get(n.recordId) !== n.sourceId))) errors.push('Graph node record evidence is outside its case source.');
     }
     for (const e of c.graph && Array.isArray(c.graph.edges) ? c.graph.edges : []) {
-      if (!plain(e) || !nodes.has(e.from) || !nodes.has(e.to) || !str(e.type, 100) || !str(e.sourceId, 300) || !sourceIds.has(e.sourceId)) errors.push('Graph edge lacks valid endpoints, type, or case source evidence.');
-      if (e && e.recordId !== undefined && (!recordIds.has(e.recordId) || recordSource.get(e.recordId) !== e.sourceId)) errors.push('Graph edge record evidence is outside its case source.');
+      if (!plain(e) || !str(e.id, 300) || edgeIds.has(e.id) || !nodes.has(e.from) || !nodes.has(e.to) || !str(e.type, 100) || !str(e.sourceId, 300) || !sourceIds.has(e.sourceId)) errors.push('Graph edge lacks a unique id, valid endpoints, type, or case source evidence.');
+      if (plain(e)) edgeIds.add(e.id);
+      if (plain(e) && e.caseId !== undefined && e.caseId !== c.id) errors.push('Graph edge belongs to a different case.');
+      if (plain(e) && (!str(e.recordId, 300) || !recordIds.has(e.recordId) || recordSource.get(e.recordId) !== e.sourceId)) errors.push('Graph edge record evidence is outside its case source.');
       if (e && ((e.validFrom !== undefined && !isoDate(e.validFrom)) || (e.validTo !== undefined && !isoDate(e.validTo)) || (e.validFrom && e.validTo && e.validFrom > e.validTo))) errors.push('Graph edge validity period is invalid.');
     }
     const ruleIds = new Set();
     for (const r of Array.isArray(c.rules) ? c.rules : []) {
-      if (!plain(r) || !str(r.id, 200) || ruleIds.has(r.id) || !Number.isSafeInteger(r.version) || r.version < 1 || !['proposed', 'approved', 'rejected'].includes(r.status) || !str(r.title, 300) || !isoDate(r.effectiveDate) || !Array.isArray(r.sourceRecordIds) || r.sourceRecordIds.some(id => !recordIds.has(id))) errors.push('Rule metadata or case evidence is invalid.');
+      if (!plain(r) || !str(r.id, 200) || ruleIds.has(r.id) || !Number.isSafeInteger(r.version) || r.version < 1 || !['proposed', 'approved', 'rejected'].includes(r.status) || !str(r.title, 300) || !isoDate(r.effectiveDate) || !Array.isArray(r.sourceRecordIds) || !r.sourceRecordIds.length || new Set(r.sourceRecordIds).size !== r.sourceRecordIds.length || r.sourceRecordIds.some(id => !recordIds.has(id))) errors.push('Rule metadata or case evidence is invalid.');
       else ruleIds.add(r.id);
       if (r && r.status === 'approved' && (!plain(r.approval) || !str(r.approval.reviewer, 200) || !str(r.approval.statement, 2000) || !isoDate(r.approval.approvedAt) || r.approval.confirmedByHuman !== true)) errors.push('Approved rule lacks explicit human approval metadata.');
     }
