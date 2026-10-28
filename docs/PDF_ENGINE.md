@@ -65,7 +65,7 @@ A bounded independent preflight runs before PDF.js:
 - At most 50,000 parsed objects, 10,000 streams, 8 MiB per decoded stream and
   32 MiB total decoded streams. Page-content streams have a tighter 2 MiB cap and
   65,536-character encoded literal cap before font/glyph allocation.
-- PDF.js output: at most 2,000 pages, 100,000 text items and 4 MiB text. Individual
+- PDF.js output: at most 2,000 pages, 100,000 text items, 65,536 characters per searchable text item, and 4 MiB text. Individual
   transforms/dimensions must be finite. Reader/document resources are released on
   errors as well as success.
 
@@ -76,7 +76,7 @@ acceptance claim. Text interpretation and authority remain unverified source fac
 
 ## Verification
 
-`node --test --test-isolation=none tests/pdf-engine.test.js`: seven tests pass:
+`node --test --test-isolation=none tests/pdf-engine.test.js`: eight tests pass:
 source-byte retention/geometry, xref-stream ToUnicode, actual embedded synthetic
 TrueType, no Worker/fetch resource path, encrypted/no-text/invalid inputs, bounded
 unsupported structure rejection, and decompression/literal bombs.

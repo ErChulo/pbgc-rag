@@ -42,3 +42,9 @@ test('stream bombs and giant content literals reject before PDF.js allocation',a
  await assert.rejects(parsePDFAdvanced(pdf({content:'BT /F1 12 Tf ('+'x'.repeat(65537)+') Tj ET',compress:true})),/literal exceeds/);
  await assert.rejects(parsePDFAdvanced(pdf({content:'BT /F1 12 Tf <'+'41'.repeat(65537)+'> Tj ET',compress:true})),/hex literal/);
 });
+
+test('raw stream limits and oversized combined text spans fail before creating unsearchable records',async()=>{
+ await assert.rejects(parsePDFAdvanced(pdf({extra:[stream(Buffer.alloc(pdfAdvancedLimits.expandedStream+1,32))]})),/raw stream size/);
+ const content='BT /F1 12 Tf [('+'x'.repeat(40000)+')('+'y'.repeat(40000)+')] TJ ET';
+ await assert.rejects(parsePDFAdvanced(pdf({content,compress:true})),/searchable 65536/);
+});

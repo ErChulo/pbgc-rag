@@ -1,7 +1,7 @@
 /* Bounded offline text extraction adapter for the pinned local Mozilla PDF.js engine. */
 (function (root) {
   'use strict';
-  const LIMITS = Object.freeze({ bytes: 16 * 1024 * 1024, expandedStream: 8 * 1024 * 1024, expandedTotal: 32 * 1024 * 1024, streams: 10000, pages: 2000, items: 100000, textChars: 4 * 1024 * 1024, dictionaryTokens: 100000 });
+  const LIMITS = Object.freeze({ bytes: 16 * 1024 * 1024, expandedStream: 8 * 1024 * 1024, expandedTotal: 32 * 1024 * 1024, streams: 10000, pages: 2000, items: 100000, textChars: 4 * 1024 * 1024, textItemChars: 65536, dictionaryTokens: 100000 });
   const fail = text => { throw Error('PDF import: ' + text); };
   function dictionary(source, start) {
     let i = start, tokens = 0;
@@ -100,7 +100,7 @@
     for(const key of contents)if(!streams.some(s=>s.key===key))fail('indirect content arrays or missing streams are unsupported.');
     for(const stream of streams){const data=bytes.subarray(stream.start,stream.start+stream.length),content=contents.has(stream.key);
       if(stream.filter)total+=await countInflate(data,LIMITS.expandedTotal-total,content);
-      else{if(content)checkContent(data);total+=data.length;}
+      else{if(data.length>LIMITS.expandedStream)fail('raw stream size exceeds limits.');if(content)checkContent(data);total+=data.length;}
       if(total>LIMITS.expandedTotal)fail('total decoded stream size exceeds limits.');
     }
   }
@@ -126,6 +126,7 @@
               const { value, done } = await reader.read(); if (done) break;
               for (const item of value.items) {
                 if (typeof item.str !== 'string' || !item.str.trim()) continue;
+                if(item.str.length>LIMITS.textItemChars)fail('a native text item exceeds the searchable 65536-character limit.');
                 index++; total += item.str.length;
                 if (records.length >= LIMITS.items || total > LIMITS.textChars) { await reader.cancel(); fail('extracted text exceeds limits.'); }
                 if (!Array.isArray(item.transform) || item.transform.length !== 6 || item.transform.some(n => !Number.isFinite(n)) || !Number.isFinite(item.width) || !Number.isFinite(item.height)) fail('invalid text geometry.');
