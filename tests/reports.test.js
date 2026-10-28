@@ -64,6 +64,11 @@ test('broken references, invalid calculations and cross-case evidence block repo
   assert.throws(() => R.renderResearchReport(c), /Report blocked/);
   c.rules[0].sourceRecordIds = [c.sources[0].records[0].id];
   c.graph.caseId = 'foreign'; assert.throws(() => R.renderResearchReport(c), /Report blocked/);
+  delete c.graph.caseId;
+  A.approveRule(c, 'rule', { reviewer: 'Synthetic reviewer', statement: 'Synthetic test only.', confirmedByHuman: true });
+  const calculation = A.calculateSynthetic(c, 'rule', { annualSalaryCents: 6000000, serviceMonths: 120, accrualBasisPoints: 150 });
+  calculation.annualBenefitCents++;
+  assert.throws(() => R.renderResearchReport(c), /replay validation/);
 });
 test('rendered-content bounds reject expansion before creating an oversized HTML artifact', () => {
   const c = fixture(), source = c.sources[0], original = source.records[0];
