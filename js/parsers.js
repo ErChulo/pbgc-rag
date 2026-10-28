@@ -163,7 +163,7 @@
     else records = lines(text);
     if (records.length > MAX_RECORDS) throw new Error('Record limit exceeded. Split the source file.');
     records = records.map((record, index) => ({ ...record, id: `${id}:${index + 1}`, sourceId: id }));
-    return { id, name: file.name, hash, format, size: bytes.byteLength, parserVersion: VERSION, encoding, records, originalBase64: bytesToBase64(bytes) };
+    return { id, name: file.name, hash, format, size: bytes.byteLength, parserVersion: ['docx','xlsx','xlsm'].includes(format) ? (root.PBGC.officeVersion || VERSION) : VERSION, encoding, records, originalBase64: bytesToBase64(bytes) };
   }
   const api = { parseFile, parserRegistry: Object.freeze({ version: VERSION, formats: FORMATS, maxBytes: MAX_BYTES, maxRecords: MAX_RECORDS, maxDepth: MAX_DEPTH }) };
   Object.assign(root.PBGC = root.PBGC || {}, api);

@@ -142,3 +142,14 @@ test('claim accessors are rejected before they can execute during case validatio
   Object.defineProperty(c.claims[0], 'value', { enumerable: true, get() { executed = true; throw Error('must not execute'); } });
   assert.equal(A.validateCase(c).valid, false); assert.equal(executed, false);
 });
+
+test('reference provenance remains version-pinned in portable packages and report citations', async () => {
+  const c = fixture();
+  c.sources[0].referenceOrigin = { libraryId: 'synthetic-library', revision: 2, versionLabel: 'Synthetic edition 2' };
+  assert.deepEqual((await A.importCase(await A.exportCase(c))).sources[0].referenceOrigin, c.sources[0].referenceOrigin);
+  assert.deepEqual(A.buildReport(c).sections[0].evidence[0].referenceOrigin, c.sources[0].referenceOrigin);
+  for (const invalid of [{ libraryId: 'x', revision: 0, versionLabel: 'bad' }, { libraryId: 'x', revision: 2 }, { libraryId: 'x', revision: 2, versionLabel: 'ok', approved: true }]) {
+    c.sources[0].referenceOrigin = invalid;
+    await assert.rejects(A.exportCase(c), /provenance/);
+  }
+});

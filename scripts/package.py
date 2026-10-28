@@ -13,6 +13,7 @@ files = [ROOT / name for name in EXPLICIT]
 files += sorted((ROOT / 'js').glob('*.js'))
 files += sorted((ROOT / 'assets').glob('*.css'))
 files += sorted((ROOT / 'fixtures').glob('synthetic-plan.*'))
+files += sorted((ROOT / 'docs').glob('*.md'))
 entries = {}
 for source in files:
     if source.is_symlink() or not source.is_file() or not source.resolve().is_relative_to(ROOT):
@@ -21,7 +22,7 @@ for source in files:
     entries[relative] = source.read_bytes()
 manifest = {
     'format': 'pbgc-rag-development-bundle', 'schemaVersion': 1,
-    'applicationVersion': '0.1.0', 'status': 'INCOMPLETE-DEVELOPMENT',
+    'applicationVersion': json.loads((ROOT / 'package.json').read_text())['version'], 'status': 'INCOMPLETE-DEVELOPMENT',
     'official': False, 'fileOriginAcceptance': 'BLOCKED in managed cloud browser',
     'fixtures': 'Synthetic only. No official templates or real case records.',
     'files': {name: {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}

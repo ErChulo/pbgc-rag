@@ -59,6 +59,10 @@
       sourceIds.add(s.id);
       if (s.caseId !== undefined && s.caseId !== c.id) errors.push('Source belongs to a different case.');
       if (!str(s.name, 500) || !str(s.format, 30) || !Number.isSafeInteger(s.size) || s.size < 0 || s.size > LIMITS.sourceBytes) errors.push('Source metadata is invalid.');
+      if (s.referenceOrigin !== undefined) {
+        const origin = s.referenceOrigin;
+        if (!plain(origin) || Object.keys(origin).some(k => !['libraryId', 'revision', 'versionLabel'].includes(k)) || !str(origin.libraryId, 200) || !Number.isSafeInteger(origin.revision) || origin.revision < 1 || !str(origin.versionLabel, 200)) errors.push('Reference-library provenance is invalid.');
+      }
       try { if (bytesFromBase64(s.originalBase64).length !== s.size) errors.push('Original source size does not match metadata.'); } catch (e) { errors.push(e.message); }
       if (!Array.isArray(s.records)) { errors.push('Source records are missing.'); continue; }
       count += s.records.length;
@@ -130,7 +134,7 @@
   function buildReport(c) {
     const validation = assertCase(c);
     const screening = claimScreening(c);
-    const evidence = c.sources.flatMap(s => s.records.map(r => ({ recordId: r.id, sourceId: s.id, sourceName: s.name, sourceHash: s.hash, excerpt: r.text, locator: r.locator, verification: 'unverified', authority: 'not assessed', applicability: 'not assessed' })));
+    const evidence = c.sources.flatMap(s => s.records.map(r => ({ recordId: r.id, sourceId: s.id, sourceName: s.name, sourceHash: s.hash, referenceOrigin: s.referenceOrigin ? JSON.parse(JSON.stringify(s.referenceOrigin)) : null, excerpt: r.text, locator: r.locator, verification: 'unverified', authority: 'not assessed', applicability: 'not assessed' })));
     return {
       schemaVersion: VERSION, kind: 'internal-case-review', status: 'PROVISIONAL', official: false,
       title: 'Internal case review draft', caseId: c.id, caseName: c.name,

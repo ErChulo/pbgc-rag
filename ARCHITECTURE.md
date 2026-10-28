@@ -22,3 +22,12 @@ The coordinator owns index.html, app.js, CSS, package metadata, browser integrat
 - `renderResearchReport(case,{layout})` produces script-free local HTML with escaped text, evidence anchors, hashes, timelines and unresolved conflicts. `review` and `evidence` are versioned internal layouts, never official templates.
 - Search records and queries are preflight-bounded; regex and SQL LIKE additionally share actual operation budgets. Exhaustion throws rather than returning partial success.
 - The app probes local capabilities and retains deterministic search without workers/models. `file://` behavior cannot be inferred from HTTP diagnostics; current managed policy blocks the required origin.
+
+## Development increment 0.2
+
+- Reference libraries use an independent versioned schema and a separate IndexedDB database. Only explicitly selected authorized original sources are copied into cases. Copies pin library id, edition and revision; case graph/rule/claim state never transfers. Packages and storage codecs reject libraries masquerading as cases or vice versa.
+- `importFiles(caseSnapshot,files,options)` captures a verified immutable case, hashes actual bytes, skips unchanged sources, and yields complete-source checkpoints. Case storage commits each case envelope and its separately bound import manifest in the same transaction. Normal case edits invalidate the resume manifest. Directory inputs expose relative paths only; no absolute path is inferred.
+- Recovery scans quarantine damaged cases without hiding healthy ones. Verified older checkpoints restore as new revisions. Ambiguous revision metadata fails closed. Explicit history pruning preserves the current verified payload and requires a user action; no automatic deletion occurs.
+- `renderEvidenceGraph` draws a bounded, keyboard-selectable SVG. Selection resolves evidence only against the current case. Temporal links are user-entered proposed claims; layout does not rank legal authority.
+- `retrieveQuestionEvidence` ranks exact normalized source terms for natural-language question text and returns unchanged excerpts and citations with full/partial/insufficient lexical coverage. It never generates an answer or claims semantic inference.
+- DOCX extraction includes supported relationship-linked headers, footers, footnotes and endnotes. Part/role/note provenance is explicit and stored but uncited parts are marked; parser version 1.1.0 identifies these semantics.

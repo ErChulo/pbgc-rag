@@ -27,3 +27,11 @@ The repository initially contained AGENTS.md, KICKOFF.md and DESIGN.md only. The
 7. Complete full accessibility, hostile parser fuzzing, browser storage/version recovery UX, CPU/RAM/performance and synthetic full acceptance matrix. Do not promote subset tests to full acceptance.
 
 Use `npm test`, `npm run test:browser`, and the documented secondary HTTP diagnostic separately. Use existing checkout; no worktree unless requested. Keep synthetic fixtures public and confidential material outside this cloud workspace. Commit tested changes, update this queue and ACCEPTANCE.md, and never reset completed work.
+
+## Resumed development — increment 0.2
+
+Development resumed without additional user configuration. Added independent reference libraries and source-only case copies with pinned provenance; source-hash resumable imports with atomic case/manifest checkpoints, directory fallback and cancellation; corruption-isolating checkpoint recovery and explicit pruning; accessible selectable SVG graph display; lexical natural-language question retrieval with explicit abstention; DOCX related parts.
+
+Current integrated module suite: 146 PASS before additional PDF-engine work. Actual Chromium secondary HTTP checks pass for the full workflow, references across two isolated cases, interrupted import/reload/resume, nested folder paths, damaged-case recovery and pruning, SVG keyboard/hostile-input behavior, and question/temporal-link integration. These results do not satisfy the managed file-origin gate. Broader local PDF extraction is being developed separately and must pass its tests before integration.
+
+Completed portions of queue item 3: separate reference-library lifecycle, relative directory selection, complete-source hash checkpoints/resume, and checkpoint recovery UX. Mid-parser interruption, OPFS and broad large-file/performance acceptance remain unfinished. Queue item 4 now has honest source-only natural-language question retrieval; model-based semantic inference remains separate and unavailable.

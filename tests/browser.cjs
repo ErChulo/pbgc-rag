@@ -25,14 +25,35 @@ try {
  await page.getByText('1 results',{exact:true}).waitFor();
  assert.match(await page.locator('#results').innerText(),/65/);
  await page.getByRole('button',{name:'Add to evidence graph'}).click();
+ await page.getByLabel('Search mode',{exact:true}).selectOption('question');
+ await page.getByLabel('Search text or query').fill('What is normal retirement age?');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText(/Retrieval status: evidence-found/).waitFor();
+ await page.getByText('Normal retirement age is 65 for this fictional example.',{exact:true}).waitFor();
+ await page.getByLabel('Search text or query').fill('unicorn migration');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText(/Retrieval status: insufficient-evidence/).waitFor();
+ await page.getByLabel('Search mode',{exact:true}).selectOption('keyword');
  await page.getByLabel('Search text or query').fill('amendment');
  await page.getByRole('button',{name:'Search',exact:true}).click();
  await page.getByRole('button',{name:'Add to evidence graph'}).click();
  await page.getByRole('link',{name:'4 · Evidence graph'}).click();
  await page.getByLabel('To evidence',{exact:true}).selectOption({index:1});
+ await page.getByLabel('Link valid from (optional)').fill('2026-01-01');
+ await page.getByLabel('Link valid to (optional)').fill('2027-12-31');
  await page.getByRole('button',{name:'Add proposed link'}).click();
  await page.getByRole('button',{name:'Trace linked evidence'}).click();
  assert.match(await page.locator('#view pre').innerText(),/edgeIds/);
+ await page.locator('#evidence-diagram [role="button"]').first().focus();
+ await page.keyboard.press('Enter');
+ await page.locator('#selected-graph-evidence').getByText('Normal retirement age is 65 for this fictional example.',{exact:true}).waitFor();
+ await page.getByLabel('Applicable date (optional)').fill('2025-01-01');
+ await page.getByRole('button',{name:'Trace linked evidence'}).click();
+ assert.equal(JSON.parse(await page.locator('#view pre').innerText()).nodes.length,1);
+ await page.getByLabel('Applicable date (optional)').fill('2026-01-01');
+ await page.getByRole('button',{name:'Trace linked evidence'}).click();
+ assert.equal(JSON.parse(await page.locator('#view pre').innerText()).nodes.length,2);
+
 
  await page.locator('#view > p').filter({hasText:'Normal retirement age is 65'}).first().waitFor();
  await page.getByRole('link',{name:'5 · Rules'}).click();

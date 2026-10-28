@@ -93,3 +93,13 @@ test('absent or zero-conflict claim screens never assert case correctness', () =
   c.claims = [];
   assert.match(R.renderResearchReport(c), /zero-conflict result does not establish correctness/);
 });
+
+test('HTML evidence preserves pinned reference edition provenance as escaped text', () => {
+  const c = fixture();
+  c.sources[0].referenceOrigin = { libraryId: 'synthetic-reference', revision: 2, versionLabel: '<script>bad()</script>' };
+  const html = R.renderResearchReport(c);
+  assert.match(html, /Pinned reference library/);
+  assert.match(html, /synthetic-reference · revision 2/);
+  assert.match(html, /&lt;script&gt;bad\(\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+});

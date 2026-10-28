@@ -71,3 +71,90 @@ test('missing, denied and timed-out browser storage fall back explicitly to memo
 test('capability inspection measures local crypto and WASM without claiming persistent storage or a semantic model', async () => {
   const capabilities = await inspectCapabilities(); assert.equal(capabilities.sha256, true); assert.equal(capabilities.wasm, true); assert.equal(capabilities.semanticModel, false); assert.match(capabilities.storageDurability, /not guaranteed/); assert.equal(capabilities.worker, false);
 });
+
+test('recovery scan quarantines one damaged current case while preserving healthy cases and verified history', async () => {
+  const factory = fakeIDB(), store = await createCaseStore({ indexedDB: factory });
+  await store.put(caseData('broken', 'Before damage'));
+  await store.put(caseData('broken', 'After edit'));
+  await store.put(caseData('healthy', 'Healthy case'));
+  factory.data.get('broken').envelope = factory.data.get('broken').envelope.replace('After edit', 'Corrupted!');
+  await assert.rejects(store.list(), /integrity/);
+  const scan = await store.scan();
+  assert.deepEqual(scan.cases.map(c => c.id), ['healthy']);
+  assert.equal(scan.damaged[0].id, 'broken');
+  assert.equal(scan.damaged[0].recoverableVersions[0].revision, 1);
+  const inspected = await store.inspectVersions('broken');
+  assert.deepEqual(inspected.versions.map(v => v.revision), [1]);
+  assert.equal(inspected.damaged[0].revision, 2);
+  const recovered = await store.get('broken', 1);
+  assert.equal(recovered.name, 'Before damage');
+  assert.equal((await store.put(recovered)).revision, 3);
+  assert.equal((await store.get('broken')).name, 'Before damage');
+  assert.equal((await store.scan()).cases.length, 2);
+  assert.equal((await store.inspectVersions('broken')).damaged.length, 1);
+  store.close();
+});
+
+test('explicit checkpoint pruning keeps current data, requires a valid latest revision and is atomic', async () => {
+  const factory = fakeIDB(), store = await createCaseStore({ indexedDB: factory });
+  for (let i = 1; i <= 6; i++) await store.put(caseData('history', 'Revision ' + i));
+  await assert.rejects(store.pruneHistory('history', { keepLast: 0 }), /between/);
+  await assert.rejects(store.pruneHistory('history', { keepLast: 3, expectedRevision: 5 }), /changed/);
+  factory.failNextPut = true;
+  await assert.rejects(store.pruneHistory('history', { keepLast: 3, expectedRevision: 6 }), /quota/);
+  assert.equal((await store.listVersions('history')).length, 6);
+  assert.deepEqual(await store.pruneHistory('history', { keepLast: 3, expectedRevision: 6 }), { id: 'history', revision: 6, retained: 3, removed: 3 });
+  assert.deepEqual((await store.inspectVersions('history')).versions.map(v => v.revision), [6, 5, 4]);
+  assert.equal(await store.get('history', 1), null);
+  assert.equal((await store.get('history')).name, 'Revision 6');
+  await store.pruneHistory('history', { keepLast: 1 });
+  assert.equal((await store.listVersions('history')).length, 1);
+  const raw = factory.data.get('history'); raw.envelope = '{}';
+  await assert.rejects(store.pruneHistory('history', { keepLast: 1 }), /package/);
+  store.close();
+});
+
+test('ambiguous duplicate checkpoint numbers are never advertised or restored as verified history', async () => {
+  const factory = fakeIDB(), store = await createCaseStore({ indexedDB: factory });
+  await store.put(caseData('ambiguous', 'Earlier'));
+  await store.put(caseData('ambiguous', 'Current'));
+  factory.data.get('ambiguous').revision = 1;
+  await assert.rejects(store.get('ambiguous', 1), /ambiguous|metadata/);
+  await assert.rejects(store.inspectVersions('ambiguous'), /ambiguous|metadata/);
+  const scan = await store.scan();
+  assert.equal(scan.cases.length, 0);
+  assert.equal(scan.damaged.length, 1);
+  assert.deepEqual(scan.damaged[0].recoverableVersions, []);
+  store.close();
+});
+
+test('reference libraries use a distinct verified storage codec and never become case workspaces', async () => {
+  const L = require('../js/library.js');
+  const { createReferenceStore } = require('../js/storage.js');
+  const reference = await createReferenceStore({ memoryOnly: true });
+  const cases = await createCaseStore({ memoryOnly: true });
+  const library = L.createReferenceLibrary({ id: 'shared-id', name: 'Synthetic references' });
+  await reference.put(library); await cases.put(caseData('shared-id', 'Separate synthetic case'));
+  assert.equal((await reference.get('shared-id')).kind, 'reference-library');
+  assert.equal((await cases.get('shared-id')).name, 'Separate synthetic case');
+  await assert.rejects(reference.put(caseData()), /reference library|unsupported|identity/i);
+  reference.close(); cases.close();
+});
+
+test('case and import manifest checkpoints commit atomically and stale manifests never resume', async () => {
+  require('../js/parsers.js'); const { importFiles } = require('../js/indexer.js');
+  const factory = fakeIDB(), store = await createCaseStore({ indexedDB: factory });
+  const result = await importFiles(caseData(), [new File(['Synthetic resume source'], 'reference.txt')]);
+  await store.put(result.caseData, { importManifest: result.manifest });
+  assert.deepEqual(await store.getImportCheckpoint(result.caseData.id), result.manifest);
+  const revised = structuredClone(result.caseData); revised.name = 'Changed since import';
+  await assert.rejects(store.put(revised, { importManifest: result.manifest }), /stale/);
+  assert.equal((await store.get(result.caseData.id)).name, result.caseData.name);
+  await store.put(revised);
+  assert.equal(await store.getImportCheckpoint(revised.id), null);
+  factory.failNextPut = true;
+  await assert.rejects(store.put(result.caseData, { importManifest: result.manifest }), /quota/);
+  assert.equal((await store.get(revised.id)).name, revised.name);
+  assert.equal(await store.getImportCheckpoint(revised.id), null);
+  store.close();
+});
