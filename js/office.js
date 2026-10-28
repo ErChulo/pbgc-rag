@@ -99,6 +99,7 @@
   function descendants(node, name) { const out = []; function walk(n) { for (const child of children(n)) { if (child.local === name) out.push(child); walk(child); } } walk(node); return out; }
   function textOf(node) { return node.children.map(x => typeof x === 'string' ? x : textOf(x)).join(''); }
   function part(entries, name, optional) { const bytes = entries.get(name); if (!bytes) { if (optional) return null; fail(`required part ${name} is missing.`); } return xml(bytes, name); }
+  function spreadsheetString(node) { let value = ''; for (const child of children(node)) { if (child.local === 't') value += textOf(child); else if (child.local === 'r') value += spreadsheetString(child); } return value; }
   function childText(node, name) { const item = children(node, name)[0]; return item ? textOf(item) : ''; }
   function indexAmong(node, name) { return children(node.parent, name).indexOf(node) + 1; }
   function ancestor(node, name) { let p = node.parent; while (p) { if (p.local === name) return p; p = p.parent; } return null; }
@@ -129,7 +130,7 @@
     const workbook = part(entries, 'xl/workbook.xml'), rels = part(entries, 'xl/_rels/workbook.xml.rels');
     if (workbook.local !== 'workbook' || rels.local !== 'Relationships') fail('invalid workbook parts.');
     const sharedPart = part(entries, 'xl/sharedStrings.xml', true);
-    const shared = sharedPart ? children(sharedPart, 'si').map(si => descendants(si, 't').map(textOf).join('')) : [];
+    const shared = sharedPart ? children(sharedPart, 'si').map(spreadsheetString) : [];
     const relationships = new Map();
     for (const rel of children(rels, 'Relationship')) { if (!rel.attrs.Id || relationships.has(rel.attrs.Id)) fail('invalid or duplicate workbook relationship.'); relationships.set(rel.attrs.Id, rel.attrs); }
     const sheets = children(children(workbook, 'sheets')[0] || { children: [] }, 'sheet');
@@ -147,7 +148,7 @@
         if (column > 16384 || Number(address.slice(letters.length)) > 1048576) fail('cell address exceeds Excel limits.');
         const raw = childText(cell, 'v'), type = cell.attrs.t || 'n'; let value = raw;
         if (type === 's') { if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) >= shared.length) fail('invalid shared string index.'); value = shared[Number(raw)]; }
-        else if (type === 'inlineStr') value = descendants(cell, 't').map(textOf).join('');
+        else if (type === 'inlineStr') value = children(cell, 'is').map(spreadsheetString).join('');
         else if (!['n', 'b', 'str', 'e', 'd'].includes(type)) fail('unsupported worksheet cell type.');
         const formulaNode = children(cell, 'f')[0], formula = formulaNode ? textOf(formulaNode) : null;
         records.push({ text: formula === null ? value : `${value}${value ? ' | ' : ''}Formula: ${formula}`, fields: { value, rawValue: raw, type, formula, formulaAttributes: formulaNode ? { ...formulaNode.attrs } : null, formulaEvaluated: false, styleIndex: cell.attrs.s || null }, locator: { kind: 'excel', part: path, sheet: name, cell: address, label: `${name}!${address}` } });

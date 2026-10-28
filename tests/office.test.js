@@ -63,3 +63,30 @@ test('ZIP member local/central size mismatch and truncation are rejected', async
   await assert.rejects(parseOffice(mismatch, 'docx'), /disagree/);
   const truncated = wordZip().subarray(0, -5); await assert.rejects(parseOffice(truncated, 'docx'), /ZIP/);
 });
+test('XLSX parseFile and case package pipeline preserve original bytes, SHA-256, cell provenance and formulas', async () => {
+  const { createHash } = require('node:crypto');
+  const { parseFile } = require('../js/parsers.js');
+  const { validateCase, exportCase, importCase } = require('../js/artifacts.js');
+  const bytes = zip(bookFiles());
+  const source = await parseFile({ name: 'synthetic-case.xlsx', size: bytes.length, arrayBuffer: async () => Uint8Array.from(bytes).buffer });
+  assert.equal(source.hash, createHash('sha256').update(bytes).digest('hex'));
+  assert.deepEqual(Buffer.from(source.originalBase64, 'base64'), bytes);
+  assert.equal(source.records[2].sourceId, source.id);
+  assert.equal(source.records[2].locator.label, 'Synthetic & plan!C1');
+  assert.equal(source.records[2].fields.formula, 'SUM(B2:B3)');
+  const caseData = { schemaVersion: 1, id: 'synthetic-office-case', name: 'Synthetic Office evidence', createdAt: '2026-10-28T00:00:00.000Z', sources: [source], graph: { nodes: [], edges: [] }, rules: [], calculations: [] };
+  assert.equal(validateCase(caseData).valid, true);
+  const restored = await importCase(await exportCase(caseData));
+  assert.deepEqual(restored, caseData);
+  const altered = JSON.parse(JSON.stringify(caseData));
+  const corrupted = Buffer.from(altered.sources[0].originalBase64, 'base64'); corrupted[0] ^= 1;
+  altered.sources[0].originalBase64 = corrupted.toString('base64');
+  await assert.rejects(exportCase(altered), /hash mismatch/);
+});
+
+test('spreadsheet phonetic annotations do not alter actual rich-string cell values', async () => {
+  const files = bookFiles('<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c><c r="B1" t="inlineStr"><is><r><t>Visible</t></r><rPh sb="0" eb="7"><t>phonetic</t></rPh></is></c></row></sheetData></worksheet>');
+  files['xl/sharedStrings.xml'] = '<sst><si><r><t>Benefit</t></r><rPh sb="0" eb="7"><t>phonetic</t></rPh></si></sst>';
+  const records = await parseOffice(zip(files), 'xlsx');
+  assert.deepEqual(records.map(x => x.fields.value), ['Benefit', 'Visible']);
+});
