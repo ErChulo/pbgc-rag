@@ -16,12 +16,21 @@
     if (++budget.n > 1500000 || depth > 40) throw new Error('Case structure exceeds limits.');
     if (x === null || typeof x === 'boolean' || typeof x === 'string') return;
     if (typeof x === 'number' && Number.isFinite(x)) return;
-    if (Array.isArray(x)) { for (const v of x) safeTree(v, depth + 1, budget); return; }
-    if (!plain(x)) throw new Error('Case must contain JSON data only.');
-    for (const key of Object.keys(x)) {
-      if (['__proto__', 'prototype', 'constructor'].includes(key)) throw new Error('Unsafe object key.');
-      safeTree(x[key], depth + 1, budget);
+    if (!Array.isArray(x) && !plain(x)) throw new Error('Case must contain JSON data only.');
+    for (const key of Reflect.ownKeys(x)) {
+      if (typeof key !== 'string' || ['__proto__', 'prototype', 'constructor'].includes(key)) throw new Error('Unsafe object key.');
+      const descriptor = Object.getOwnPropertyDescriptor(x, key);
+      if (!Object.hasOwn(descriptor, 'value')) throw new Error('Case accessors are not accepted.');
+      if (Array.isArray(x) && key === 'length') continue;
+      safeTree(descriptor.value, depth + 1, budget);
     }
+  }
+  function claimScreening(c) {
+    if (c.claims === undefined) return { schemaVersion: 1, caseId: c.id, assessedClaims: 0, conflicts: [], status: 'not-screened', interpretation: 'No structured claims are supplied. No contradiction screening was performed. This does not establish correctness or official acceptance.' };
+    const ontology = root.PBGC && typeof root.PBGC.detectConflicts === 'function' ? root.PBGC : typeof require === 'function' ? require('./ontology.js') : null;
+    if (!ontology || typeof ontology.detectConflicts !== 'function') throw new Error('Claim validation is unavailable. Load the local ontology module.');
+    const screening = ontology.detectConflicts(c, c.claims);
+    return { ...screening, status: screening.conflicts.length ? 'unresolved' : 'no-conflicts-flagged' };
   }
   function bytesFromBase64(value) {
     if (typeof value !== 'string' || value.length > Math.ceil(LIMITS.sourceBytes / 3) * 4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw new Error('Invalid or oversized original source bytes.');
@@ -48,6 +57,7 @@
       if (!plain(s)) { errors.push('Source must be an object.'); continue; }
       if (!/^[a-f0-9]{64}$/.test(s.hash) || s.id !== 'src-' + s.hash || sourceIds.has(s.id)) errors.push('Source identity or hash is invalid or duplicated.');
       sourceIds.add(s.id);
+      if (s.caseId !== undefined && s.caseId !== c.id) errors.push('Source belongs to a different case.');
       if (!str(s.name, 500) || !str(s.format, 30) || !Number.isSafeInteger(s.size) || s.size < 0 || s.size > LIMITS.sourceBytes) errors.push('Source metadata is invalid.');
       try { if (bytesFromBase64(s.originalBase64).length !== s.size) errors.push('Original source size does not match metadata.'); } catch (e) { errors.push(e.message); }
       if (!Array.isArray(s.records)) { errors.push('Source records are missing.'); continue; }
@@ -56,6 +66,7 @@
       for (const r of s.records) {
         if (!plain(r) || !str(r.id, 300) || recordIds.has(r.id) || r.sourceId !== s.id || typeof r.text !== 'string' || r.text.length > LIMITS.textChars || !plain(r.locator) || !str(r.locator.kind, 50) || !str(r.locator.label, 1000)) { errors.push('Record identity, text, or source locator is invalid.'); continue; }
         recordIds.add(r.id); recordSource.set(r.id, s.id);
+        if (r.caseId !== undefined && r.caseId !== c.id) errors.push('Source record belongs to a different case.');
       }
     }
     if (plain(c.graph) && c.graph.caseId !== undefined && c.graph.caseId !== c.id) errors.push('Graph case identity does not match this case.');
@@ -89,6 +100,9 @@
         if (x.annualBenefitCents !== expected.annualBenefitCents || x.monthlyBenefitCents !== expected.monthlyBenefitCents || JSON.stringify(x.trace) !== JSON.stringify(expected.trace)) errors.push('Calculation failed exact replay validation.');
       } catch { errors.push('Calculation inputs are invalid.'); }
     }
+    if (c.claims !== undefined && errors.length === 0) {
+      try { claimScreening(c); } catch (e) { errors.push(e.message); }
+    }
     if (!sourceIds.size) warnings.push('No source evidence is imported.');
     warnings.push('Schema validation does not verify source content, interpretations, or official output validity. Export and import also verify original-byte hashes.');
     return { valid: errors.length === 0, errors: Array.from(new Set(errors)), warnings };
@@ -115,13 +129,16 @@
   }
   function buildReport(c) {
     const validation = assertCase(c);
+    const screening = claimScreening(c);
     const evidence = c.sources.flatMap(s => s.records.map(r => ({ recordId: r.id, sourceId: s.id, sourceName: s.name, sourceHash: s.hash, excerpt: r.text, locator: r.locator, verification: 'unverified', authority: 'not assessed', applicability: 'not assessed' })));
     return {
       schemaVersion: VERSION, kind: 'internal-case-review', status: 'PROVISIONAL', official: false,
       title: 'Internal case review draft', caseId: c.id, caseName: c.name,
+      conflictScreening: screening,
       disclaimer: 'This is not an official R1 memo, BSRS configuration, benefit determination, or approved actuarial interpretation.',
       sections: [
         { heading: 'Case facts', text: 'Review imported source evidence. No legal or actuarial conclusions are inferred.', evidence },
+        { heading: 'Unresolved claim screening', screening },
         { heading: 'Proposed and approved rules', rules: JSON.parse(JSON.stringify(c.rules)) },
         { heading: 'Synthetic calculation traces', calculations: JSON.parse(JSON.stringify(c.calculations)) },
         { heading: 'Assumptions and limitations', items: ['Source authority and participant applicability require review.', 'Contradictions are not automatically resolved.', 'Package integrity does not establish factual accuracy.', ...OFFICIAL_BLOCKERS] },

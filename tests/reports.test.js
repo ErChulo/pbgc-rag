@@ -75,3 +75,21 @@ test('rendered-content bounds reject expansion before creating an oversized HTML
   source.records = Array.from({ length: 5 }, (_, i) => ({ ...original, id: original.id + ':' + i, text: '<'.repeat(1024 * 1024) }));
   assert.throws(() => R.renderResearchReport(c), /rendered-content limit/);
 });
+test('reports expose source-linked unresolved claims without deciding legal priority', () => {
+  const c = fixture(), recordId = c.sources[0].records[0].id;
+  const base = { caseId: c.id, kind: 'provision', subjectId: 'synthetic-plan', predicate: 'internal:NRD', group: 'synthetic-group', sourceRecordIds: [recordId] };
+  c.claims = [{ ...base, id: 'a', value: 65 }, { ...base, id: 'b', value: '<img src=x onerror=alert(1)>' }];
+  for (const layout of ['review', 'evidence']) {
+    const html = R.renderResearchReport(c, { layout });
+    assert.match(html, /UNRESOLVED: internal:NRD/); assert.match(html, /No resolution or legal priority is determined/);
+    assert.match(html, /Unresolved conflicts flagged: 1/); assert.match(html, /&lt;img/); assert.doesNotMatch(html, /<img\b/);
+    const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map(m => m[1]));
+    for (const match of html.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.has(match[1]));
+    assert.match(html, /Official output BLOCKED/);
+  }
+});
+test('absent or zero-conflict claim screens never assert case correctness', () => {
+  const c = fixture(); assert.match(R.renderResearchReport(c), /No structured claims are supplied/);
+  c.claims = [];
+  assert.match(R.renderResearchReport(c), /zero-conflict result does not establish correctness/);
+});

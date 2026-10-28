@@ -111,3 +111,34 @@ test('duplicate proposal evidence fails without mutating the case', () => {
   assert.throws(() => A.proposeRule(c, { id: 'duplicate', title: 'Duplicate', effectiveDate: '2026-01-01', sourceRecordIds: [id, id] }), /Proposal/);
   assert.equal(c.rules.length, 0); assert.equal(A.validateCase(c).valid, true);
 });
+function claimsFor(c) {
+  const base = { caseId: c.id, kind: 'provision', subjectId: 'synthetic-plan', predicate: 'internal:NRD', group: 'synthetic-group', sourceRecordIds: [c.sources[0].records[0].id] };
+  return [{ ...base, id: 'claim-a', value: 65 }, { ...base, id: 'claim-b', value: 62 }];
+}
+test('valid optional claims survive package round trips and remain unresolved in reports', async () => {
+  const c = fixture(); c.claims = claimsFor(c);
+  assert.equal(A.validateCase(c).valid, true);
+  assert.deepEqual((await A.importCase(await A.exportCase(c))).claims, c.claims);
+  const report = A.buildReport(c);
+  assert.equal(report.conflictScreening.status, 'unresolved');
+  assert.equal(report.conflictScreening.conflicts.length, 1);
+  assert.equal(report.conflictScreening.conflicts[0].resolution, null);
+  assert.ok(report.sections.some(section => section.heading === 'Unresolved claim screening'));
+  assert.equal(report.release.allowed, false);
+});
+test('malformed and cross-case claims fail export and rehashed package import', async () => {
+  const c = fixture(); c.claims = claimsFor(c);
+  const valid = await A.exportCase(c);
+  for (const mutate of [x => x.claims[0].caseId = 'foreign', x => x.claims[0].sourceRecordIds = ['foreign-record'], x => x.claims[0].priority = 'highest', x => x.claims = null]) {
+    const envelope = JSON.parse(valid), payload = JSON.parse(envelope.payload); mutate(payload);
+    assert.equal(A.validateCase(payload).valid, false);
+    await assert.rejects(A.exportCase(payload));
+    envelope.payload = JSON.stringify(payload); envelope.hash = createHash('sha256').update(envelope.payload).digest('hex');
+    await assert.rejects(A.importCase(JSON.stringify(envelope)), /claim|Claim|Cross-case|Unknown/);
+  }
+});
+test('claim accessors are rejected before they can execute during case validation', () => {
+  const c = fixture(); c.claims = claimsFor(c); let executed = false;
+  Object.defineProperty(c.claims[0], 'value', { enumerable: true, get() { executed = true; throw Error('must not execute'); } });
+  assert.equal(A.validateCase(c).valid, false); assert.equal(executed, false);
+});

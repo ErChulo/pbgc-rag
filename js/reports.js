@@ -2,8 +2,8 @@
 (function (root) {
   'use strict';
   const REPORT_LAYOUTS = Object.freeze({
-    review: Object.freeze({ schemaVersion: 1, key: 'review', title: 'Internal case review', sections: Object.freeze(['sources', 'timeline', 'rules', 'calculations', 'evidence']) }),
-    evidence: Object.freeze({ schemaVersion: 1, key: 'evidence', title: 'Source evidence review', sections: Object.freeze(['sources', 'evidence', 'timeline', 'rules', 'calculations']) })
+    review: Object.freeze({ schemaVersion: 1, key: 'review', title: 'Internal case review', sections: Object.freeze(['sources', 'timeline', 'screening', 'rules', 'calculations', 'evidence']) }),
+    evidence: Object.freeze({ schemaVersion: 1, key: 'evidence', title: 'Source evidence review', sections: Object.freeze(['sources', 'evidence', 'screening', 'timeline', 'rules', 'calculations']) })
   });
   const escape = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   // Encode UTF-16 units, so arbitrary record IDs remain unique, stable, safe HTML fragment IDs.
@@ -12,7 +12,7 @@
   const link = (anchor, label) => '<a href="#' + escape(anchor) + '">' + escape(label) + '</a>';
   const json = value => escape(JSON.stringify(value, null, 2));
   const dateLabel = value => new Date(value).toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' });
-  const title = { sources: 'Source inventory', evidence: 'Source evidence', timeline: 'Proposed rule applicability timeline', rules: 'Rule review status', calculations: 'Synthetic calculation traces' };
+  const title = { screening: 'Unresolved claim screening', sources: 'Source inventory', evidence: 'Source evidence', timeline: 'Proposed rule applicability timeline', rules: 'Rule review status', calculations: 'Synthetic calculation traces' };
   function getReportLayout(key) {
     if (typeof key !== 'string' || !Object.hasOwn(REPORT_LAYOUTS, key)) throw new Error('Unsupported report layout. Choose review or evidence.');
     return REPORT_LAYOUTS[key];
@@ -37,7 +37,7 @@
       if (renderRecords > 5000) throw new Error('Report exceeds the 5000-record limit. Split the case for reporting.');
       countContent({ name: source.name, records: source.records });
     }
-    countContent(c.rules); countContent(c.calculations);
+    countContent(c.rules); countContent(c.calculations); countContent(c.claims || []);
     const report = api.buildReport(c), records = new Map();
     for (const source of c.sources) for (const record of source.records) records.set(record.id, { source, record });
     const citations = ids => ids.map(id => {
@@ -53,7 +53,14 @@
       const rule = c.rules.find(rule => rule.id === calculation.ruleId);
       return '<article><h3>' + escape(rule.title) + '</h3><p>Status: synthetic, provisional, official release BLOCKED.</p><p>Rule version: ' + calculation.ruleVersion + '. Evidence: ' + citations(rule.sourceRecordIds) + '</p><dl><dt>Annual benefit in cents (synthetic)</dt><dd>' + calculation.annualBenefitCents + '</dd><dt>Monthly benefit in cents (synthetic)</dt><dd>' + calculation.monthlyBenefitCents + '</dd><dt>Rounding</dt><dd>' + escape(calculation.rounding) + '</dd></dl><details><summary>Inputs and exact rational trace</summary><pre>' + json({ inputs: calculation.inputs, trace: calculation.trace }) + '</pre></details><p>' + escape(calculation.limitation) + '</p></article>';
     }).join('') + (!c.calculations.length ? '<p>No synthetic calculations are recorded.</p>' : '');
-    const contents = { sources: inventory, evidence, rules, timeline, calculations };
+    const assessed = report.conflictScreening;
+    const claims = c.claims || [];
+    // Conflict records contain repeated excerpts; bound them before expanding HTML citations.
+    countContent(assessed);
+    const claimList = claims.map(claim => '<article><h3>Claim ' + escape(claim.id) + '</h3><p>Subject: ' + escape(claim.subjectId) + ' · Predicate: ' + escape(claim.predicate) + ' · Group: ' + escape(claim.group) + '</p><p>Recorded value: <code>' + json(claim.value) + '</code> (' + escape(typeof claim.value) + '). Kind: ' + escape(claim.kind) + '.</p><p>Validity: ' + escape(claim.validFrom || 'not specified') + ' through ' + escape(claim.validTo || 'not specified') + '.</p><p>Evidence: ' + citations(claim.sourceRecordIds) + '</p></article>').join('');
+    const conflictList = assessed.conflicts.map(conflict => '<article><h3>UNRESOLVED: ' + escape(conflict.predicate) + '</h3><p>Subject: ' + escape(conflict.subjectId) + ' · Group: ' + escape(conflict.group) + '</p><p>Claim ' + escape(conflict.left.claimId) + ': <code>' + json(conflict.left.value) + '</code> (' + escape(conflict.left.valueType) + '). Evidence: ' + citations(conflict.left.sourceRecordIds) + '</p><p>Claim ' + escape(conflict.right.claimId) + ': <code>' + json(conflict.right.value) + '</code> (' + escape(conflict.right.valueType) + '). Evidence: ' + citations(conflict.right.sourceRecordIds) + '</p><p>Overlapping dates: ' + escape(conflict.overlap.validFrom || 'not bounded') + ' through ' + escape(conflict.overlap.validTo || 'not bounded') + '.</p><p>' + escape(conflict.reason) + '</p><p>No resolution or legal priority is determined. Authorized review is required.</p></article>').join('');
+    const screening = '<p>Screening status: <strong>' + escape(assessed.status) + '</strong>. Claims assessed: ' + assessed.assessedClaims + '. Unresolved conflicts flagged: ' + assessed.conflicts.length + '.</p><p>' + escape(assessed.interpretation) + '</p>' + (claims.length ? '<h3>Recorded claims</h3>' + claimList : '<p>No structured claims are recorded.</p>') + (assessed.conflicts.length ? '<h3>Unresolved differences</h3>' + conflictList : '<p>No differences were flagged by this bounded screen. This is not an acceptance result.</p>');
+    const contents = { sources: inventory, evidence, rules, timeline, calculations, screening };
     const sections = layout.sections.map(key => '<section id="' + key + '"><h2>' + title[key] + '</h2>' + contents[key] + '</section>').join('');
     const blockers = report.release.blockers.map(item => '<li>' + escape(item) + '</li>').join('');
     const css = 'body{font-family:Arial,sans-serif;color:#111;background:#fff;max-width:72rem;margin:2rem auto;padding:0 1.25rem;line-height:1.55}h1,h2,h3{color:#002D72}a{color:#002D72;text-underline-offset:.18em}a:focus-visible,summary:focus-visible{outline:3px solid #E4002B;outline-offset:3px}.status{border-left:5px solid #E4002B;padding:1rem;background:#f2f2f2}table{border-collapse:collapse;width:100%}th,td{text-align:left;border:1px solid #81807F;padding:.5rem}caption{text-align:left;font-weight:bold}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}blockquote{margin:1rem 0;padding-left:1rem;border-left:3px solid #002D72}.evidence{border-top:1px solid #81807F;margin-top:1rem;padding-top:.5rem}dt{font-weight:bold}dd{margin:0 0 .5rem}nav ul{display:flex;gap:1.5rem;flex-wrap:wrap;list-style:none;padding:0}section,article{scroll-margin-top:1rem}@media print{body{max-width:none;margin:0}nav{display:none}h2{break-before:auto}article{break-inside:auto}a{color:inherit}}';
