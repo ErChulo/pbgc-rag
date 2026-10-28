@@ -40,3 +40,17 @@ test('SQLite rejects encryption, truncated pages and malicious cell pointers', (
   const bad = bytes.slice(); bad[108] = 255; bad[109] = 255;
   assert.throws(() => parseSQLite(bad), /cell pointer/);
 });
+test('quoted INTEGER type names preserve rowid primary-key aliases for all SQLite quoting forms', () => {
+  const rows = parseSQLite(fixture('quoted-types'));
+  assert.equal(rows.length, 6);
+  for (const table of ['double_quote', 'single_quote', 'backtick', 'bracket']) {
+    const row = rows.find(r => r.locator.table === table);
+    assert.equal(row.locator.rowid, 17); assert.equal(row.fields.id, 17);
+    assert.equal(row.fields.value, 'Synthetic ' + table);
+  }
+  // The historical inline PRIMARY KEY DESC exception and BIGINT do not alias rowid.
+  for (const table of ['descending', 'big_type']) {
+    const row = rows.find(r => r.locator.table === table);
+    assert.equal(row.locator.rowid, 1); assert.equal(row.fields.id, 17);
+  }
+});

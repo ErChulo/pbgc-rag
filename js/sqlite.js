@@ -163,7 +163,7 @@
     let alias = null;
     for (const [name, p] of definitions) {
       const text = p.map(upper); const pk = text.indexOf('PRIMARY');
-      const integer = text[0] === 'INTEGER' && (text.length === 1 || ['PRIMARY', 'NOT', 'UNIQUE', 'CHECK', 'DEFAULT', 'COLLATE', 'REFERENCES', 'CONSTRAINT'].includes(text[1]));
+      const integer = p[0]?.value.toUpperCase() === 'INTEGER' && (text.length === 1 || ['PRIMARY', 'NOT', 'UNIQUE', 'CHECK', 'DEFAULT', 'COLLATE', 'REFERENCES', 'CONSTRAINT'].includes(text[1]));
       if (integer && ((pk >= 0 && text[pk + 1] === 'KEY' && text[pk + 2] !== 'DESC') || (tablePK && tablePK.toLowerCase() === name.toLowerCase()))) alias = name;
     }
     return { columns, alias };
