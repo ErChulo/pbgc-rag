@@ -59,7 +59,7 @@
     const shownNodes = selectedNodes.map((node, index) => ({ ...clone(node), label: node.label || node.id, type: node.type || 'evidence', status: node.status || 'unreviewed', x: 40 + index % columns * 300, y: 70 + Math.floor(index / columns) * 180 }));
     const shownEdges = selectedEdges.map(edge => ({ ...clone(edge), status: edge.status || 'proposed' }));
     const omittedNodes = graph.nodes.length - shownNodes.length, omittedEdges = graph.edges.length - shownEdges.length;
-    return { schemaVersion: 1, ...(caseIds.size ? { caseId: [...caseIds][0] } : {}), nodes: shownNodes, edges: shownEdges, totalNodes: graph.nodes.length, totalEdges: graph.edges.length, omittedNodes, omittedEdges, truncated: omittedNodes > 0 || omittedEdges > 0, width: Math.max(420, columns * 300), height: Math.max(220, Math.ceil(shownNodes.length / columns) * 180 + 60), interpretation: 'Layout and link labels express recorded research claims. They do not establish legal priority, approval, or official validity.' };
+    return { schemaVersion: 1, ...(caseIds.size ? { caseId: [...caseIds][0] } : {}), nodes: shownNodes, edges: shownEdges, totalNodes: graph.nodes.length, totalEdges: graph.edges.length, omittedNodes, omittedEdges, truncated: omittedNodes > 0 || omittedEdges > 0, width: Math.max(480, columns * 300 + 180), height: Math.max(220, Math.ceil(shownNodes.length / columns) * 180 + 60), interpretation: 'Layout and link labels express recorded research claims. They do not establish legal priority, approval, or official validity.' };
   }
   let rendering = 0;
   function renderEvidenceGraph(container, graph, options = {}) {
@@ -94,7 +94,7 @@
       group.append(element('title', {}, `${edge.type} (${edge.status}) · ${edge.sourceId} · ${edge.recordId}`));
       group.append(element('path', { d, fill: 'none', stroke: 'var(--line, #81807f)', 'stroke-width': 2, 'marker-end': `url(#${arrow})` }));
       const label = edge.type.length > 28 ? edge.type.slice(0, 27) + '…' : edge.type;
-      group.append(element('text', { x: self ? sx + 50 : (sx + ex) / 2, y: self ? sy - 30 : (sy + ey) / 2 - 28, fill: 'var(--muted, #bec6df)', 'font-family': 'Arial, sans-serif', 'font-size': 13, 'text-anchor': 'middle' }, `${label} · ${edge.status}`));
+      group.append(element('text', { x: self ? sx + 50 : (sx + ex) / 2, y: self ? sy - 30 : (sy + ey) / 2 - 28, fill: 'var(--muted, #bec6df)', 'font-family': 'Arial, sans-serif', 'font-size': 13, 'text-anchor': 'middle' }, `${label} · ${edge.status.length > 18 ? edge.status.slice(0, 17) + '…' : edge.status}`));
       svg.append(group);
     }
     for (const node of model.nodes) {
