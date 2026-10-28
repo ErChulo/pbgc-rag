@@ -1,0 +1,16 @@
+Mozilla PDF.js 6.4.299, distribution build d0991a0d5
+Copyright Mozilla Foundation and contributors. Apache License 2.0; see LICENSE.
+Upstream: https://github.com/mozilla/pdf.js and https://www.npmjs.com/package/pdfjs-dist
+
+The original legacy/build/pdf.mjs and legacy/build/pdf.worker.mjs are preserved
+without changes under source/. The source package's legacy compatibility layer
+contains core-js 3.50.0 (MIT); see LICENSE_COREJS. Embedded standard-font/CMap data
+retain LICENSE_FOXIT, LICENSE_LIBERATION, LICENSE_CMAPS. Additional upstream codec
+license notices are preserved although WASM/media rendering is disabled.
+
+Local modifications: entry.mjs combines main-thread and worker handlers into one
+classic script; provides only bundled CMap/font bytes; no application-time package
+installation or network fetch. pdfjs-local.js is derived using esbuild 0.28.2.
+The PDF scripting sandbox, viewer, WASM binaries, ICC files, and media assets are
+not imported. Application GUI fonts remain local Arial/system fallbacks; PDF font
+resources are parsing data and are never installed or used as GUI fonts.

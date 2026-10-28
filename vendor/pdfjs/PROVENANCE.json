@@ -1,0 +1,95 @@
+{
+  "package": "pdfjs-dist",
+  "version": "6.4.299",
+  "license": "Apache-2.0",
+  "upstream": "https://github.com/mozilla/pdf.js",
+  "registry": "https://registry.npmjs.org/pdfjs-dist",
+  "tarball": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.4.299.tgz",
+  "npmIntegrity": "sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==",
+  "integrityVerified": true,
+  "distributionBuild": "d0991a0d5",
+  "sourcePaths": [
+    "legacy/build/pdf.mjs",
+    "legacy/build/pdf.worker.mjs"
+  ],
+  "buildTool": {
+    "name": "esbuild",
+    "version": "0.28.2",
+    "license": "MIT",
+    "npmIntegrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="
+  },
+  "files": {
+    "LICENSE": {
+      "bytes": 10174,
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    "LICENSE_CMAPS": {
+      "bytes": 2080,
+      "sha256": "aa92ab5a472974865a96fd4a4e9c13bb41bf6fe1b309cb6b8da48bc9e19839a2"
+    },
+    "LICENSE_COREJS": {
+      "bytes": 1134,
+      "sha256": "b87653fff2d44426ab5cd4723cee3b1364dc8d35a0acdf098c54689543123bf8"
+    },
+    "LICENSE_FOXIT": {
+      "bytes": 1553,
+      "sha256": "b578cdd2345840ada550bd12519533812320d5f1d21cf4c1c7e1b1b0a31c98b7"
+    },
+    "LICENSE_JBIG2": {
+      "bytes": 12862,
+      "sha256": "9e66b7f1b934a28b37f3bc4dac97915de1674271e79a0a88182a18ed9731b4d1"
+    },
+    "LICENSE_LIBERATION": {
+      "bytes": 22154,
+      "sha256": "d2c4d5b3e115a519cb58eb691aa64538397e2611f9ebe801392cf9667997e7dc"
+    },
+    "LICENSE_OPENJPEG": {
+      "bytes": 2112,
+      "sha256": "a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6"
+    },
+    "LICENSE_PDFJS_JBIG2": {
+      "bytes": 555,
+      "sha256": "aad3cce09842e00e9e11ad5e8fef8cc02fbc3a3768fe2f007443b9cee37aaee5"
+    },
+    "LICENSE_PDFJS_OPENJPEG": {
+      "bytes": 1285,
+      "sha256": "717fc62da03292dbb4dd0c8280bd4ce7bb8550dcf31d772bc93455fb50313425"
+    },
+    "LICENSE_PDFJS_QCMS": {
+      "bytes": 1036,
+      "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1"
+    },
+    "LICENSE_QCMS": {
+      "bytes": 1121,
+      "sha256": "36d847ae882f6574ebc72f56a4f354e4f104fde4a584373496482e97d52d31bc"
+    },
+    "NOTICE": {
+      "bytes": 1103,
+      "sha256": "d0ecb2cfe4b39ece8700724446c02daf2608dcc25be8dbe8411564dfd0b845c6"
+    },
+    "assets.json": {
+      "bytes": 2592384,
+      "sha256": "73598b95f038654a1b1bdd0b007e2de19af276208e4b4476d17e4c077ef1dbc3"
+    },
+    "build.mjs": {
+      "bytes": 638,
+      "sha256": "774844f009a4c540d4bc5c411fff1a479aaf72df758d34ddc48857f3691f36b9"
+    },
+    "entry.mjs": {
+      "bytes": 821,
+      "sha256": "420c305aa9440d9345efb7c8d664d3df7efe55a4b691c0c8e0f88c198ec4216d"
+    },
+    "pdfjs-local.js": {
+      "bytes": 4337392,
+      "sha256": "84114c54127365512fdc1367df01211fd32c7e7ee9bcc9d54130ca327f92faff"
+    },
+    "source/pdf.mjs": {
+      "bytes": 1069549,
+      "sha256": "bc51f4874a66e3853189cb5d50aba4b3096afa83ed433b885d293a3d94583cdc"
+    },
+    "source/pdf.worker.mjs": {
+      "bytes": 2418244,
+      "sha256": "bb422f60804477de4a0b09091d8347a916a387755ed1cbad24ccaec1d09c78bf"
+    }
+  }
+}
