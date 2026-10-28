@@ -42,7 +42,7 @@ test('actual parser to search, evidence, synthetic review, exact calculation and
   assert.equal(report.official, false);
   assert.equal(report.sections[0].evidence[1].sourceHash, c.sources[0].hash);
   assert.equal(report.sections[0].evidence[1].locator.line, 2);
-  assert.equal(report.sections[2].calculations[0].monthlyBenefitCents, 75000);
+  assert.equal(report.sections.find(section => section.calculations).calculations[0].monthlyBenefitCents, 75000);
   const restored = await A.importCase(await A.exportCase(c));
   assert.deepEqual(restored, c);
   assert.deepEqual(Buffer.from(restored.sources[0].originalBase64, 'base64'), Buffer.from(c.sources[0].originalBase64, 'base64'));
