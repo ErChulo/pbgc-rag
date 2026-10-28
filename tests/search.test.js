@@ -93,3 +93,19 @@ test('safe regex agrees with native reference for 2048 short supported examples'
     assert.equal(search([{ id: 'r', sourceId: 's', text }], pattern, 'regex').length > 0, new RegExp(pattern).test(text), JSON.stringify({ pattern, text }));
   }
 });
+test('regex shares an actual state-operation budget across records and returns no partial result', () => {
+  const long = i => ({ id: String(i), sourceId: 's', text: 'a'.repeat(30000) });
+  const pattern = 'a*'.repeat(20) + 'b$';
+  // Each individual search fits; combined execution exhausts shared state work.
+  assert.deepEqual(search([long(1)], pattern, 'regex'), []);
+  assert.throws(() => search([long(1), long(2)], pattern, 'regex'), /operation budget exceeded/);
+});
+test('SQL LIKE budgets actual field characters and DP transitions, including non-text fields', () => {
+  const large = { id: 'r', sourceId: 's', text: 'small', fields: { value: 'a'.repeat(60000) } };
+  const pattern = '%'.repeat(100) + 'b';
+  assert.throws(() => querySQL([large], "SELECT id FROM records WHERE fields.value LIKE '" + pattern + "'"), /operation budget exceeded/);
+  const record = i => ({ id: String(i), sourceId: 's', text: 'small', fields: { value: 'a'.repeat(30000) } });
+  const query = "SELECT id FROM records WHERE fields.value LIKE '" + '%'.repeat(100) + "b'";
+  assert.deepEqual(querySQL([record(1)], query), []);
+  assert.throws(() => querySQL([record(1), record(2)], query), /operation budget exceeded/);
+});

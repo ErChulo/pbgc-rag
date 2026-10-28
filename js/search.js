@@ -1,8 +1,12 @@
 /* PBGC-RAG search v1. Dependency-free, read-only, bounded execution. */
 (function (root) {
   'use strict';
-  const LIMITS = Object.freeze({ records: 50000, text: 65536, totalText: 4000000, query: 256, results: 1000, nodes: 10000, edges: 50000, depth: 8 });
+  const LIMITS = Object.freeze({ records: 50000, text: 65536, totalText: 4000000, query: 256, results: 1000, nodes: 10000, edges: 50000, depth: 8, regexOperations: 5000000, sqlOperations: 5000000 });
   function fail(message) { throw new Error(message); }
+  function operationBudget(label, maximum) {
+    let remaining = maximum;
+    return (amount = 1) => { remaining -= amount; if (remaining < 0) fail(label + ' operation budget exceeded. Narrow the selected sources or simplify the query. No partial result is returned.'); };
+  }
   function recordsInput(records) {
     if (!Array.isArray(records) || records.length > LIMITS.records) fail('Record limit exceeded or invalid records.');
     let total = 0;
@@ -21,12 +25,13 @@
   // Thompson-style simulation: supported regex tokens cannot cause backtracking.
   // Supported: literals, ., [], [^], ranges, ^, $, \\d/\\w/\\s and inverses, * + ?.
   // Unsupported syntax is rejected; there is no fallback to native RegExp matching.
-  function compileSafeRegex(pattern) {
+  function compileSafeRegex(pattern, spend) {
     queryInput(pattern);
     let begin = false, end = false, i = 0;
     if (pattern[0] === '^') { begin = true; i++; }
     const tokens = [];
-    const charClass = code => ({ d: /[0-9]/, D: /[^0-9]/, w: /[A-Za-z0-9_]/, W: /[^A-Za-z0-9_]/, s: /\s/u, S: /\S/u })[code];
+    const classes = { d: /[0-9]/, D: /[^0-9]/, w: /[A-Za-z0-9_]/, W: /[^A-Za-z0-9_]/, s: /\s/u, S: /\S/u };
+    const charClass = code => classes[code];
     function escaped() {
       if (++i >= pattern.length) fail('Regex ends with an incomplete escape.');
       const code = pattern[i++];
@@ -64,17 +69,20 @@
       tokens.push({ match, min, repeat });
     }
     function closure(states) {
+      spend(states.size);
       const out = new Set(states);
-      for (const index of out) if (index < tokens.length && tokens[index].min === 0) out.add(index + 1);
+      for (const index of out) { spend(); if (index < tokens.length && tokens[index].min === 0) out.add(index + 1); }
       return out;
     }
     return text => {
       let active = closure(new Set([0]));
       if (active.has(tokens.length) && (!end || !text.length)) return true;
       for (let pos = 0; pos < text.length; pos++) {
+        spend(1 + active.size);
         if (!begin) active = closure(new Set([...active, 0]));
         const next = new Set();
         for (const index of active) {
+          spend();
           const token = tokens[index];
           if (token && token.match(text[pos])) { next.add(index + 1); if (token.repeat) next.add(index); }
         }
@@ -92,7 +100,7 @@
     let matcher;
     if (mode === 'regex') {
       if (records.reduce((n, r) => n + r.text.length, 0) * Math.max(query.length, 1) > 20000000) fail('Regex work limit exceeded. Narrow the selected sources or simplify the pattern.');
-      const regex = compileSafeRegex(query); matcher = text => regex(text) ? 1 : 0; }
+      const regex = compileSafeRegex(query, operationBudget('Regex', LIMITS.regexOperations)); matcher = text => regex(text) ? 1 : 0; }
     else {
       const terms = mode === 'exact' ? [normalize(query)] : [...new Set(normalize(query).trim().split(/\s+/u))];
       matcher = text => { const value = normalize(text); return terms.every(term => value.includes(term)) ? terms.reduce((n, term) => n + value.split(term).length - 1, 0) : 0; };
@@ -149,13 +157,16 @@
     if (i !== tokens.length) fail('Unsupported SQL clause or multiple statements.');
     const sqlWork = records.reduce((n, r) => n + r.text.length, 0) * conditions.reduce((n, c) => n + (c.op === 'LIKE' ? c.value.length : 1), 0);
     if (sqlWork > 20000000) fail('SQL work limit exceeded. Narrow the selected sources or simplify LIKE conditions.');
+    const spendSQL = operationBudget('SQL LIKE', LIMITS.sqlOperations);
     const like = (actual, pattern) => {
       // LIKE is a small dynamic-programming wildcard matcher, without regex backtracking.
       let state = new Uint8Array(pattern.length + 1); state[0] = 1;
-      for (let p = 0; p < pattern.length && pattern[p] === '%'; p++) state[p + 1] = 1;
+      for (let p = 0; p < pattern.length && pattern[p] === '%'; p++) { spendSQL(); state[p + 1] = 1; }
       for (const ch of actual) {
+        spendSQL();
         const next = new Uint8Array(pattern.length + 1);
         for (let p = 0; p < pattern.length; p++) {
+          spendSQL();
           if (pattern[p] === '%') next[p + 1] = next[p] || state[p + 1];
           else if (state[p] && (pattern[p] === '_' || pattern[p] === ch)) next[p + 1] = 1;
         }
