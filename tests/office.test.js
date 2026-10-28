@@ -90,3 +90,88 @@ test('spreadsheet phonetic annotations do not alter actual rich-string cell valu
   const records = await parseOffice(zip(files), 'xlsx');
   assert.deepEqual(records.map(x => x.fields.value), ['Benefit', 'Visible']);
 });
+
+function relatedWordFiles() {
+  const relationshipType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  return {
+    '[Content_Types].xml': contentTypes,
+    'word/document.xml': '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t>Main evidence</w:t><w:footnoteReference w:id="5"/><w:endnoteReference w:id="7"/></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="h1"/><w:headerReference w:type="first" r:id="h2"/><w:footerReference w:type="default" r:id="f1"/></w:sectPr></w:body></w:document>',
+    'word/_rels/document.xml.rels': '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + [
+      ['h1', 'header', 'header1.xml'], ['h2', 'header', 'header1.xml'], ['f1', 'footer', 'footer1.xml'],
+      ['fn', 'footnotes', 'footnotes.xml'], ['en', 'endnotes', 'endnotes.xml']
+    ].map(([Id, Type, Target]) => `<Relationship Id="${Id}" Type="${relationshipType + Type}" Target="${Target}"/>`).join('') + `<Relationship Id="link" Type="${relationshipType}hyperlink" Target="https://invalid.test/synthetic" TargetMode="External"/></Relationships>`,
+    'word/header1.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Shared header</w:t></w:r><w:fldSimple w:instr="INCLUDETEXT https://invalid.test/field"><w:r><w:t> cached value</w:t></w:r></w:fldSimple><w:r><w:instrText>SECRET FIELD INSTRUCTION</w:instrText></w:r></w:p></w:hdr>',
+    'word/footer1.xml': '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Footer table evidence</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:ftr>',
+    'word/footnotes.xml': '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="-1" w:type="separator"><w:p><w:r><w:t>Separator control text</w:t></w:r></w:p></w:footnote><w:footnote w:id="5"><w:p><w:r><w:t>Footnote current</w:t></w:r></w:p></w:footnote><w:footnote w:id="8"><w:p><w:r><w:t>Stored uncited footnote</w:t></w:r></w:p></w:footnote></w:footnotes>',
+    'word/endnotes.xml': '<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:id="7"><w:p><w:moveFrom><w:r><w:t>Moved old endnote</w:t></w:r></w:moveFrom><w:r><w:t>Endnote current</w:t><w:delInstrText>Deleted field instruction</w:delInstrText></w:r></w:p></w:endnote></w:endnotes>',
+    'word/header-not-related.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Unrelated part must not be guessed as active</w:t></w:r></w:p></w:hdr>'
+  };
+}
+test('DOCX related text parts retain role and precise part/note/table locators, shared headers deduplicate', async () => {
+  const records = await parseOffice(zip(relatedWordFiles()), 'docx');
+  assert.deepEqual(records.map(r => r.text), ['Main evidence', 'Shared header cached value', 'Footer table evidence', 'Footnote current', 'Stored uncited footnote', 'Endnote current']);
+  assert.equal(records[0].locator.label, 'Paragraph 1');
+  assert.equal(records[0].locator.part, 'word/document.xml'); assert.equal(records[0].locator.role, 'body');
+  const header = records.find(r => r.locator.role === 'header');
+  assert.equal(header.locator.part, 'word/header1.xml'); assert.equal(header.locator.paragraph, 1);
+  assert.deepEqual(header.fields.relationshipIds, ['h1', 'h2']);
+  assert.deepEqual(header.fields.referenceTypes, ['default', 'first']); assert.equal(header.fields.referencedInDocument, true);
+  const footer = records.find(r => r.locator.role === 'footer');
+  assert.equal(footer.locator.part, 'word/footer1.xml'); assert.equal(footer.locator.table, 1); assert.equal(footer.locator.row, 1); assert.equal(footer.locator.cell, 1);
+  const note = records.find(r => r.locator.noteId === '5');
+  assert.equal(note.locator.role, 'footnote'); assert.equal(note.locator.part, 'word/footnotes.xml'); assert.equal(note.locator.paragraph, 1); assert.equal(note.fields.referencedInDocument, true);
+  assert.equal(records.find(r => r.locator.noteId === '8').fields.referencedInDocument, false);
+  assert.ok(!records.some(r => /SECRET|Moved old|Separator|Deleted field|Unrelated part/.test(r.text)));
+});
+test('DOCX text parts linked but unused in current sections are explicitly marked stored, not rendered applicability', async () => {
+  const files = relatedWordFiles();
+  files['word/document.xml'] = files['word/document.xml'].replace(/<w:headerReference[^>]*\/>/g, '');
+  const records = await parseOffice(zip(files), 'docx');
+  const header = records.find(r => r.locator.role === 'header');
+  assert.equal(header.fields.referencedInDocument, false); assert.deepEqual(header.fields.referenceTypes, []);
+  assert.equal(header.text, 'Shared header cached value');
+  assert.ok(!Object.hasOwn(header.locator, 'page'));
+});
+test('DOCX actual relationship targets and source locators survive parseFile and portable recovery', async () => {
+  const { parseFile } = require('../js/parsers.js'), { exportCase, importCase } = require('../js/artifacts.js');
+  const files = relatedWordFiles();
+  files['word/_rels/document.xml.rels'] = files['word/_rels/document.xml.rels'].replace('Target="footer1.xml"', 'Target="parts/footer-custom.xml"');
+  files['word/parts/footer-custom.xml'] = files['word/footer1.xml']; delete files['word/footer1.xml'];
+  const bytes = zip(files), source = await parseFile(new File([bytes], 'synthetic-related-parts.docx'));
+  assert.equal(source.records.find(r => r.locator.role === 'footer').locator.part, 'word/parts/footer-custom.xml');
+  assert.deepEqual(Buffer.from(source.originalBase64, 'base64'), bytes);
+  const c = { schemaVersion: 1, id: 'synthetic-related-parts', name: 'Synthetic related Word text', createdAt: '2026-10-28T00:00:00.000Z', sources: [source], graph: { nodes: [], edges: [] }, rules: [], calculations: [] };
+  assert.deepEqual(await importCase(await exportCase(c)), c);
+});
+test('DOCX relationship-linked text rejects missing, malformed, conflicting or external targets', async () => {
+  const variants = [];
+  const missing = relatedWordFiles(); delete missing['word/header1.xml']; variants.push(missing);
+  const malformed = relatedWordFiles(); malformed['word/header1.xml'] = '<w:hdr><w:p>broken'; variants.push(malformed);
+  const wrongRoot = relatedWordFiles(); wrongRoot['word/header1.xml'] = '<w:ftr><w:p/></w:ftr>'; variants.push(wrongRoot);
+  const noRelations = relatedWordFiles(); delete noRelations['word/_rels/document.xml.rels']; variants.push(noRelations);
+  for (const target of ['https://invalid.test/header.xml', '//invalid.test/header.xml', '../../escape.xml', '%2e%2e/header.xml']) {
+    const files = relatedWordFiles(); files['word/_rels/document.xml.rels'] = files['word/_rels/document.xml.rels'].replace('Target="header1.xml"', `Target="${target}"`); variants.push(files);
+  }
+  const external = relatedWordFiles(); external['word/_rels/document.xml.rels'] = external['word/_rels/document.xml.rels'].replace('Target="header1.xml"', 'Target="header1.xml" TargetMode="External"'); variants.push(external);
+  const conflicting = relatedWordFiles(); conflicting['word/_rels/document.xml.rels'] = conflicting['word/_rels/document.xml.rels'].replace('relationships/footer', 'relationships/header').replace('Target="footer1.xml"', 'Target="endnotes.xml"'); variants.push(conflicting);
+  for (const files of variants) await assert.rejects(parseOffice(zip(files), 'docx'), /Office import/);
+});
+test('DOCX notes reject missing citations, duplicate ids, unsupported roots and ambiguous note parts', async () => {
+  const variants = [];
+  const missingCited = relatedWordFiles(); missingCited['word/footnotes.xml'] = missingCited['word/footnotes.xml'].replace('w:id="5"', 'w:id="6"'); variants.push(missingCited);
+  const duplicate = relatedWordFiles(); duplicate['word/footnotes.xml'] = duplicate['word/footnotes.xml'].replace('w:id="8"', 'w:id="5"'); variants.push(duplicate);
+  const wrongRoot = relatedWordFiles(); wrongRoot['word/endnotes.xml'] = '<w:comments/>'; variants.push(wrongRoot);
+  const ambiguousZero = relatedWordFiles(); ambiguousZero['word/footnotes.xml'] = ambiguousZero['word/footnotes.xml'].replace('w:id="8"', 'w:id="-0"'); variants.push(ambiguousZero);
+  const noNoteRelation = relatedWordFiles(); noNoteRelation['word/_rels/document.xml.rels'] = noNoteRelation['word/_rels/document.xml.rels'].replace(/<Relationship Id="fn"[^>]*\/>/, ''); variants.push(noNoteRelation);
+  const multiple = relatedWordFiles(); multiple['word/_rels/document.xml.rels'] = multiple['word/_rels/document.xml.rels'].replace('</Relationships>', '<Relationship Id="fn2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes-other.xml"/></Relationships>'); multiple['word/footnotes-other.xml'] = multiple['word/footnotes.xml']; variants.push(multiple);
+  for (const files of variants) await assert.rejects(parseOffice(zip(files), 'docx'), /Office import/);
+});
+test('DOCX deleted references do not require live parts, strict relationship URIs and alternate prefixes remain supported', async () => {
+  const files = relatedWordFiles();
+  files['word/document.xml'] = files['word/document.xml'].replace('<w:sectPr>', '<w:p><w:del><w:r><w:footnoteReference w:id="999"/></w:r></w:del></w:p><w:sectPr>');
+  files['word/_rels/document.xml.rels'] = files['word/_rels/document.xml.rels'].replaceAll('http://schemas.openxmlformats.org/officeDocument/2006/relationships/', 'http://purl.oclc.org/ooxml/officeDocument/relationships/');
+  files['word/footnotes.xml'] = files['word/footnotes.xml'].replaceAll('w:', 'n:').replace('xmlns:w=', 'xmlns:n=');
+  const records = await parseOffice(zip(files), 'docx');
+  assert.equal(records.find(r => r.locator.noteId === '5').text, 'Footnote current');
+  assert.equal(records.filter(r => r.locator.role === 'header').length, 1);
+});

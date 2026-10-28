@@ -103,28 +103,110 @@
   function childText(node, name) { const item = children(node, name)[0]; return item ? textOf(item) : ''; }
   function indexAmong(node, name) { return children(node.parent, name).indexOf(node) + 1; }
   function ancestor(node, name) { let p = node.parent; while (p) { if (p.local === name) return p; p = p.parent; } return null; }
-  function docx(entries) {
-    const doc = part(entries, 'word/document.xml'); if (doc.local !== 'document') fail('Word document root is invalid.');
-    const body = children(doc, 'body')[0]; if (!body) fail('Word document body is missing.');
-    const records = [], tables = descendants(body, 'tbl');
-    const paragraphs = descendants(body, 'p');
+  function localAttribute(node, name) {
+    const matches = Object.keys(node.attrs).filter(key => key === name || key.endsWith(':' + name));
+    if (matches.length > 1) fail(`ambiguous ${name} attribute in Word part.`);
+    return matches.length ? node.attrs[matches[0]] : undefined;
+  }
+  function currentWordNode(node) { return !ancestor(node, 'del') && !ancestor(node, 'moveFrom'); }
+  function wordRecords(container, context, records) {
+    const tables = descendants(container, 'tbl'), paragraphs = descendants(container, 'p');
     for (let i = 0; i < paragraphs.length; i++) {
-      const paragraph = paragraphs[i], pieces = []; if (ancestor(paragraph, 'del')) continue;
-      function run(node) { for (const child of children(node)) { if (child.local === 't') pieces.push(textOf(child)); else if (child.local === 'tab') pieces.push('\t'); else if (child.local === 'br' || child.local === 'cr') pieces.push('\n'); else if (!['del', 'instrText', 'p'].includes(child.local)) run(child); } }
+      const paragraph = paragraphs[i], pieces = []; if (!currentWordNode(paragraph)) continue;
+      function run(node) {
+        for (const child of children(node)) {
+          if (child.local === 't') pieces.push(textOf(child));
+          else if (child.local === 'tab') pieces.push('\t');
+          else if (child.local === 'br' || child.local === 'cr') pieces.push('\n');
+          else if (!['del', 'moveFrom', 'instrText', 'delInstrText', 'p'].includes(child.local)) run(child);
+        }
+      }
       run(paragraph); const text = pieces.join(''); if (!text.trim()) continue;
       const table = ancestor(paragraph, 'tbl'), row = ancestor(paragraph, 'tr'), cell = ancestor(paragraph, 'tc');
-      const locator = { kind: 'word', part: 'word/document.xml', paragraph: i + 1, label: `Paragraph ${i + 1}` };
+      const locator = { kind: 'word', part: context.part, role: context.role, paragraph: i + 1, label: `Paragraph ${i + 1}` };
       if (table && row && cell) Object.assign(locator, { table: tables.indexOf(table) + 1, row: indexAmong(row, 'tr'), cell: indexAmong(cell, 'tc'), label: `Table ${tables.indexOf(table) + 1}, row ${indexAmong(row, 'tr')}, cell ${indexAmong(cell, 'tc')}, paragraph ${i + 1}` });
+      if (context.noteId !== undefined) locator.noteId = context.noteId;
+      if (context.role !== 'body') locator.label = `${context.role[0].toUpperCase() + context.role.slice(1)}${context.noteId === undefined ? '' : ' ' + context.noteId} (${context.part}), ${locator.label[0].toLowerCase() + locator.label.slice(1)}`;
       const style = children(children(paragraph, 'pPr')[0] || { children: [] }, 'pStyle')[0];
-      records.push({ text, locator, fields: { style: style ? style.attrs['w:val'] || style.attrs.val || '' : '', revisionPolicy: 'current text; deleted text and field instructions excluded; field results not recalculated' } });
+      const fields = { style: style ? localAttribute(style, 'val') || '' : '', role: context.role, revisionPolicy: 'current text; deleted and moved-from text and field instructions excluded; cached field results not recalculated' };
+      if (context.relationshipIds) fields.relationshipIds = [...context.relationshipIds];
+      if (context.referencedInDocument !== undefined) { fields.referencedInDocument = context.referencedInDocument; fields.referencePolicy = 'syntactic references only; rendered pages and legal applicability are not inferred'; }
+      if (context.referenceTypes) fields.referenceTypes = [...context.referenceTypes];
+      records.push({ text, locator, fields });
       if (records.length > LIMIT.records) fail('record limit exceeded.');
+    }
+  }
+  function docx(entries) {
+    const documentPart = 'word/document.xml', doc = part(entries, documentPart);
+    if (doc.local !== 'document') fail('Word document root is invalid.');
+    const body = children(doc, 'body')[0]; if (!body) fail('Word document body is missing.');
+    const records = [];
+    wordRecords(body, { part: documentPart, role: 'body' }, records);
+    const relRoot = part(entries, 'word/_rels/document.xml.rels', true), relationships = new Map(), related = new Map();
+    if (relRoot && relRoot.local !== 'Relationships') fail('Word relationships root is invalid.');
+    const supportedType = /^http:\/\/(?:schemas\.openxmlformats\.org\/officeDocument\/2006|purl\.oclc\.org\/ooxml\/officeDocument)\/relationships\/(header|footer|footnotes|endnotes)$/;
+    for (const node of relRoot ? children(relRoot, 'Relationship') : []) {
+      const rel = node.attrs;
+      if (!rel.Id || /\s/.test(rel.Id) || rel.Id.length > 256 || relationships.has(rel.Id) || !rel.Type) fail('invalid or duplicate Word relationship.');
+      const type = supportedType.exec(rel.Type);
+      relationships.set(rel.Id, { attrs: rel, role: type ? type[1] : null });
+      if (!type) continue; // Other relationships, including hyperlinks and media, remain inert.
+      if (!rel.Target || (rel.TargetMode && rel.TargetMode !== 'Internal')) fail('external or missing Word text-part relationship.');
+      const path = resolveTarget(documentPart, rel.Target);
+      if (!path || !path.startsWith('word/') || path === documentPart) fail('Word text-part relationship is outside the supported Word package.');
+      const prior = related.get(path);
+      if (prior && prior.role !== type[1]) fail('one Word part has conflicting relationship roles.');
+      if (prior) prior.relationshipIds.push(rel.Id);
+      else related.set(path, { part: path, role: type[1], relationshipIds: [rel.Id], references: [] });
+    }
+    // Section references validate relationship IDs, but never imply rendered page positions.
+    for (const role of ['header', 'footer']) for (const reference of descendants(body, role + 'Reference').filter(currentWordNode)) {
+      const relationId = localAttribute(reference, 'id'), relation = relationships.get(relationId);
+      if (!relation || relation.role !== role) fail(`missing or mismatched Word ${role} relationship.`);
+      const target = resolveTarget(documentPart, relation.attrs.Target);
+      const referenceType = localAttribute(reference, 'type');
+      if (referenceType !== undefined && !['default', 'even', 'first'].includes(referenceType)) fail(`unsupported Word ${role} reference type.`);
+      related.get(target).references.push({ type: referenceType || 'unspecified' });
+    }
+    const referenceContainers = [body];
+    for (const item of related.values()) {
+      if (!['header', 'footer'].includes(item.role)) continue;
+      const content = part(entries, item.part), expectedRoot = item.role === 'header' ? 'hdr' : 'ftr';
+      if (content.local !== expectedRoot) fail(`invalid Word ${item.role} part root in ${item.part}.`);
+      referenceContainers.push(content);
+      wordRecords(content, { ...item, referencedInDocument: item.references.length > 0, referenceTypes: [...new Set(item.references.map(x => x.type))] }, records);
+    }
+    for (const plural of ['footnotes', 'endnotes']) {
+      const role = plural.slice(0, -1), parts = [...related.values()].filter(item => item.role === plural);
+      if (parts.length > 1) fail(`multiple Word ${plural} parts are unsupported.`);
+      const citations = new Set();
+      for (const container of referenceContainers) for (const reference of descendants(container, role + 'Reference').filter(currentWordNode)) {
+        const noteId = localAttribute(reference, 'id');
+        if (!/^(?:0|[1-9]\d*)$/.test(noteId || '') || !Number.isSafeInteger(Number(noteId))) fail(`invalid Word ${role} reference id.`);
+        citations.add(noteId);
+      }
+      if (!parts.length) { if (citations.size) fail(`Word ${plural} relationship is missing for cited notes.`); continue; }
+      const item = parts[0], content = part(entries, item.part);
+      if (content.local !== plural) fail(`invalid Word ${plural} part root in ${item.part}.`);
+      const seen = new Set(), normalNotes = new Set();
+      for (const note of children(content, role)) {
+        const noteId = localAttribute(note, 'id'), noteType = localAttribute(note, 'type') || 'normal';
+        if (!/^-?(?:0|[1-9]\d*)$/.test(noteId || '') || !Number.isSafeInteger(Number(noteId)) || String(Number(noteId)) !== noteId || seen.has(noteId)) fail(`invalid or duplicate Word ${role} id.`);
+        seen.add(noteId);
+        if (['separator', 'continuationSeparator', 'continuationNotice'].includes(noteType)) continue;
+        if (noteType !== 'normal' || Number(noteId) < 0) fail(`unsupported Word ${role} type or id.`);
+        normalNotes.add(noteId);
+        wordRecords(note, { ...item, role, noteId, referencedInDocument: citations.has(noteId) }, records);
+      }
+      for (const noteId of citations) if (!normalNotes.has(noteId)) fail(`Word ${role} ${noteId} is cited but missing or not a normal note.`);
     }
     return records;
   }
   function resolveTarget(base, target) {
-    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.includes('\\') || target.includes('\0') || target.includes('#') || target.includes('?')) fail('external or invalid workbook relationship.');
+    if (target.startsWith('//') || /%[0-9a-f]{2}/i.test(target)) fail('encoded or external package relationship is unsupported.');
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.includes('\\') || target.includes('\0') || target.includes('#') || target.includes('?')) fail('external or invalid package relationship.');
     const parts = target.startsWith('/') ? [] : base.split('/').slice(0, -1);
-    for (const piece of target.split('/')) { if (!piece || piece === '.') continue; if (piece === '..') { if (!parts.length) fail('workbook path escapes package.'); parts.pop(); } else parts.push(piece); } return parts.join('/');
+    for (const piece of target.split('/')) { if (!piece || piece === '.') continue; if (piece === '..') { if (!parts.length) fail('relationship path escapes package.'); parts.pop(); } else parts.push(piece); } return parts.join('/');
   }
   function xlsx(entries) {
     const workbook = part(entries, 'xl/workbook.xml'), rels = part(entries, 'xl/_rels/workbook.xml.rels');
@@ -162,7 +244,7 @@
     const entries = await readZip(bytes); part(entries, '[Content_Types].xml');
     return extension === 'docx' ? docx(entries) : xlsx(entries);
   }
-  const api = { parseOffice, officeLimits: LIMIT };
+  const api = { parseOffice, officeLimits: LIMIT, officeVersion: '1.1.0' };
   Object.assign(root.PBGC = root.PBGC || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);
