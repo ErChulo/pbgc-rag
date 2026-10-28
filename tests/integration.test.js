@@ -96,3 +96,32 @@ test('source hash tampering fails even with a freshly recomputed package envelop
   c.sources[0].hash = '0'.repeat(64);
   await assert.rejects(A.exportCase(c), /Source identity or hash/);
 });
+
+test('portable graph validation rejects graphs that the traversal contract cannot safely query', async () => {
+  const c = await workspace();
+  const source = c.sources[0], recordId = source.records[0].id;
+  c.graph.nodes = [{ id: 'a' }, { id: 'b' }];
+  const edge = { id: 'edge-one', from: 'a', to: 'b', type: 'supports', sourceId: source.id, recordId };
+  for (const changes of [{ id: undefined }, { recordId: undefined }, { caseId: 'foreign-case' }]) {
+    c.graph.edges = [{ ...edge, ...changes }];
+    // JSON packages drop undefined fields, so use the actual portable representation.
+    c.graph.edges = JSON.parse(JSON.stringify(c.graph.edges));
+    assert.equal(A.validateCase(c).valid, false, JSON.stringify(changes));
+  }
+  c.graph.edges = [edge, { ...edge }];
+  assert.equal(A.validateCase(c).valid, false, 'duplicate edge ids');
+  c.graph.edges = [edge];
+  c.graph.caseId = 'foreign-case';
+  assert.equal(A.validateCase(c).valid, false, 'foreign graph case');
+  c.graph.caseId = c.id;
+  c.graph.nodes[0].caseId = 'foreign-case';
+  assert.equal(A.validateCase(c).valid, false, 'foreign node case');
+});
+
+test('portable rule validation requires evidence even when an attacker bypasses the proposal API', async () => {
+  const c = await workspace();
+  const rule = propose(c, [c.sources[0].records[0].id]);
+  rule.sourceRecordIds = [];
+  assert.equal(A.validateCase(c).valid, false);
+  await assert.rejects(A.exportCase(c), /evidence|Rule/);
+});
