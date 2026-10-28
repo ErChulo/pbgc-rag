@@ -106,3 +106,8 @@ test('imported rules cannot omit evidence or duplicate evidence references', () 
   r.sourceRecordIds = [c.sources[0].records[0].id, c.sources[0].records[0].id];
   assert.equal(A.validateCase(c).valid, false);
 });
+test('duplicate proposal evidence fails without mutating the case', () => {
+  const c = fixture(); const id = c.sources[0].records[0].id;
+  assert.throws(() => A.proposeRule(c, { id: 'duplicate', title: 'Duplicate', effectiveDate: '2026-01-01', sourceRecordIds: [id, id] }), /Proposal/);
+  assert.equal(c.rules.length, 0); assert.equal(A.validateCase(c).valid, true);
+});

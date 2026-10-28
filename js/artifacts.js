@@ -133,7 +133,8 @@
   }
   function proposeRule(c, p) {
     assertCase(c);
-    if (!plain(p) || !str(p.id, 200) || c.rules.some(r => r.id === p.id) || !str(p.title, 300) || !isoDate(p.effectiveDate) || !Array.isArray(p.sourceRecordIds) || !p.sourceRecordIds.length) throw new Error('Proposal needs a unique id, title, effective date, and source evidence.');
+    if (c.rules.length >= LIMITS.rules) throw new Error('Rule limit exceeded.');
+    if (!plain(p) || !str(p.id, 200) || c.rules.some(r => r.id === p.id) || !str(p.title, 300) || !isoDate(p.effectiveDate) || !Array.isArray(p.sourceRecordIds) || !p.sourceRecordIds.length || new Set(p.sourceRecordIds).size !== p.sourceRecordIds.length) throw new Error('Proposal needs a unique id, title, effective date, and source evidence.');
     const recordIds = new Set(c.sources.flatMap(s => s.records.map(r => r.id)));
     if (p.sourceRecordIds.some(id => !recordIds.has(id))) throw new Error('Proposal evidence is outside this case.');
     const rule = { id: p.id, version: 1, title: p.title, effectiveDate: p.effectiveDate, sourceRecordIds: [...p.sourceRecordIds], status: 'proposed', synthetic: p.synthetic === true, formula: p.formula === 'synthetic-accrual-v1' ? p.formula : null, interpretation: typeof p.interpretation === 'string' ? p.interpretation.slice(0, 10000) : '', rounding: 'half up to nearest cent', inputContract: ['annualSalaryCents', 'serviceMonths', 'accrualBasisPoints'], outputContract: ['annualBenefitCents', 'monthlyBenefitCents'] };
@@ -158,6 +159,7 @@
     assertCase(c);
     const r = c.rules.find(x => x.id === id);
     if (!r || r.status !== 'approved' || r.synthetic !== true || r.formula !== 'synthetic-accrual-v1') throw new Error('Calculation requires an approved, explicitly synthetic accrual rule.');
+    if (c.calculations.length >= 10000) throw new Error('Calculation limit exceeded.');
     const amounts = syntheticAmounts(inputs);
     const result = { schemaVersion: VERSION, synthetic: true, official: false, ruleId: r.id, ruleVersion: r.version, inputs: { annualSalaryCents: inputs.annualSalaryCents, serviceMonths: inputs.serviceMonths, accrualBasisPoints: inputs.accrualBasisPoints }, annualBenefitCents: amounts.annualBenefitCents, monthlyBenefitCents: amounts.monthlyBenefitCents, rounding: 'half up to nearest cent; annual and monthly values independently rounded from exact rational amounts', trace: amounts.trace, limitation: 'Synthetic arithmetic only. This does not model an actual plan, PBGC guarantee, interest, mortality, limits, or statutory benefit.' };
     c.calculations.push(result); return result;
