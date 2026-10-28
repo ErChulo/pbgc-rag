@@ -35,3 +35,12 @@ Development resumed without additional user configuration. Added independent ref
 Current integrated module suite: 146 PASS before additional PDF-engine work. Actual Chromium secondary HTTP checks pass for the full workflow, references across two isolated cases, interrupted import/reload/resume, nested folder paths, damaged-case recovery and pruning, SVG keyboard/hostile-input behavior, and question/temporal-link integration. These results do not satisfy the managed file-origin gate. Broader local PDF extraction is being developed separately and must pass its tests before integration.
 
 Completed portions of queue item 3: separate reference-library lifecycle, relative directory selection, complete-source hash checkpoints/resume, and checkpoint recovery UX. Mid-parser interruption, OPFS and broad large-file/performance acceptance remain unfinished. Queue item 4 now has honest source-only natural-language question retrieval; model-based semantic inference remains separate and unavailable.
+
+
+## Current verified increment 0.2.0
+
+155 module/integration tests PASS. All five Chromium secondary HTTP suites PASS: full workflow, recovery, interrupted imports/directory resume, reference-library isolation, and accessible graph behavior. The full workflow additionally blocks and counts any runtime fetch/Worker/FontFace construction or CSP violation while parsing a real synthetic embedded-font PDF; all counts remain zero.
+
+The audited pinned PDF.js engine is now integrated as a local classic script, with embedded CMap/font parsing data, no worker/assets download and conservative decompression/content bounds. Native text with tested embedded TrueType/ToUnicode/xref streams works. Original bytes remain unchanged and round-trip through case packages. No OCR, object streams, unsupported filter/indirect stream-length coverage or exact glyph-bounding-box claim is made. Version and licenses are in docs/PDF_ENGINE.md and vendor/pdfjs/PROVENANCE.json. Python RAG-Anything remains optional and uninstalled.
+
+Next engineering work: legacy DOC/XLS and remaining binary variants; OPFS and schema-migration/reindex lifecycle; mid-parser interruption and broader CPU/RAM acceptance; model-based semantic retrieval; further domain and official artifact implementations once authoritative sources/specifications are available. Full application/official/workplace acceptance is still not complete.

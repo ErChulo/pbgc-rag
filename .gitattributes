@@ -3,3 +3,6 @@
 *.docx binary
 *.xlsx binary
 *.db binary
+
+# Preserve original audited upstream source/notice whitespace.
+vendor/pdfjs/** whitespace=-blank-at-eol,-blank-at-eof

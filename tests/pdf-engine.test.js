@@ -48,3 +48,15 @@ test('raw stream limits and oversized combined text spans fail before creating u
  const content='BT /F1 .001 Tf 72 720 Td [('+'x'.repeat(40000)+')('+'y'.repeat(40000)+')] TJ ET';
  await assert.rejects(parsePDFAdvanced(pdf({content,compress:true})),/searchable 65536/);
 });
+
+test('source wrapper prefers the audited engine and packages untouched originals with engine version', async () => {
+  const { parseFile } = require('../js/parsers.js');
+  const { exportCase, importCase } = require('../js/artifacts.js');
+  const input = pdf({content:'BT /F1 12 Tf 72 720 Td <01> Tj ET',unicode:true,xrefStream:true,compress:true});
+  const source = await parseFile(new File([input], 'synthetic-unicode.pdf'));
+  assert.equal(source.records[0].text, 'Ω');
+  assert.match(source.parserVersion, /pdfjs-6\.4\.299/);
+  assert.deepEqual(Buffer.from(source.originalBase64, 'base64'), Buffer.from(input));
+  const c = {schemaVersion:1,id:'pdf-wrapper-case',name:'Synthetic PDF wrapper case',createdAt:'2026-10-28T00:00:00.000Z',sources:[source],graph:{nodes:[],edges:[]},rules:[],calculations:[]};
+  assert.deepEqual(await importCase(await exportCase(c)), c);
+});

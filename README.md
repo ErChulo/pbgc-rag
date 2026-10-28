@@ -9,13 +9,13 @@ Keep `index.html`, `js/`, and `assets/` together. Open `index.html` directly in 
 Use only synthetic data in this public repository and cloud environment. Do not upload participant records, restricted cases, proprietary templates, or internal PBGC material.
 
 1. Create a case or load the synthetic demonstration.
-2. Import supported files. Inspect the source inventory and retained original bytes.
+2. Import supported files or a folder where supported. Completed sources and a separate hash-bound resume manifest commit atomically. Re-select files after interruption; unchanged content is skipped. Inspect the source inventory and retained original bytes.
 3. Search by keywords, exact text, bounded regex, or read-only SQL. Use source scope to narrow large searches.
-4. Add evidence nodes and proposed graph links. Trace bounded paths; do not treat links as legal conclusions.
+4. Add evidence nodes and proposed dated graph links. Inspect the keyboard-selectable SVG and trace bounded paths; do not treat links as legal conclusions.
 5. Record interpretation proposals with source evidence and applicability dates. Proposals remain inactive.
 6. Inspect the provisional review and export a verified portable case package. Restore checks payload and source-byte hashes.
 
-The app probes IndexedDB with actual reads/writes before using it, keeps bounded verified revisions, and falls back to memory when unavailable. Browser storage is best effort and plaintext. Export a backup before closing. Package integrity detects corruption, not authorship or factual validity.
+The app probes IndexedDB with actual reads/writes before using it, keeps bounded verified revisions, and falls back to memory when unavailable. The Case step exposes verified checkpoints; damaged current cases are isolated, and an older checkpoint restores as a new revision. Pruning older history requires an explicit action. Reference libraries have separate versioned packages and browser storage. Add only authorized shared originals; explicitly copy selected sources into a case. Each copy pins its library edition, and later updates never alter cases or copy interpretations. Browser storage is best effort and plaintext. Export a backup before closing. Package integrity detects corruption, not authorship or factual validity.
 
 ## Supported formats and limitations
 
@@ -26,9 +26,9 @@ The app probes IndexedDB with actual reads/writes before using it, keeps bounded
 | JSON | Scalar evidence with JSON pointers; bounded nesting |
 | XML | Text nodes and exact paths; DTD/external entities rejected; no attribute record inventory |
 | HTML | Inert text only; scripts/styles excluded, no imported DOM execution |
-| DOCX | Main-body paragraphs and tables/cells; no complete visual/layout fidelity, header/footnote/image extraction |
+| DOCX | Main body plus supported related headers, footers, footnotes and endnotes; precise parts/paragraphs/cells/note IDs; no rendered pagination, images, comments or complete visual/layout fidelity |
 | XLSX, XLSM | Sheets/cells, rich/shared strings, raw numbers, formula text and cached values; no macro/formula execution or date inference |
-| PDF | Conventional xref-table PDFs with supported standard Roman Type1 text fonts and raw/Flate streams; no OCR, custom/embedded fonts, xref streams, incremental files, image/form XObjects or bounding-box inference |
+| PDF | Audited local PDF.js 6.4.299 with bounded raw/Flate preflight: tested native text, embedded TrueType, ToUnicode and xref streams; precise page/text-item geometry, no inferred glyph boxes. No OCR, encrypted files, object streams, indirect lengths or unsupported compression filters. Mixed pages without native text are identified. See docs/PDF_ENGINE.md |
 | SQLite | Standalone unencrypted rowid tables; exact column values/rowids; no overflow payloads, WITHOUT ROWID, WAL snapshots, virtual tables or schema-expression execution |
 | Legacy DOC, XLS | Unsupported; explicit rejection |
 
@@ -38,11 +38,15 @@ SQL starts with `SELECT * FROM records LIMIT 20`. It supports scalar fields, com
 
 ## Development and tests
 
-Node 22+ is development-only. There are no npm runtime dependencies.
+Node 22+ is development-only. No package installation is needed at runtime. PDF parsing uses a pinned, locally bundled PDF.js engine and embedded parsing resources; licenses and provenance are retained under vendor/pdfjs. It creates no worker and downloads no runtime assets.
 
 ```sh
 npm test
 npm run test:browser
+npm run test:recovery
+npm run test:imports
+npm run test:libraries
+npm run test:graph
 ```
 
 The browser test uses installed Playwright and `/usr/bin/chromium` (`CHROMIUM_PATH` can select another approved installation). It requires browser process/socket permissions. The default test opens the real `file://` app and must pass before file-origin acceptance. The current cloud managed URL policy blocks it. Do not bypass managed policy.
@@ -51,6 +55,10 @@ For secondary UI diagnosis in this environment:
 
 ```sh
 PBGC_HTTP_CHECK=1 npm run test:browser
+PBGC_HTTP_CHECK=1 npm run test:recovery
+PBGC_HTTP_CHECK=1 npm run test:imports
+PBGC_HTTP_CHECK=1 npm run test:libraries
+PBGC_HTTP_CHECK=1 npm run test:graph
 ```
 
 The test starts/stops its own loopback server, blocks external HTTP/HTTPS/WebSockets, and exercises the synthetic workflow, original binary parsers, hostile markup, portable recovery and storage fallback. An HTTP pass does not satisfy `file://` acceptance. No browser processes or servers need to persist between tasks.
@@ -59,6 +67,8 @@ The test starts/stops its own loopback server, blocks external HTTP/HTTPS/WebSoc
 
 The internal report and provisional BSRS representation are **not** official R1 or BSRS formats. Official R1/R5/DEL/PF/V1/436, determination letters and template-preserving exports remain blocked. Missing approved `data_dictionary_complete.xlsm`, official templates/mappings, authoritative BSRS syntax/validator, ATPBGC reference specifications/results, and authorized actuarial interpretation approval cannot be replaced with invented fields or formulas. Synthetic arithmetic tests demonstrate software behavior only.
 
-See [KICKOFF.md](KICKOFF.md), [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [docs/UPSTREAM_AUDIT.md](docs/UPSTREAM_AUDIT.md). No RAG-Anything code was imported: upstream license/revision/dependencies could not be audited while the inherited HTTPS proxy refused connections.
+See [KICKOFF.md](KICKOFF.md), [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [docs/UPSTREAM_AUDIT.md](docs/UPSTREAM_AUDIT.md). No RAG-Anything code was imported. Its exact revision, MIT license and direct dependency architecture were audited; the optional Python stack is not required by the workplace build.
 
 Build a development portable ZIP with `python3 scripts/package.py`. The bundle includes a SHA-256 manifest and synthetic fixtures; it is explicitly incomplete and is not an accepted workplace release.
+
+Natural-language questions use exact-token lexical retrieval, not a language model. They return full/partial/insufficient token coverage and original source excerpts; no synthesized answer or legal priority is inferred. See docs/QUESTIONS.md, docs/INDEXING.md, docs/REFERENCE_LIBRARY.md and docs/GRAPH_VIEW.md for precise contracts.

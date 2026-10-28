@@ -155,7 +155,7 @@
     const id = 'src-' + hash;
     let records;
     if(['docx','xlsx','xlsm'].includes(format)){if(!root.PBGC?.parseOffice)throw Error('Office parser is unavailable.');records=await root.PBGC.parseOffice(bytes,extension);}
-    else if(format==='pdf'){if(!root.PBGC?.parsePDF)throw Error('PDF parser is unavailable.');records=await root.PBGC.parsePDF(bytes);}
+    else if(format==='pdf'){if(!root.PBGC?.parsePDF && !root.PBGC?.parsePDFAdvanced)throw Error('PDF parser is unavailable.');records=await (root.PBGC.parsePDFAdvanced || root.PBGC.parsePDF)(bytes);}
     else if(format==='sqlite'){if(!root.PBGC?.parseSQLite)throw Error('SQLite parser is unavailable.');records=await root.PBGC.parseSQLite(bytes);}
     else if (format === 'csv' || format === 'tsv') records = delimited(text, format === 'csv' ? ',' : '\t');
     else if (format === 'json') records = jsonRecords(text);
@@ -163,7 +163,7 @@
     else records = lines(text);
     if (records.length > MAX_RECORDS) throw new Error('Record limit exceeded. Split the source file.');
     records = records.map((record, index) => ({ ...record, id: `${id}:${index + 1}`, sourceId: id }));
-    return { id, name: file.name, hash, format, size: bytes.byteLength, parserVersion: ['docx','xlsx','xlsm'].includes(format) ? (root.PBGC.officeVersion || VERSION) : VERSION, encoding, records, originalBase64: bytesToBase64(bytes) };
+    return { id, name: file.name, hash, format, size: bytes.byteLength, parserVersion: ['docx','xlsx','xlsm'].includes(format) ? (root.PBGC.officeVersion || VERSION) : (format==='pdf' && root.PBGC.parsePDFAdvanced ? `pdfjs-${root.PBGC_PDFJS?.version || 'unavailable'}/bounded-1` : VERSION), encoding, records, originalBase64: bytesToBase64(bytes) };
   }
   const api = { parseFile, parserRegistry: Object.freeze({ version: VERSION, formats: FORMATS, maxBytes: MAX_BYTES, maxRecords: MAX_RECORDS, maxDepth: MAX_DEPTH }) };
   Object.assign(root.PBGC = root.PBGC || {}, api);

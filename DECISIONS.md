@@ -8,3 +8,5 @@
 - The repository began with three requirement documents and no app or tests. User explicitly authorized source implementation and commits after onboarding inspection; subsequent code changes are development work.
 - The cloud Chromium URL policy blocks file navigation. Respect it and retain file acceptance as blocked; HTTP secondary tests are diagnostic only.
 - RAG-Anything import is deferred until exact upstream revision, license and dependency audit can be verified through the supported proxy.
+
+- Increment 0.2: upstream RAG-Anything audit is complete; its Python runtime remains optional rather than a browser dependency. A separately audited pinned Mozilla PDF.js classic bundle now expands native PDF text support, with main-thread execution, embedded parser resources and strict preflight bounds. Source/version integrity and all license notices are retained. No runtime package installation or network access is introduced.

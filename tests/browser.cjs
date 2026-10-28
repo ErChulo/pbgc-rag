@@ -16,8 +16,17 @@ try {
  const attempts=[], errors=[];
  await context.route(/https?:\/\//,route=>{if(server&&new URL(route.request().url()).origin===new URL(base).origin)return route.continue();attempts.push(route.request().url());return route.abort();});
  await context.routeWebSocket(/.*/,ws=>{attempts.push(ws.url());ws.close();});
+ await context.addInitScript(()=>{
+  window.__pdfRestrictedCalls={fetch:0,worker:0,fontFace:0,policy:[]};
+  globalThis.fetch=()=>{window.__pdfRestrictedCalls.fetch++;return Promise.reject(Error('Unexpected runtime fetch'));};
+  globalThis.Worker=class{constructor(){window.__pdfRestrictedCalls.worker++;throw Error('Unexpected runtime worker');}};
+  globalThis.FontFace=class{constructor(){window.__pdfRestrictedCalls.fontFace++;throw Error('Unexpected font installation');}};
+  window.addEventListener('securitypolicyviolation',e=>window.__pdfRestrictedCalls.policy.push(e.violatedDirective));
+ });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);
+
+
  await page.getByRole('button',{name:'Load synthetic demonstration'}).click();
  await page.getByRole('heading',{name:'Search source evidence'}).waitFor();
  await page.getByLabel('Search text or query').fill('retirement');
@@ -101,6 +110,17 @@ try {
  await page.getByLabel('Search text or query').fill('Synthetic PDF evidence');
  await page.getByRole('button',{name:'Search',exact:true}).click();
  await page.getByText('Synthetic PDF evidence',{exact:true}).waitFor();
+ const nativePDFFixtures=JSON.parse(fs.readFileSync(path.join(__dirname,'pdf-engine.test.js'),'utf8').match(/const fixtures=(\{[^\n]*\});/)[1]);
+ await page.getByRole('link',{name:'2 · Import'}).click();
+ await page.getByLabel('Select source files').setInputFiles([{name:'synthetic-embedded.pdf',mimeType:'application/pdf',buffer:Buffer.from(nativePDFFixtures.embedded,'base64')}]);
+ await page.getByRole('button',{name:'Import and index'}).click();
+ await page.getByText('1 files imported. 0 skipped or rejected.',{exact:true}).waitFor();
+ await page.getByRole('link',{name:'3 · Search'}).click();
+ await page.getByLabel('Search text or query').fill('Synthetic embedded Ω');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText('Synthetic embedded Ω',{exact:true}).waitFor();
+ assert.deepEqual(await page.evaluate(()=>window.__pdfRestrictedCalls),{fetch:0,worker:0,fontFace:0,policy:[]});
+
  await page.evaluate(()=>{const parse=PBGC.parseFile;PBGC.parseFile=async file=>{await new Promise(r=>setTimeout(r,700));return parse(file);};});
  await page.getByRole('link',{name:'2 · Import'}).click();
  await page.getByLabel('Select source files').setInputFiles([{name:'cancelled.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic cancelled input')}]);

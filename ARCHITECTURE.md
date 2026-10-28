@@ -31,3 +31,6 @@ The coordinator owns index.html, app.js, CSS, package metadata, browser integrat
 - `renderEvidenceGraph` draws a bounded, keyboard-selectable SVG. Selection resolves evidence only against the current case. Temporal links are user-entered proposed claims; layout does not rank legal authority.
 - `retrieveQuestionEvidence` ranks exact normalized source terms for natural-language question text and returns unchanged excerpts and citations with full/partial/insufficient lexical coverage. It never generates an answer or claims semantic inference.
 - DOCX extraction includes supported relationship-linked headers, footers, footnotes and endnotes. Part/role/note provenance is explicit and stored but uncited parts are marked; parser version 1.1.0 identifies these semantics.
+
+
+The integrated advanced PDF path loads the audited self-contained vendor classic script before pdf-engine.js. parseFile prefers parsePDFAdvanced when present and records the engine/preflight version; direct legacy parsePDF remains independently tested. Native PDF source geometry is not treated as exact glyph bounds. Empty native-text pages are explicitly identified, and no-text documents refuse with an OCR limitation. The portable runtime carries all required notices and verifies vendor provenance hashes.
