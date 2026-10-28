@@ -1,0 +1,114 @@
+'use strict';
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const http = require('node:http');
+const fs = require('node:fs');
+(async () => {
+let server, reportHTML; let base='file://'+path.resolve(__dirname,'../index.html');
+if(process.env.PBGC_HTTP_CHECK==='1'){
+ const root=path.resolve(__dirname,'..');server=http.createServer((req,res)=>{if(req.url==='/__test_report.html'){res.setHeader('Content-Type','text/html');res.end(reportHTML||'No report');return;}const p=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]));if(!p.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(p,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');res.end(data);});});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));base=`http://127.0.0.1:${server.address().port}/index.html`;
+}
+const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-crash-reporter','--disable-crashpad','--disable-breakpad']});
+try {
+ const context = await browser.newContext({acceptDownloads:true});
+ const attempts=[], errors=[];
+ await context.route(/https?:\/\//,route=>{if(server&&new URL(route.request().url()).origin===new URL(base).origin)return route.continue();attempts.push(route.request().url());return route.abort();});
+ await context.routeWebSocket(/.*/,ws=>{attempts.push(ws.url());ws.close();});
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base);
+ await page.getByRole('button',{name:'Load synthetic demonstration'}).click();
+ await page.getByRole('heading',{name:'Search source evidence'}).waitFor();
+ await page.getByLabel('Search text or query').fill('retirement');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText('1 results',{exact:true}).waitFor();
+ assert.match(await page.locator('#results').innerText(),/65/);
+ await page.getByRole('button',{name:'Add to evidence graph'}).click();
+ await page.getByLabel('Search text or query').fill('amendment');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByRole('button',{name:'Add to evidence graph'}).click();
+ await page.getByRole('link',{name:'4 · Evidence graph'}).click();
+ await page.getByLabel('To evidence',{exact:true}).selectOption({index:1});
+ await page.getByRole('button',{name:'Add proposed link'}).click();
+ await page.getByRole('button',{name:'Trace linked evidence'}).click();
+ assert.match(await page.locator('#view pre').innerText(),/edgeIds/);
+
+ await page.locator('#view > p').filter({hasText:'Normal retirement age is 65'}).first().waitFor();
+ await page.getByRole('link',{name:'5 · Rules'}).click();
+ await page.getByLabel('Proposed rule title').fill('Synthetic retirement proposal');
+ await page.getByLabel('Effective date').fill('2026-01-01');
+ await page.getByLabel('Proposed interpretation').fill('Requires authorized review; no activation.');
+ await page.getByRole('button',{name:'Save proposal'}).click();
+ await page.getByText(/Synthetic retirement proposal · proposed/).waitFor();
+ for(const claimValue of ['65','67']){
+  await page.getByLabel('Claim subject',{exact:true}).fill('Synthetic plan');
+  await page.getByLabel('Applicable group',{exact:true}).fill('Synthetic group');
+  await page.getByLabel('Claim value',{exact:true}).fill(claimValue);
+  await page.getByRole('button',{name:'Add claim and screen conflicts'}).click();
+ }
+ assert.match(await page.locator('#view pre').innerText(),/unresolved/);
+ await page.getByRole('link',{name:'6 · Report and export'}).click();
+ await page.getByText('Internal case schema: PASS',{exact:true}).waitFor();
+ const [download] = await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export verified case package'}).click()]);
+ const packagePath=await download.path();assert.ok(packagePath);
+ const [htmlDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export readable review HTML'}).click()]);
+ reportHTML=fs.readFileSync(await htmlDownload.path(),'utf8');assert.match(reportHTML,/UNRESOLVED/);
+ if(server){const reportPage=await context.newPage();await reportPage.goto(new URL('/__test_report.html',base).href);await reportPage.getByText('PROVISIONAL — Official output BLOCKED',{exact:true}).waitFor();assert.equal(await reportPage.locator('script').count(),0);await reportPage.close();}
+
+ await page.getByText('IndexedDB available · export for backup',{exact:true}).waitFor();
+ await page.reload();
+ await page.getByRole('link',{name:'1 · Case'}).click();
+ await page.getByRole('button',{name:'Open Synthetic training plan',exact:true}).click();
+ await page.getByRole('link',{name:'1 · Case'}).click();
+ await page.getByLabel('Restore a portable case package').setInputFiles(packagePath);
+ await page.getByText('Case integrity and schema verified.',{exact:true}).waitFor();
+ await page.getByRole('link',{name:'2 · Import'}).click();
+ await page.getByLabel('Select source files').setInputFiles([{name:'hostile.html',mimeType:'text/html',buffer:Buffer.from('<p>Inert evidence</p><script>globalThis.pwned=true;fetch("https://invalid.test")</script><img src="https://invalid.test/a" onerror="globalThis.pwned=true">')}]);
+ await page.getByRole('button',{name:'Import and index'}).click();
+ await page.getByText('1 files imported. 0 skipped or rejected.',{exact:true}).waitFor();
+ assert.equal(await page.evaluate(()=>globalThis.pwned),undefined);
+ await page.getByRole('link',{name:'3 · Search'}).click();
+ await page.getByLabel('Search text or query').fill('Inert');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText('Inert evidence',{exact:true}).waitFor();
+ await page.getByRole('link',{name:'2 · Import'}).click();
+ await page.getByLabel('Select source files').setInputFiles(['../fixtures/synthetic-plan.docx','../fixtures/synthetic-plan.xlsx','../fixtures/synthetic-plan.pdf','fixtures/sqlite-synthetic.db'].map(f=>path.resolve(__dirname,f)));
+ await page.getByRole('button',{name:'Import and index'}).click();
+ await page.getByText('4 files imported. 0 skipped or rejected.',{exact:true}).waitFor();
+ await page.getByRole('link',{name:'3 · Search'}).click();
+ await page.getByLabel('Search text or query').fill('Synthetic PDF evidence');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByText('Synthetic PDF evidence',{exact:true}).waitFor();
+ await page.evaluate(()=>{const parse=PBGC.parseFile;PBGC.parseFile=async file=>{await new Promise(r=>setTimeout(r,700));return parse(file);};});
+ await page.getByRole('link',{name:'2 · Import'}).click();
+ await page.getByLabel('Select source files').setInputFiles([{name:'cancelled.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic cancelled input')}]);
+ await page.getByRole('button',{name:'Import and index'}).click();
+ await page.getByRole('link',{name:'5 · Rules'}).click();
+ await page.getByRole('button',{name:'Cancel active import',exact:true}).click();
+ await page.getByText('Import cancelled. Completed sources were saved.',{exact:true}).waitFor();
+ assert.equal(await page.locator('#source-table').count(),0);
+ await page.getByRole('link',{name:'1 · Case'}).click();
+ await page.getByRole('button',{name:'Load synthetic demonstration'}).click();
+ await page.getByLabel('Case name',{exact:true}).fill('Must not replace importing demo');
+ await page.getByRole('button',{name:'Create case',exact:true}).click();
+ await page.getByText('Wait for the import to finish.',{exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Search source evidence'}).waitFor();
+ await page.getByText('Synthetic training plan · 1 sources',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Use light theme'}).click();
+ assert.equal(await page.locator('body').getAttribute('class'),'light');
+ assert.deepEqual(errors,[]);assert.deepEqual(attempts,[]);
+ // Real file:// fallback when storage is unavailable.
+ const noStorage=await browser.newContext();
+ await noStorage.addInitScript(()=>Object.defineProperty(window,'indexedDB',{get(){throw Error('Storage disabled by policy');}}));
+ const fallback=await noStorage.newPage();
+ await fallback.goto(base);
+ await fallback.getByText('Memory only · export before closing',{exact:true}).waitFor();
+ await fallback.getByRole('button',{name:'Load synthetic demonstration'}).click();
+ await fallback.getByRole('heading',{name:'Search source evidence'}).waitFor();
+ await noStorage.close();
+ console.log(`PASS: ${server?'HTTP secondary check (file acceptance remains BLOCKED)':'file://'} synthetic import → search → graph → proposal → report → export → restore; hostile markup inert; zero external network attempts; memory fallback; dark/light toggle.`);
+ await page.screenshot({path:'/tmp/pbgc-rag-browser.png',fullPage:true});
+ await context.close();
+} finally { await browser.close();if(server)await new Promise(resolve=>server.close(resolve)); }
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -48,7 +48,7 @@ test('HTML extracts inert evidence without loading active markup', async () => {
 });
 test('limits, unsupported binary formats and invalid encodings fail closed', async () => {
   await assert.rejects(parseFile({ name: 'big.txt', size: parserRegistry.maxBytes + 1, arrayBuffer() { throw Error('must not read'); } }), /16 MiB/);
-  for (const name of ['plan.pdf', 'plan.docx', 'plan.xlsm', 'plan.sqlite']) await assert.rejects(parseFile(file(name, 'fake')), /Unsupported format/);
+  for (const name of ['plan.doc', 'plan.xls', 'plan.unknown']) await assert.rejects(parseFile(file(name, 'fake')), /Unsupported format/);
   await assert.rejects(parseFile(file('bad.txt', Buffer.from([0xff, 0x80]))));
   await assert.rejects(parseFile(file('bad.txt', 'a\0b')), /Binary/);
   await assert.rejects(parseFile(file('deep.json', '['.repeat(66) + '0' + ']'.repeat(66))), /depth/);

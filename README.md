@@ -1,0 +1,64 @@
+# PBGC-RAG
+
+An offline browser casework research application in active development. **This is not a finished or PBGC-approved product.** Read [ACCEPTANCE.md](ACCEPTANCE.md) for verified outcomes and [PROGRESS.md](PROGRESS.md) for remaining implementation.
+
+## Open the application
+
+Keep `index.html`, `js/`, and `assets/` together. Open `index.html` directly in an approved desktop browser. No server, installation, Node, Python, network, CDN, remote fonts, or cloud model is required at runtime. Browser policy must permit local files and scripts. The cloud environment's managed Chromium currently blocks `file://`; this is an outstanding acceptance gate, not evidence of workplace compatibility.
+
+Use only synthetic data in this public repository and cloud environment. Do not upload participant records, restricted cases, proprietary templates, or internal PBGC material.
+
+1. Create a case or load the synthetic demonstration.
+2. Import supported files. Inspect the source inventory and retained original bytes.
+3. Search by keywords, exact text, bounded regex, or read-only SQL. Use source scope to narrow large searches.
+4. Add evidence nodes and proposed graph links. Trace bounded paths; do not treat links as legal conclusions.
+5. Record interpretation proposals with source evidence and applicability dates. Proposals remain inactive.
+6. Inspect the provisional review and export a verified portable case package. Restore checks payload and source-byte hashes.
+
+The app probes IndexedDB with actual reads/writes before using it, keeps bounded verified revisions, and falls back to memory when unavailable. Browser storage is best effort and plaintext. Export a backup before closing. Package integrity detects corruption, not authorship or factual validity.
+
+## Supported formats and limitations
+
+| Format | Current supported scope |
+|---|---|
+| TXT, Markdown | Nonempty lines, original offsets; UTF-8/BOM UTF-16 |
+| CSV, TSV | Cells, quoted CSV fields, exact row/column source spans; no formula evaluation |
+| JSON | Scalar evidence with JSON pointers; bounded nesting |
+| XML | Text nodes and exact paths; DTD/external entities rejected; no attribute record inventory |
+| HTML | Inert text only; scripts/styles excluded, no imported DOM execution |
+| DOCX | Main-body paragraphs and tables/cells; no complete visual/layout fidelity, header/footnote/image extraction |
+| XLSX, XLSM | Sheets/cells, rich/shared strings, raw numbers, formula text and cached values; no macro/formula execution or date inference |
+| PDF | Conventional xref-table PDFs with supported standard Roman Type1 text fonts and raw/Flate streams; no OCR, custom/embedded fonts, xref streams, incremental files, image/form XObjects or bounding-box inference |
+| SQLite | Standalone unencrypted rowid tables; exact column values/rowids; no overflow payloads, WITHOUT ROWID, WAL snapshots, virtual tables or schema-expression execution |
+| Legacy DOC, XLS | Unsupported; explicit rejection |
+
+Sources are limited to 16 MiB each; ZIP expansion, parser depth, record counts, graph traversal and query sizes are bounded. Unsupported variants fail explicitly. Parser completeness across arbitrary documents is not claimed. Exact limits appear in module exports and tests.
+
+SQL starts with `SELECT * FROM records LIMIT 20`. It supports scalar fields, comparisons joined with `AND`, `LIKE`, sorting and limits. It rejects joins, mutation, expressions, comments, multiple statements and unsafe field access. Regex supports literals, classes, anchors, dot, `*`, `+`, `?` using nonbacktracking simulation; groups, alternatives, backreferences and counted repetition are rejected. Structured claim screening flags overlapping different values with current-case citations; it never decides legal authority. Semantic inference is unavailable.
+
+## Development and tests
+
+Node 22+ is development-only. There are no npm runtime dependencies.
+
+```sh
+npm test
+npm run test:browser
+```
+
+The browser test uses installed Playwright and `/usr/bin/chromium` (`CHROMIUM_PATH` can select another approved installation). It requires browser process/socket permissions. The default test opens the real `file://` app and must pass before file-origin acceptance. The current cloud managed URL policy blocks it. Do not bypass managed policy.
+
+For secondary UI diagnosis in this environment:
+
+```sh
+PBGC_HTTP_CHECK=1 npm run test:browser
+```
+
+The test starts/stops its own loopback server, blocks external HTTP/HTTPS/WebSockets, and exercises the synthetic workflow, original binary parsers, hostile markup, portable recovery and storage fallback. An HTTP pass does not satisfy `file://` acceptance. No browser processes or servers need to persist between tasks.
+
+## Official outputs
+
+The internal report and provisional BSRS representation are **not** official R1 or BSRS formats. Official R1/R5/DEL/PF/V1/436, determination letters and template-preserving exports remain blocked. Missing approved `data_dictionary_complete.xlsm`, official templates/mappings, authoritative BSRS syntax/validator, ATPBGC reference specifications/results, and authorized actuarial interpretation approval cannot be replaced with invented fields or formulas. Synthetic arithmetic tests demonstrate software behavior only.
+
+See [KICKOFF.md](KICKOFF.md), [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [docs/UPSTREAM_AUDIT.md](docs/UPSTREAM_AUDIT.md). No RAG-Anything code was imported: upstream license/revision/dependencies could not be audited while the inherited HTTPS proxy refused connections.
+
+Build a development portable ZIP with `python3 scripts/package.py`. The bundle includes a SHA-256 manifest and synthetic fixtures; it is explicitly incomplete and is not an accepted workplace release.

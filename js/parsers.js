@@ -4,7 +4,7 @@
   const MAX_BYTES = 16 * 1024 * 1024;
   const MAX_RECORDS = 100000;
   const MAX_DEPTH = 64;
-  const FORMATS = Object.freeze({ txt: 'text', md: 'markdown', markdown: 'markdown', csv: 'csv', tsv: 'tsv', json: 'json', xml: 'xml', html: 'html', htm: 'html' });
+  const FORMATS = Object.freeze({ txt: 'text', md: 'markdown', markdown: 'markdown', csv: 'csv', tsv: 'tsv', json: 'json', xml: 'xml', html: 'html', htm: 'html', docx:'docx', xlsx:'xlsx', xlsm:'xlsm', pdf:'pdf', sqlite:'sqlite', sqlite3:'sqlite', db:'sqlite' });
   const VERSION = '1.0.0';
   function bytesToBase64(bytes) {
     if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
@@ -144,15 +144,20 @@
   async function parseFile(file) {
     if (!file || typeof file.name !== 'string' || typeof file.arrayBuffer !== 'function') throw new Error('Select a local file.');
     const extension = file.name.toLowerCase().split('.').pop(); const format = FORMATS[extension];
-    if (!format) throw new Error(`Unsupported format: ${extension}. This build supports TXT, Markdown, CSV, TSV, JSON, XML, and HTML. Original file is unchanged.`);
+    if (!format) throw new Error(`Unsupported format: ${extension}. Legacy DOC/XLS and unknown formats are not supported. Original file is unchanged.`);
     if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > MAX_BYTES) throw new Error('File exceeds the 16 MiB import limit.');
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.byteLength !== file.size || bytes.byteLength > MAX_BYTES) throw new Error('File size changed or exceeds the import limit.');
-    const { text, encoding } = decode(bytes);
+    let text, encoding;
+    const binary=['docx','xlsx','xlsm','pdf','sqlite'].includes(format);
+    if(!binary)({text,encoding}=decode(bytes));else encoding='binary';
     const hash = Array.from(new Uint8Array(await root.crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
     const id = 'src-' + hash;
     let records;
-    if (format === 'csv' || format === 'tsv') records = delimited(text, format === 'csv' ? ',' : '\t');
+    if(['docx','xlsx','xlsm'].includes(format)){if(!root.PBGC?.parseOffice)throw Error('Office parser is unavailable.');records=await root.PBGC.parseOffice(bytes,extension);}
+    else if(format==='pdf'){if(!root.PBGC?.parsePDF)throw Error('PDF parser is unavailable.');records=await root.PBGC.parsePDF(bytes);}
+    else if(format==='sqlite'){if(!root.PBGC?.parseSQLite)throw Error('SQLite parser is unavailable.');records=await root.PBGC.parseSQLite(bytes);}
+    else if (format === 'csv' || format === 'tsv') records = delimited(text, format === 'csv' ? ',' : '\t');
     else if (format === 'json') records = jsonRecords(text);
     else if (format === 'xml' || format === 'html') records = markupRecords(text, format === 'xml');
     else records = lines(text);
