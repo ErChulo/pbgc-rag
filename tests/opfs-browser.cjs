@@ -44,6 +44,8 @@ const path = require('node:path');
   await page.getByRole('link', { name: 'Local backups', exact: true }).click();
   await page.getByRole('button', { name: 'Save active case recovery backup (keeps two)', exact: true }).click();
   await page.getByText('Verified local backup generation 2 saved for Synthetic OPFS case. Keep a portable export too.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Restore local backup Synthetic OPFS case generation 1', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Restore local backup Synthetic OPFS case generation 2', exact: true }).waitFor();
   assert.equal(await page.getByRole('button', { name: /^Restore local backup Synthetic OPFS case generation/ }).count(), 2);
   const id = await page.evaluate(async () => { const store = await PBGC.createCaseStore(); try { return (await store.list())[0].id; } finally { store.close(); } });
   await page.getByRole('link', { name: '1 · Case', exact: true }).click(); await page.getByRole('button', { name: 'Delete active case from this browser', exact: true }).click();
@@ -75,6 +77,19 @@ const path = require('node:path');
   await page.getByText('2 local backup slots removed. Case checkpoints were kept.', { exact: true }).waitFor();
   await page.getByText('No verified local case backups are present.', { exact: true }).waitFor();
   assert.equal(await page.evaluate(async id => { const store = await PBGC.createCaseStore(); try { return (await store.get(id)).sources.length; } finally { store.close(); } }, id), 1);
+  // With every slot damaged, an active verified case can explicitly clear only its own unusable copies.
+  await page.getByRole('button', { name: 'Save active case recovery backup (keeps two)', exact: true }).click();
+  await page.getByText('Verified local backup generation 1 saved for Synthetic OPFS case. Keep a portable export too.', { exact: true }).waitFor();
+  await page.getByRole('link', { name: '1 · Case', exact: true }).click();
+  await page.evaluate(async()=>{
+   const dir=await(await navigator.storage.getDirectory()).getDirectoryHandle('pbgc-rag-backups-v1');
+   for await(const [,handle]of dir.entries()){const stream=await handle.createWritable();await stream.write('{unreadable synthetic backup');await stream.close();}
+  });
+  await page.getByRole('link', { name: 'Local backups', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove damaged backups for active case', exact: true }).click();
+  await page.getByText('1 damaged local backup slots removed. The active case and checkpoints were kept.', { exact: true }).waitFor();
+  await page.getByText('No verified local case backups are present.', { exact: true }).waitFor();
+  assert.equal(await page.evaluate(async()=>{const dir=await(await navigator.storage.getDirectory()).getDirectoryHandle('pbgc-rag-backups-v1');let count=0;for await(const entry of dir.entries())count++;return count;}),0);
   await page.getByRole('link', { name: '3 · Search', exact: true }).click(); await page.getByLabel('Search text or query').fill('OPFS recovery'); await page.getByRole('button', { name: 'Search', exact: true }).click(); await page.getByText('1 results', { exact: true }).waitFor();
   await c.close();
 

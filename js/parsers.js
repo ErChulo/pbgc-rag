@@ -5,7 +5,7 @@
   const MAX_RECORDS = 100000;
   const MAX_DEPTH = 64;
   const FORMATS = Object.freeze({ txt: 'text', md: 'markdown', markdown: 'markdown', csv: 'csv', tsv: 'tsv', json: 'json', xml: 'xml', html: 'html', htm: 'html', docx:'docx', xlsx:'xlsx', xlsm:'xlsm', pdf:'pdf', sqlite:'sqlite', sqlite3:'sqlite', db:'sqlite' });
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   function bytesToBase64(bytes) {
     if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
     let text = '';
@@ -162,10 +162,16 @@
     else if (format === 'xml' || format === 'html') records = markupRecords(text, format === 'xml');
     else records = lines(text);
     if (records.length > MAX_RECORDS) throw new Error('Record limit exceeded. Split the source file.');
+    let extractedChars=0;
+    for(const record of records){
+      if(typeof record.text!=='string'||record.text.length>2*1024*1024)throw new Error('Parsed record exceeds the 2 MiB text limit. Split the source content.');
+      extractedChars+=record.text.length;
+      if(extractedChars>32*1024*1024)throw new Error('Extracted source text exceeds the 32 MiB limit. Split the source content.');
+    }
     records = records.map((record, index) => ({ ...record, id: `${id}:${index + 1}`, sourceId: id }));
     return { id, name: file.name, hash, format, size: bytes.byteLength, parserVersion: ['docx','xlsx','xlsm'].includes(format) ? (root.PBGC.officeVersion || VERSION) : (format==='sqlite' ? (root.PBGC.SQLITE_PARSER_VERSION || VERSION) : format==='pdf' && root.PBGC.parsePDFAdvanced ? `pdfjs-${root.PBGC_PDFJS?.version || 'unavailable'}/bounded-${root.PBGC.PDF_ADVANCED_PARSER_VERSION || '1.0.0'}` : VERSION), encoding, records, originalBase64: bytesToBase64(bytes) };
   }
-  const api = { parseFile, parserRegistry: Object.freeze({ version: VERSION, formats: FORMATS, maxBytes: MAX_BYTES, maxRecords: MAX_RECORDS, maxDepth: MAX_DEPTH }) };
+  const api = { parseFile, parserRegistry: Object.freeze({ version: VERSION, formats: FORMATS, maxBytes: MAX_BYTES, maxRecords: MAX_RECORDS, maxDepth: MAX_DEPTH, maxRecordChars: 2*1024*1024, maxTextChars: 32*1024*1024 }) };
   Object.assign(root.PBGC = root.PBGC || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

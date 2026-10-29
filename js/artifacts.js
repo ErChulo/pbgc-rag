@@ -12,18 +12,24 @@
   const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x) && (Object.getPrototypeOf(x) === Object.prototype || Object.getPrototypeOf(x) === null);
   const str = (x, max = 1000) => typeof x === 'string' && x.length > 0 && x.length <= max;
   const isoDate = x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)?$/.test(x) && !Number.isNaN(Date.parse(x)) && new Date(x).toISOString().slice(0, 10) === x.slice(0, 10);
-  function safeTree(x, depth = 0, budget = { n: 0 }) {
+  function safeTree(x, depth = 0, budget = { n: 0, chars: 0 }) {
     if (++budget.n > 1500000 || depth > 40) throw new Error('Case structure exceeds limits.');
-    if (x === null || typeof x === 'boolean' || typeof x === 'string') return;
+    if (typeof x === 'string') { budget.chars += x.length; if (budget.chars > LIMITS.packageChars) throw new Error('Case cumulative text exceeds the 48 MiB limit.'); return; }
+    if (x === null || typeof x === 'boolean') return;
     if (typeof x === 'number' && Number.isFinite(x)) return;
-    if (!Array.isArray(x) && !plain(x)) throw new Error('Case must contain JSON data only.');
+    if ((!Array.isArray(x) && !plain(x)) || (Array.isArray(x) && Object.getPrototypeOf(x)!==Array.prototype)) throw new Error('Case must contain plain JSON data only.');
+    let indices=0;
     for (const key of Reflect.ownKeys(x)) {
       if (typeof key !== 'string' || ['__proto__', 'prototype', 'constructor'].includes(key)) throw new Error('Unsafe object key.');
       const descriptor = Object.getOwnPropertyDescriptor(x, key);
       if (!Object.hasOwn(descriptor, 'value')) throw new Error('Case accessors are not accepted.');
       if (Array.isArray(x) && key === 'length') continue;
+      if (!descriptor.enumerable) throw new Error('Case hidden properties are not JSON data.');
+      if (Array.isArray(x)) { if(!/^(0|[1-9]\d*)$/.test(key) || Number(key)>=x.length) throw new Error('Case array properties are not JSON data.'); indices++; }
+      budget.chars += key.length; if (budget.chars > LIMITS.packageChars) throw new Error('Case cumulative text exceeds the 48 MiB limit.');
       safeTree(descriptor.value, depth + 1, budget);
     }
+    if(Array.isArray(x) && indices!==x.length) throw new Error('Case sparse arrays are not JSON data.');
   }
   function claimScreening(c) {
     if (c.claims === undefined) return { schemaVersion: 1, caseId: c.id, assessedClaims: 0, conflicts: [], status: 'not-screened', interpretation: 'No structured claims are supplied. No contradiction screening was performed. This does not establish correctness or official acceptance.' };
@@ -33,9 +39,19 @@
     return { ...screening, status: screening.conflicts.length ? 'unresolved' : 'no-conflicts-flagged' };
   }
   function bytesFromBase64(value) {
-    if (typeof value !== 'string' || value.length > Math.ceil(LIMITS.sourceBytes / 3) * 4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw new Error('Invalid or oversized original source bytes.');
+    if (typeof value !== 'string' || value.length > Math.ceil(LIMITS.sourceBytes / 3) * 4 || value.length % 4 !== 0) throw new Error('Invalid or oversized original source bytes.');
+    const padding=value.endsWith('==')?2:value.endsWith('=')?1:0, bodyLength=value.length-padding;
+    let last=0;
+    for(let i=0;i<bodyLength;i++){
+      const code=value.charCodeAt(i);
+      last=code>=65&&code<=90?code-65:code>=97&&code<=122?code-71:code>=48&&code<=57?code+4:code===43?62:code===47?63:-1;
+      if(last<0)throw new Error('Invalid or oversized original source bytes.');
+    }
+    if((padding===2&&(last&15)!==0)||(padding===1&&(last&3)!==0))throw new Error('Noncanonical original source bytes.');
     const raw = typeof atob === 'function' ? atob(value) : Buffer.from(value, 'base64').toString('binary');
-    return Uint8Array.from(raw, c => c.charCodeAt(0));
+    const bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    return bytes;
   }
   async function digest(bytes) {
     const c = root.crypto || (typeof require === 'function' ? require('node:crypto').webcrypto : null);
@@ -116,15 +132,16 @@
   }
   function assertCase(c) { const v = validateCase(c); if (!v.valid) throw new Error(v.errors.join(' ')); return v; }
   async function exportCase(c) {
-    assertCase(c); await verifySources(c);
+    assertCase(c);
     const payload = JSON.stringify(c);
     if (payload.length > LIMITS.packageChars) throw new Error('Case package exceeds size limits.');
+    await verifySources(JSON.parse(payload)); // Verify the exact synchronously captured payload, never a later caller mutation.
     const encoded = JSON.stringify({ format: 'pbgc-rag-case', version: VERSION, algorithm: 'SHA-256', hash: await digest(new TextEncoder().encode(payload)), payload });
-    if (encoded.length > LIMITS.packageChars + 1024 * 1024) throw new Error('Encoded case package exceeds size limits.');
+    if (encoded.length > 2 * LIMITS.packageChars + 1024 * 1024) throw new Error('Encoded case package exceeds size limits.');
     return encoded;
   }
   async function importCase(json) {
-    if (typeof json !== 'string' || json.length > LIMITS.packageChars + 1024 * 1024) throw new Error('Case package is invalid or too large.');
+    if (typeof json !== 'string' || json.length > 2 * LIMITS.packageChars + 1024 * 1024) throw new Error('Case package is invalid or too large.');
     let envelope; try { envelope = JSON.parse(json); } catch { throw new Error('Case package is not valid JSON.'); }
     if (!plain(envelope) || envelope.format !== 'pbgc-rag-case' || envelope.version !== VERSION || envelope.algorithm !== 'SHA-256' || typeof envelope.payload !== 'string' || envelope.payload.length > LIMITS.packageChars || !/^[a-f0-9]{64}$/.test(envelope.hash)) throw new Error('Unsupported or malformed case package.');
     if (await digest(new TextEncoder().encode(envelope.payload)) !== envelope.hash) throw new Error('Case package integrity check failed.');

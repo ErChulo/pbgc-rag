@@ -57,3 +57,28 @@ Source reindex preview/apply is available beside sources in Import. It reparses 
 PDF adapter1.1.0 fixes a verified repeatability defect: PDF.js document-global font handles changed between identical loads. Persisted font IDs are now deterministic document-local extraction IDs, explicitly not source font names. Repeated/concurrent extraction and PDF reindex no-op regressions pass.
 
 Remaining engineering and external gates from the prior queue still apply. Case-schema migrations/OPFS and broad format/model/official-output coverage are not completed by this parser-upgrade lifecycle. No additional user inputs were needed for this increment.
+
+
+## Current verified increment 0.4.0
+
+215 module/integration tests PASS; ten secondary HTTP browser suites PASS (previous seven plus native OPFS, large queries/restored-graph editing, and reviewer ZIP export/restore). The independent gap audit identified two real supported-workflow bugs; both now have fixes and browser regressions. Search/question/scalar SQL admit 100,000 records, 2 MiB each and 32 MiB total text with explicit execution budgets; large previews and SQL display are bounded without dropping full retrievable results. Graph editing uses the node's actual evidence record ID, not its possibly independent node ID, and missing labels fall back to readable IDs.
+
+Optional explicit OPFS backups use two generation slots and cross-tab Web Locks, with complete readback and source-integrity verification. Native browser tests prove separation from IndexedDB, older-generation recovery after IDB deletion, partial/all-slot corruption handling, removal isolation and unavailable/denied/no-lock fallbacks. No silent autosave, durability guarantee or worker fallback is introduced. Current-only history pruning remains reachable for larger cases before four revisions.
+
+Internal reviewer ZIP creation/verification is now integrated with Report export and Case restore. It includes case envelope, standalone escaped HTML, provisional JSON, safe CSV inventory, passive original bytes and checksum manifest. Strict ZIP/CRC/SHA/source checks and regeneration bind derived artifacts to the verified case; tampered inputs refuse without changing active or stored data. Python ZIP interoperability and browser reopen/navigation/restore pass. Official output remains BLOCKED.
+
+Case/source bounds now prevent repeated-text/shared-string amplification before serialization. Large canonical Base64 decodes without recursive-regex stack exhaustion; valid JSON-escaped working cases round-trip through the expanded envelope allowance. Data is captured synchronously before async export; non-JSON hidden/sparse/prototype-bearing inputs refuse. Generic parser registry is1.1.0; retained old sources upgrade only through the existing reviewed reindex lifecycle.
+
+### Genuine external actions pending
+
+- Approved Windows file-origin deployment: user agreed to test extracted index.html with the synthetic demonstration; browser/version/result not received yet. Cloud managed policy still blocks file navigation; HTTP does not pass this gate.
+- Maintained legacy XLS dependency: official git.sheetjs.com/cdn.sheetjs.com/docs.sheetjs.com fail CONNECT403. A narrow additive network settings draft for these domains is saved (existing presets/custom rules preserved); requires review/save/publication and a successful retry. No old vulnerable SheetJS artifact was imported. See docs/LEGACY_XLS_AUDIT.md.
+- Official dictionary/templates/BSRS/actuarial references and authorized interpretation approvals remain unavailable for their own gates; do not upload restricted casework to this public/cloud workspace.
+
+### Next engineering queue
+
+1. Retry the official XLS audit/download only after network settings change; then pin/check license/integrity, resource limits and native BIFF/OLE provenance before integration. Legacy DOC and remaining PDF/Office variants also remain unfinished.
+2. Add source-backed analytical tables/charts and broader report layouts; the new coherent reviewer ZIP completes only the internal review delivery portion.
+3. Implement/evaluate genuinely local semantic inference or an explicitly identified model-based method with audited local assets, while keeping deterministic fallback and truthful no-model status.
+4. Complete case-schema migrations, durable-file acceptance, mid-parser interruption, concurrent-edit conflict handling, broader resource/fuzz/accessibility/enterprise validation. OPFS recovery snapshots are not schema migration.
+5. Integrate actual authorized official contracts when available; never infer official fields, formulas or template validity. Overall application/workplace acceptance is still not complete.

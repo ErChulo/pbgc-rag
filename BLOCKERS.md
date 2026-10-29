@@ -9,3 +9,8 @@
 The initial proxy ECONNREFUSED was caused by restricted command execution. Read-only HTTPS Git access succeeds with appropriate execution permission using existing injected authentication; no new token is needed. See docs/UPSTREAM_AUDIT.md. There is no current verified upstream access blocker.
 
 Unfinished engineering is tracked in PROGRESS.md, not labeled an external blocker. All official release gates remain fail-closed.
+
+
+6. **Maintained legacy XLS parser access:** official SheetJS source/download/docs hosts are denied by the current restricted proxy (CONNECT403). The readable npm/frozen GitHub builds are not a verified patched maintained choice. A draft adds only git.sheetjs.com, cdn.sheetjs.com and docs.sheetjs.com, preserving current package-manager presets and custom rules. Review/save and publish that environment draft to enable a meaningful retry; this changes development network access, not app publication or runtime networking. Persistence is confirmed, application/enforcement is not. See docs/LEGACY_XLS_AUDIT.md.
+
+The user has agreed to perform the limited approved-Windows synthetic deployment check. No browser/version/result has been received, so file-origin acceptance remains pending. No real case documents are requested.

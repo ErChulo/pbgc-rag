@@ -175,3 +175,16 @@ test('DOCX deleted references do not require live parts, strict relationship URI
   assert.equal(records.find(r => r.locator.noteId === '5').text, 'Footnote current');
   assert.equal(records.filter(r => r.locator.role === 'header').length, 1);
 });
+
+test('reused shared strings cannot amplify a small workbook beyond the extracted-text budget', async () => {
+  const {parseFile}=require('../js/parsers.js');
+  let state=0x12345678;
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars=new Array(1000000);
+  for(let i=0;i<chars.length;i++){state^=state<<13;state^=state>>>17;state^=state<<5;chars[i]=alphabet[(state>>>0)%alphabet.length];}
+  const text=chars.join(''), files=bookFiles('<worksheet><sheetData>'+Array.from({length:40},(_,i)=>`<row r="${i+1}"><c r="A${i+1}" t="s"><v>0</v></c></row>`).join('')+'</sheetData></worksheet>');
+  files['xl/sharedStrings.xml']='<sst><si><t>'+text+'</t></si></sst>';
+  const bytes=zip(files);
+  assert.ok(bytes.length<2*1024*1024);
+  await assert.rejects(parseFile(new File([bytes],'synthetic-shared-amplification.xlsx')),/Extracted source text exceeds/);
+});

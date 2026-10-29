@@ -1,6 +1,6 @@
 # Remaining engineering and pilot gates
 
-Reviewed October 29, 2026 against revision `ed2aee9`, `KICKOFF.md`, `DESIGN.md`, and the current acceptance record. This is an independent source review with two small synthetic module reproductions, not a new full-suite run. Later changes may resolve individual findings; verify them against the listed acceptance before closing them.
+Reviewed October 28, 2026 against revision `ed2aee9`, `KICKOFF.md`, `DESIGN.md`, and the current acceptance record. This is an independent source review with two small synthetic module reproductions, not a new full-suite run. Later changes may resolve individual findings; verify them against the listed acceptance before closing them.
 
 The implemented subset supports useful synthetic research evaluation. It does not yet establish the requested full core application or mandatory workplace readiness. A clearly scoped development pilot can evaluate supported imports and deterministic research tools while official release stays blocked. Do not make official-template availability a prerequisite for fixing the independent engineering below.
 
@@ -48,3 +48,10 @@ The 30-check accessibility regression suite and source-derived contrast tests ar
 ## Official-output blockers remain separate
 
 Approved versioned `data_dictionary_complete.xlsm`, authoritative BSRS grammar/validator, official template originals and mappings, ATPBGC/reference numerical specifications, and authorized actuarial/release approvals remain external prerequisites. Continue independent engineering without them. Official outputs must remain **BLOCKED** until supplied inputs and structural/numerical/approval gates pass; synthetic arithmetic or a research pilot cannot substitute for those gates.
+
+
+## Follow-up closures in increment0.4
+
+Both specifically reproduced supported-workflow defects above are fixed and covered by actual Chromium secondary-HTTP regressions: independent graph node/record identities retain proper link evidence, and real accepted long-line/50,001/100,000-record cases can retrieve their final unique evidence within documented work budgets. Full source/result caps remain explicit, not silent input truncation. Case serialization and shared-string amplification now have aggregate guards.
+
+Optional native OPFS two-generation recovery and a cohesive checksum/source-verified internal reviewer ZIP are now implemented and browser-tested. This closes those defined delivery/recovery subsets, not schema migration, durable file-origin acceptance, arbitrary format coverage, full resource/security/accessibility acceptance, or official validity. Analytical charts and broader report layouts remain next reporting work. Maintained XLS source access has an actual three-host network-policy blocker with a saved settings draft. Current acceptance evidence and exact counts are in ACCEPTANCE.md; baseline findings above are retained for traceability.

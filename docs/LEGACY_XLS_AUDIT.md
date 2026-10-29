@@ -1,6 +1,6 @@
 # Legacy XLS / BIFF dependency audit
 
-Audit date: October 29, 2026 (UTC). Read-only inspection; **no spreadsheet parser
+Audit date: October 28, 2026 (America/New_York). Read-only inspection; **no spreadsheet parser
 was installed, vendored, or enabled**. Existing application source, dependency
 manifests and browser/network policies were not changed.
 

@@ -14,9 +14,9 @@ Use only synthetic data in this public repository and cloud environment. Do not 
 3. Search by keywords, exact text, bounded regex, or read-only SQL. Use source scope to narrow large searches.
 4. Add evidence nodes and proposed dated graph links. Inspect the keyboard-selectable SVG and trace bounded paths; do not treat links as legal conclusions.
 5. Record interpretation proposals with source evidence and applicability dates. Proposals remain inactive.
-6. Inspect the provisional review and export a verified portable case package. Restore checks payload and source-byte hashes.
+6. Inspect the provisional review and export a verified portable case package or internal reviewer ZIP (readable report, case, hashes and passive original-byte attachments). Reviewer ZIPs can also be verified and restored from the Case step. Restore checks payload and source-byte hashes.
 
-The app probes IndexedDB with actual reads/writes before using it, keeps bounded verified revisions, and falls back to memory when unavailable. The Case step exposes verified checkpoints; damaged current cases are isolated, and an older checkpoint restores as a new revision. Pruning older history requires an explicit action. Reference libraries have separate versioned packages and browser storage. Add only authorized shared originals; explicitly copy selected sources into a case. Each copy pins its library edition, and later updates never alter cases or copy interpretations. Browser storage is best effort and plaintext. Export a backup before closing. Package integrity detects corruption, not authorship or factual validity.
+The app probes IndexedDB with actual reads/writes before using it, keeps bounded verified revisions, and falls back to memory when unavailable. Local backups optionally use a separate two-generation OPFS recovery copy, verified by readback and serialized with Web Locks; unavailable/read-only browsers keep their existing case and portable-export workflow. The Case step exposes verified checkpoints; damaged current cases are isolated, and an older checkpoint restores as a new revision. Pruning older history requires an explicit action. Reference libraries have separate versioned packages and browser storage. Add only authorized shared originals; explicitly copy selected sources into a case. Each copy pins its library edition, and later updates never alter cases or copy interpretations. Browser storage is best effort and plaintext. Export a backup before closing. Package integrity detects corruption, not authorship or factual validity.
 
 ## Supported formats and limitations
 
@@ -50,6 +50,9 @@ npm run test:libraries
 npm run test:graph
 npm run test:accessibility
 npm run test:reindex
+npm run test:opfs
+npm run test:queries
+npm run test:review
 ```
 
 The browser test uses installed Playwright and `/usr/bin/chromium` (`CHROMIUM_PATH` can select another approved installation). It requires browser process/socket permissions. The default test opens the real `file://` app and must pass before file-origin acceptance. The current cloud managed URL policy blocks it. Do not bypass managed policy.
@@ -64,6 +67,9 @@ PBGC_HTTP_CHECK=1 npm run test:libraries
 PBGC_HTTP_CHECK=1 npm run test:graph
 PBGC_HTTP_CHECK=1 npm run test:accessibility
 PBGC_HTTP_CHECK=1 npm run test:reindex
+PBGC_HTTP_CHECK=1 npm run test:opfs
+PBGC_HTTP_CHECK=1 npm run test:queries
+PBGC_HTTP_CHECK=1 npm run test:review
 ```
 
 The test starts/stops its own loopback server, blocks external HTTP/HTTPS/WebSockets, and exercises the synthetic workflow, original binary parsers, hostile markup, portable recovery and storage fallback. An HTTP pass does not satisfy `file://` acceptance. No browser processes or servers need to persist between tasks.
@@ -79,3 +85,10 @@ Build a development portable ZIP with `python3 scripts/package.py`. The bundle i
 Natural-language questions use exact-token lexical retrieval, not a language model. They return full/partial/insufficient token coverage and original source excerpts; no synthesized answer or legal priority is inferred. See docs/QUESTIONS.md, docs/INDEXING.md, docs/REFERENCE_LIBRARY.md and docs/GRAPH_VIEW.md for precise contracts.
 
 The targeted accessibility audit fixes skip-link routing, logical focus after step changes, and 320/375-pixel reflow. It is not a full Section 508 or screen-reader certification. See docs/ACCESSIBILITY_AUDIT.md. Reviewed source reparsing is documented in docs/REINDEX.md; it is separate from case-schema migration and actuarial approval. PDF font-resource IDs are deterministic extraction metadata, not original font names.
+
+
+Increment 0.4 supports 100,000 records, 2 MiB per record and 32 MiB total query text, with actual execution budgets and explicit failure rather than partial results. Long excerpts render a bounded preview and load full text on request; complete SQL results can be downloaded. Sources exceeding extracted-record/text budgets reject before case promotion. Compressed/shared-string expansion cannot silently exceed those output budgets. Case validation also accounts for cumulative text before serialization, and package envelopes allow JSON escaping overhead without rejecting an otherwise valid working-case export.
+
+Internal reviewer ZIPs use stored regular files, CRCs and a SHA-256 manifest, then regenerate expected reports/inventory from the verified case. Original sources retain a passive `.original` suffix and are never executed. Official release remains blocked. See docs/REVIEW_BUNDLE.md. OPFS snapshots are optional browser-local recovery copies, not durable portable backups; each slot has a separate 64 MiB UTF-8 bound, so an unusually escaped/large case may require the portable export instead. See docs/OPFS_BACKUP.md.
+
+Maintained legacy XLS support is not implemented yet. The official SheetJS source/CDN/docs require the three domains listed in docs/LEGACY_XLS_AUDIT.md; their narrow environment-settings draft is saved but has not been applied. Old vulnerable npm/frozen-source builds were not imported. Enabling development download access does not add runtime network access to the app.

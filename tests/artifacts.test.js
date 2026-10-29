@@ -153,3 +153,42 @@ test('reference provenance remains version-pinned in portable packages and repor
     await assert.rejects(A.exportCase(c), /provenance/);
   }
 });
+
+test('aggregate repeated text is refused before package serialization can expand a large payload', async () => {
+  const c=fixture(), source=c.sources[0], block='x'.repeat(2*1024*1024);
+  source.records=Array.from({length:25},(_,i)=>({id:source.id+':'+(i+1),sourceId:source.id,text:block,locator:{kind:'text',label:'Synthetic bounded record '+(i+1)}}));
+  const validation=A.validateCase(c);
+  assert.equal(validation.valid,false);
+  assert.match(validation.errors.join(' '),/cumulative text/);
+  await assert.rejects(A.exportCase(c),/cumulative text/);
+});
+
+test('a valid working-case package round-trips when JSON string escaping expands its outer envelope', async () => {
+  const {parseFile}=require('../js/parsers.js');
+  const text=Array.from({length:5},()=>String.fromCharCode(92).repeat(2000000)).join('\n');
+  const source=await parseFile(new File([text],'synthetic-escaped-text.txt'));
+  const c={schemaVersion:1,id:'synthetic-escaped-case',name:'Synthetic escaped package case',createdAt:'2026-10-28T00:00:00.000Z',sources:[source],graph:{nodes:[],edges:[]},rules:[],calculations:[]};
+  assert.ok(JSON.stringify(c).length<32*1024*1024);
+  const encoded=await A.exportCase(c);
+  assert.ok(encoded.length>49*1024*1024,'Fixture must exercise the former outer-envelope limit.');
+  const restored=await A.importCase(encoded);
+  assert.equal(restored.sources[0].hash,source.hash);
+  assert.equal(restored.sources[0].records[4].text,source.records[4].text);
+  assert.equal(restored.sources[0].originalBase64,source.originalBase64);
+});
+
+test('case exports capture validated state before asynchronous hashing and reject non-JSON hidden or sparse state', async () => {
+  const c=fixture(), expected=JSON.parse(JSON.stringify(c));
+  const pending=A.exportCase(c);
+  c.name='Edited after export began';c.sources[0].originalBase64='AAAA';
+  assert.deepEqual(await A.importCase(await pending),expected);
+  const hidden=fixture();Object.defineProperty(hidden,'name',{value:'Hidden required name',enumerable:false});
+  assert.equal(A.validateCase(hidden).valid,false);
+  await assert.rejects(A.exportCase(hidden),/hidden properties/);
+  const sparse=fixture();sparse.notes=new Array(2);
+  await assert.rejects(A.exportCase(sparse),/sparse arrays/);
+  const decorated=fixture();decorated.notes=[];decorated.notes.extra='Not serialized';
+  await assert.rejects(A.exportCase(decorated),/array properties/);
+  let invoked=false;const altered=fixture();altered.notes=Object.setPrototypeOf([],{toJSON(){invoked=true;return [];}});
+  await assert.rejects(A.exportCase(altered),/plain JSON/);assert.equal(invoked,false);
+});

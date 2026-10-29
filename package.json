@@ -1,6 +1,6 @@
 {
   "name": "pbgc-rag",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Offline browser PBGC casework research workspace",
   "scripts": {
@@ -11,7 +11,10 @@
     "test:libraries": "node tests/library-browser.cjs",
     "test:graph": "node tests/graph-browser.cjs",
     "test:accessibility": "node tests/accessibility-browser.cjs",
-    "test:reindex": "node tests/reindex-browser.cjs"
+    "test:reindex": "node tests/reindex-browser.cjs",
+    "test:opfs": "node tests/opfs-browser.cjs",
+    "test:queries": "node tests/query-browser.cjs",
+    "test:review": "node tests/review-browser.cjs"
   },
   "engines": {
     "node": ">=22"

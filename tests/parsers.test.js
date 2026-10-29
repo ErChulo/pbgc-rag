@@ -10,7 +10,7 @@ test('text keeps bytes, SHA-256, stable IDs and exact source line offsets', asyn
   assert.equal(Buffer.from(result.originalBase64, 'base64').toString(), text);
   assert.deepEqual(result.records.map(x => [x.text, x.locator.line, x.locator.offset]), [['First', 1, 0], ['Benefit: 123', 3, 9]]);
   assert.equal((await parseFile(file('renamed.md', text))).id, result.id);
-  assert.equal(result.parserVersion, '1.0.0');
+  assert.equal(result.parserVersion, '1.1.0');
 });
 test('CSV preserves quoted delimiters, embedded newlines, escaped quotes, empty cells and source coordinates', async () => {
   const text = 'name,amount,note\r\n"Synthetic, A",12,"one\r\ntwo ""quoted"""\r\nB,0,';

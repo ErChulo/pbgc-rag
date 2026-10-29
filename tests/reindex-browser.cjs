@@ -37,7 +37,7 @@ const assert=require('node:assert/strict'),http=require('node:http'),fs=require(
   await page.getByRole('button',{name:'Apply reviewed parser update',exact:true}).click();
   await page.getByRole('heading',{name:'Import original documents',exact:true}).waitFor();
   const after=await page.evaluate(async()=>{const store=await PBGC.createCaseStore();try{return{c:await store.get('synthetic-reindex-ui'),manifest:await store.getImportCheckpoint('synthetic-reindex-ui')};}finally{store.close();}});
-  assert.equal(after.c.sources[0].parserVersion,'1.0.0');assert.equal(after.c.sources[0].hash,initial.hash);assert.equal(after.c.sources[0].originalBase64,initial.original);
+  assert.equal(after.c.sources[0].parserVersion,'1.1.0');assert.equal(after.c.sources[0].hash,initial.hash);assert.equal(after.c.sources[0].originalBase64,initial.original);
   assert.equal(after.c.graph.nodes[0].recordId,initial.sourceId+':2');assert.equal(after.c.graph.nodes[0].id,initial.sourceId+':2');assert.equal(after.c.graph.edges[0].from,initial.sourceId+':2');
   assert.deepEqual(after.c.rules[0].sourceRecordIds,[initial.sourceId+':2']);assert.equal(after.c.rules[0].status,'proposed');assert.equal(after.c.sources[0].reindexProvenance.history.length,1);assert.equal(after.manifest,null);
   await page.getByRole('button',{name:'Review parser update for synthetic-reindex.txt',exact:true}).click();

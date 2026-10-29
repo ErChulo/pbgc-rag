@@ -119,6 +119,18 @@ async function main() {
     assert.equal(pruned.removed, null);
     assert.deepEqual(pruned.versions.versions.map(v => v.revision).sort((a, b) => a - b), [3, 4, 5]);
     assert.deepEqual(pruned.versions.damaged, []);
+    // Even three large snapshots can exhaust the text budget; explicit current-only pruning remains reachable.
+    await page.getByRole('button', { name: 'Keep current checkpoint only', exact: true }).click();
+    await page.waitForFunction(async () => {
+      const store=await PBGC.createCaseStore();
+      try{return (await store.listVersions('synthetic-broken')).length===1;}finally{store.close();}
+    });
+    const retainedCurrent=await page.evaluate(async()=>{
+      const store=await PBGC.createCaseStore();
+      try{return {versions:await store.listVersions('synthetic-broken'),latest:await store.get('synthetic-broken')};}finally{store.close();}
+    });
+    assert.equal(retainedCurrent.latest.name,'Synthetic recovered revision five');
+    assert.deepEqual(retainedCurrent.versions.map(v=>v.revision),[5]);
     // Ambiguous revision metadata must never select a different payload than a listed checkpoint.
     const ambiguous = await page.evaluate(async () => {
       const store = await PBGC.createCaseStore();

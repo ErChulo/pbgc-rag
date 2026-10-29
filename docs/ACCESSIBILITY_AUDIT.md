@@ -1,6 +1,6 @@
 # Targeted accessibility audit
 
-Date: October 29, 2026. Scope: synthetic case workflow in local Chromium 154, headless Linux. This is a targeted engineering audit, not full WCAG or Section 508 compliance certification.
+Date: October 28, 2026. Scope: synthetic case workflow in local Chromium 154, headless Linux. This is a targeted engineering audit, not full WCAG or Section 508 compliance certification.
 
 ## Reproduce
 
