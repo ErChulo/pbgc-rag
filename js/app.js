@@ -2,7 +2,7 @@
 (function () {
 'use strict';
 const P = globalThis.PBGC;
-let active = null, memory = new Map(), storage = false, busy = false, caseStore = null, saveQueue = Promise.resolve(), pendingSaves = 0, initialized = false, damagedCases = [], recoveryCaseId = null, storeWritable = true, viewEpoch = 0, importController = null, importManifests = new Map(), referenceStore = null, libraries = new Map(), activeLibraryId = null, damagedLibraries = [];
+let active = null, memory = new Map(), storage = false, busy = false, caseStore = null, saveQueue = Promise.resolve(), pendingSaves = 0, initialized = false, damagedCases = [], recoveryCaseId = null, storeWritable = true, viewEpoch = 0, importController = null, importManifests = new Map(), referenceStore = null, libraries = new Map(), activeLibraryId = null, damagedLibraries = [], reindexSelection = null;
 const $ = id => document.getElementById(id);
 function el(tag, text, attrs = {}) { const n = document.createElement(tag); if (text != null) n.textContent = text; for (const [k,v] of Object.entries(attrs)) n.setAttribute(k,v); return n; }
 function add(parent, ...children) { children.flat().forEach(c => parent.append(c)); return parent; }
@@ -27,7 +27,7 @@ function allRecords(){return active?active.sources.flatMap(s=>s.records):[];}
 function requireCase(){if(active)return true;notice('Create or open a case first.');location.hash='case';return false;}
 function input(label,idValue,type='text'){const wrap=el('div');const field=el('input',null,{id:idValue,type});add(wrap,el('label',label,{for:idValue}),field);return {wrap,field};}
 function download(name,text,type='application/json'){const url=URL.createObjectURL(new Blob([text],{type}));const a=el('a',null,{href:url,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function heading(title, description){viewEpoch++;const v=$('view');v.replaceChildren(el('h1',title));if(description)v.append(el('p',description));return v;}
+function heading(title, description){viewEpoch++;const v=$('view');v.replaceChildren(el('h1',title,{id:'view-title'}));if(description)v.append(el('p',description));return v;}
 function caseView(){const v=heading('Your case workspace','Keep each plan in its own case. Import only synthetic records in this cloud development environment.');
  const f=el('form');const name=input('Case name','case-name');name.field.required=true;name.field.maxLength=120;
  add(f,name.wrap,el('button','Create case',{type:'submit'}));f.addEventListener('submit',e=>{e.preventDefault();try{checkName(name.field.value);if(busy)throw Error('Wait for the import to finish.');active=makeCase(name.field.value);persist();render();notice('Case created. Import source files next.');}catch(e){notice(e.message);}});v.append(f);
@@ -280,7 +280,56 @@ function importView() {
  })().catch(error => { resumeStatus.textContent = `Saved checkpoint unavailable: ${error.message}. Start a new import or restore a verified manifest.`; })
  .finally(() => { if (epoch === viewEpoch) start.disabled = false; });
 }
-function sourceTable(v){v.querySelector('#source-table')?.remove();const box=el('div',null,{id:'source-table'});box.append(el('h2','Source inventory'));if(!active.sources.length)box.append(el('p','No sources yet.'));for(const s of active.sources){const card=el('div',null,{class:'card'});add(card,el('strong',s.name),el('p',`${s.format} · ${s.records.length} records · ${s.size} bytes`,{class:'small'}),el('p',`SHA-256 ${s.hash}`,{class:'meta'}),button('Save original bytes',()=>{const bytes=Uint8Array.from(atob(s.originalBase64),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes]));const a=el('a',null,{href:url,download:s.name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);},'secondary'));if(s.format==='pdf' && s.records[0]?.fields.pagesWithoutNativeText?.length)card.append(el('p',`No native text on pages ${s.records[0].fields.pagesWithoutNativeText.join(', ')}. These pages need OCR and are not searchable. Original bytes remain intact.`,{class:'blocked'}));if(s.referenceOrigin)card.append(el('p',`Reference library ${s.referenceOrigin.libraryId} · pinned revision ${s.referenceOrigin.revision} · ${s.referenceOrigin.versionLabel}`,{class:'meta'}));box.append(card);}v.append(box);}
+async function reindexView() {
+ if (!requireCase()) return;
+ const v = heading('Review source reindex', 'Reparse retained originals with the current local parser. Originals never change. Existing citations must map uniquely by exact text, locator and structured fields. This is a technical parser review, not an actuarial approval.');
+ const epoch = viewEpoch;
+ if (!reindexSelection || reindexSelection.caseId !== active.id) {
+  v.append(el('p', 'Choose Review parser update beside a source in the Import step.')); return;
+ }
+ if (busy) { v.append(el('p', 'Wait for the active operation to finish, then reopen this review.')); return; }
+ const selectedIds = [...reindexSelection.sourceIds], target = active;
+ let preview;
+ busy = true;
+ const working = el('p', 'Verifying originals and preparing the current-parser comparison…', { role: 'status' });
+ v.append(working);
+ try { await saveQueue; preview = await P.reindexSources(target, selectedIds, { apply: false }); }
+ catch (error) { if (epoch === viewEpoch) working.textContent = error.message; return; }
+ finally { busy = false; }
+ if (epoch !== viewEpoch || active !== target) return;
+ working.textContent = `Parser review status: ${preview.status}. No case changes have been applied.`;
+ const summary = { changes: preview.changes, unresolved: preview.unresolved.slice(0, 100), recordMappings: preview.recordMappings.slice(0, 100) };
+ const encoded = JSON.stringify(summary, null, 2);
+ v.append(el('pre', encoded.slice(0, 40000)));
+ if (encoded.length > 40000 || preview.recordMappings.length > 100 || preview.unresolved.length > 100) v.append(el('p', 'The on-screen comparison is abbreviated. The apply operation still verifies the complete plan.', { class: 'small' }));
+ add(v, el('p', `Original case hash: ${preview.caseHash}`, { class: 'meta' }), el('p', `Parser plan hash: ${preview.planHash}`, { class: 'meta' }));
+ if (preview.status === 'blocked') {
+  v.append(el('p', 'Update blocked: cited evidence is missing, ambiguous or changed. Keep the current parser output and review the original citations. No automatic substitution is permitted.', { class: 'blocked' }));
+ } else if (preview.status === 'unchanged') {
+  v.append(el('p', 'This source already matches the current parser. No reindex checkpoint is needed.'));
+ } else {
+  const reviewed = el('input', null, { id: 'review-reindex', type: 'checkbox' });
+  add(v, el('label', 'I reviewed the parser changes and exact citation mappings.', { for: 'review-reindex' }), reviewed);
+  v.append(button('Apply reviewed parser update', async () => {
+   if (busy) throw Error('Wait for the active operation to finish.');
+   if (!reviewed.checked) throw Error('Review the comparison and confirm the technical update first.');
+   busy = true;
+   const current = active;
+   try {
+    await saveQueue;
+    const applied = await P.reindexSources(current, selectedIds, { apply: true, reviewed: true, expectedCaseHash: preview.caseHash, expectedPlanHash: preview.planHash });
+    if (active !== current) throw Error('The active case changed. Reopen the parser review.');
+    if (!applied.applied) { notice('The current parser output is unchanged.'); return; }
+    if (!commitCaseCandidate(applied.candidateCase)) return;
+    await saveQueue;
+    location.hash = 'import';
+    notice(storeWritable ? 'Parser update applied with exact citation mappings. Original bytes and existing approvals remain unchanged.' : 'Parser update applied in memory only. Export a verified backup before closing.');
+   } finally { busy = false; }
+  }));
+ }
+ v.append(el('a', 'Return to source inventory', { href: '#import' }));
+}
+function sourceTable(v){v.querySelector('#source-table')?.remove();const box=el('div',null,{id:'source-table'});box.append(el('h2','Source inventory'));if(!active.sources.length)box.append(el('p','No sources yet.'));for(const s of active.sources){const card=el('div',null,{class:'card'});add(card,el('strong',s.name),el('p',`${s.format} · ${s.records.length} records · ${s.size} bytes`,{class:'small'}),el('p',`SHA-256 ${s.hash}`,{class:'meta'}),button(`Review parser update for ${s.name}`,()=>{if(busy)throw Error('Wait for the active operation to finish.');reindexSelection={caseId:active.id,sourceIds:[s.id]};location.hash='reindex';},'secondary'),button('Save original bytes',()=>{const bytes=Uint8Array.from(atob(s.originalBase64),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes]));const a=el('a',null,{href:url,download:s.name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);},'secondary'));if(s.format==='pdf' && s.records[0]?.fields.pagesWithoutNativeText?.length)card.append(el('p',`No native text on pages ${s.records[0].fields.pagesWithoutNativeText.join(', ')}. These pages need OCR and are not searchable. Original bytes remain intact.`,{class:'blocked'}));if(s.referenceOrigin)card.append(el('p',`Reference library ${s.referenceOrigin.libraryId} · pinned revision ${s.referenceOrigin.revision} · ${s.referenceOrigin.versionLabel}`,{class:'meta'}));box.append(card);}v.append(box);}
 function searchView(){if(!requireCase())return;const v=heading('Search source evidence','Results cite exact supported locations. This build uses deterministic search and does not generate legal or actuarial answers.');const f=el('form'),q=input('Search text or query','query');q.field.required=true;
  const mode=el('select',null,{id:'mode'});for(const [value,label]of [['keyword','Keywords'],['exact','Exact text'],['question','Question (source excerpts)'],['regex','Bounded regex'],['sql','Read-only SQL']])mode.append(el('option',label,{value}));add(f,q.wrap,el('label','Search mode',{for:'mode'}),mode,el('button','Search',{type:'submit'}));const scope=el('select',null,{id:'search-source'});scope.append(el('option','All case sources',{value:''}));for(const source of active.sources)scope.append(el('option',source.name,{value:source.id}));f.insertBefore(el('label','Source scope',{for:'search-source'}),f.lastChild);f.insertBefore(scope,f.lastChild);const result=el('div',null,{id:'results','aria-live':'polite'});f.addEventListener('submit',e=>{e.preventDefault();result.replaceChildren();try{const records=scope.value?active.sources.find(s=>s.id===scope.value).records:allRecords();if(mode.value==='sql'){const rows=P.querySQL(records,q.field.value);result.append(el('pre',JSON.stringify(rows,null,2)));return;}let hits;
 if(mode.value==='question'){
@@ -309,15 +358,16 @@ function appendClaims(v){
 }
 function reportView(){if(!requireCase())return;const v=heading('Report, validate, and export','Export a portable package with original bytes and integrity checks. Reports are research drafts. Official release is blocked.');const validation=P.validateCase(active);v.append(el('p',validation.valid?'Internal case schema: PASS':'Internal case schema: FAIL',{class:'badge'}));for(const e of [...validation.errors,...validation.warnings])v.append(el('p',typeof e==='string'?e:JSON.stringify(e),{class:'small'}));const report=P.buildReport(active);v.append(el('h2','Internal review draft'));v.append(el('p',report.disclaimer));const evidenceBox=el('details');evidenceBox.append(el('summary','Source evidence and precise citations'));for(const source of active.sources){evidenceBox.append(el('h2',source.name));for(const r of source.records.slice(0,200)){add(evidenceBox,el('p',r.text),el('p',`${r.locator.label} · SHA-256 ${source.hash} · ${r.id}`,{class:'meta'}));}if(source.records.length>200)evidenceBox.append(el('p','Display limited to 200 records. The exported report retains every record.'));}v.append(evidenceBox);const timeline=el('div');timeline.append(el('h2','Proposed applicability timeline'));for(const r of [...active.rules].sort((a,b)=>a.effectiveDate.localeCompare(b.effectiveDate)))timeline.append(el('p',`${r.effectiveDate} · ${r.title} · ${r.status}`));if(!active.rules.length)timeline.append(el('p','No proposed effective dates.'));v.append(timeline);const machine=el('details');add(machine,el('summary','Inspect machine-readable report'),el('pre',JSON.stringify(report,null,2)));v.append(machine);const actions=el('div',null,{class:'actions'});add(actions,button('Export verified case package',async()=>{if(busy)throw Error('Wait for import to finish.');const target=JSON.parse(JSON.stringify(active));const text=await P.exportCase(target);await P.importCase(text);download(`pbgc-case-${target.id}.json`,text);notice('Package verified and downloaded.');}),button('Export internal research report',()=>download('internal-research-draft.json',JSON.stringify(report,null,2)),'secondary'),button('Export readable review HTML',()=>download('internal-review.html',P.renderResearchReport(active,{layout:'review'}),'text/html'),'secondary'),button('Export evidence layout HTML',()=>download('internal-evidence.html',P.renderResearchReport(active,{layout:'evidence'}),'text/html'),'secondary'));v.append(actions);v.append(el('p','Official R1, BSRS, R5, DEL, PF, V1, and 436 outputs: BLOCKED. No official formats are fabricated.',{class:'blocked'}));}
 function helpView(){const v=heading('Search and evidence guide','Pension Benefit Guaranty Corporation (PBGC) terminology does not imply this tool has agency approval.');for(const [h,p]of [['Offline use','Open index.html directly. No web server is needed. All scripts and styles are local. The content policy blocks network connections. Browser storage may differ between file locations; export a backup.'],['Question retrieval','Use Question mode for a natural-language question. It returns source excerpts ranked by exact normalized words, with missing terms and full/partial/insufficient lexical coverage. It uses no model, does not resolve legal priority, and does not generate an answer.'],['Search','Keyword search ranks matching records. Exact mode finds literal phrases. Regex supports only a bounded safe subset; complex or unsafe expressions are rejected. No semantic model is bundled.'],['SQL','Only the documented read-only subset is available. Start with SELECT * FROM records LIMIT 20. Mutation, joins and arbitrary expressions are rejected.'],['Evidence','Locators refer to parsed records, not invented document positions. Save original bytes from the source inventory. Graph links remain proposed claims.'],['Formats','The current parser registry determines supported formats. Unsupported formats fail with an explicit error. Macros, scripts, and embedded HTML never execute.'],['Actuarial use','A proposal is not a rule approval. No official field names or actuarial equivalence are inferred. Official templates, field dictionary, BSRS syntax, and independent reference results are required for official validation.'],['Recovery','Export the case package. Restore verifies schema and integrity. Integrity detects corruption; it does not prove authorship. Keep source documents and backups in an approved local location.']])add(v,el('h2',h),el('p',p));const capability=el('pre','Checking local capabilities…');add(v,el('h2','Measured browser capabilities'),capability);P.inspectCapabilities().then(result=>{capability.textContent=JSON.stringify(result,null,2);}).catch(e=>{capability.textContent=e.message;});}
-function render(){if(!initialized){heading('Opening the local workspace','Wait for the storage check to finish.');return;}const route=location.hash.slice(1)||'case';document.querySelectorAll('nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','step');else a.removeAttribute('aria-current');});try{const outcome=({case:caseView,import:importView,search:searchView,graph:graphView,rules:rulesView,report:reportView,recovery:recoveryView,library:libraryView,help:helpView}[route]||caseView)();if(outcome&&typeof outcome.catch==='function')outcome.catch(e=>notice(e.message));}catch(e){notice(`Cannot open this step: ${e.message}`);}}
+function render(focusWorkspace=true){if(!initialized){heading('Opening the local workspace','Wait for the storage check to finish.');return;}const route=location.hash.slice(1)||'case';document.querySelectorAll('nav a').forEach(a=>{if(a.hash===`#${route}`)a.setAttribute('aria-current','step');else a.removeAttribute('aria-current');});try{const outcome=({case:caseView,import:importView,search:searchView,graph:graphView,rules:rulesView,report:reportView,recovery:recoveryView,reindex:reindexView,library:libraryView,help:helpView}[route]||caseView)();if(outcome&&typeof outcome.catch==='function')outcome.catch(e=>notice(e.message));if(focusWorkspace){$('main').focus({preventScroll:true});$('main').scrollIntoView({block:'start'});}}catch(e){notice(`Cannot open this step: ${e.message}`);}}
 async function initialize(){
  heading('Opening the local workspace','Checking browser storage and portable recovery support.');
  try{caseStore=await P.createCaseStore();storage=caseStore.mode==='indexeddb';const scan=await caseStore.scan();damagedCases=scan.damaged;for(const meta of scan.cases){const c=await caseStore.get(meta.id);if(c)memory.set(c.id,c);}if(damagedCases.length)notice('Some saved cases need recovery. Healthy cases remain available.');}
  catch(e){storage=false;notice(`Stored cases could not be opened: ${e.message}. Restore a verified package.`);}
  try{referenceStore=await P.createReferenceStore();const scan=await referenceStore.scan();damagedLibraries=scan.damaged;for(const meta of scan.cases){const library=await referenceStore.get(meta.id);if(library)libraries.set(library.id,library);}}
  catch(error){notice(`Reference libraries could not be opened: ${error.message}. Case storage remains separate.`);}
- initialized=true;status();render();
+ initialized=true;status();render(false);
 }
+document.querySelector('.skip').addEventListener('click',event=>{event.preventDefault();$('main').focus({preventScroll:true});$('main').scrollIntoView({block:'start'});});
 $('cancel-active-import').addEventListener('click',()=>{importController?.abort();notice('Import will stop after the current file.');});
-$('theme').addEventListener('click',()=>{const light=document.body.classList.toggle('light');$('theme').textContent=light?'Use dark theme':'Use light theme';});window.addEventListener('hashchange',render);window.addEventListener('beforeunload',e=>{if((active&&(!storage||pendingSaves))||(referenceStore?.mode==='memory'&&libraries.size)){e.preventDefault();e.returnValue='';}});initialize();
+$('theme').addEventListener('click',()=>{const light=document.body.classList.toggle('light');$('theme').textContent=light?'Use dark theme':'Use light theme';});window.addEventListener('hashchange',()=>render());window.addEventListener('beforeunload',e=>{if((active&&(!storage||pendingSaves))||(referenceStore?.mode==='memory'&&libraries.size)){e.preventDefault();e.returnValue='';}});initialize();
 })();

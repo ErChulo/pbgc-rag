@@ -44,3 +44,16 @@ Completed portions of queue item 3: separate reference-library lifecycle, relati
 The audited pinned PDF.js engine is now integrated as a local classic script, with embedded CMap/font parsing data, no worker/assets download and conservative decompression/content bounds. Native text with tested embedded TrueType/ToUnicode/xref streams works. Original bytes remain unchanged and round-trip through case packages. No OCR, object streams, unsupported filter/indirect stream-length coverage or exact glyph-bounding-box claim is made. Version and licenses are in docs/PDF_ENGINE.md and vendor/pdfjs/PROVENANCE.json. Python RAG-Anything remains optional and uninstalled.
 
 Next engineering work: legacy DOC/XLS and remaining binary variants; OPFS and schema-migration/reindex lifecycle; mid-parser interruption and broader CPU/RAM acceptance; model-based semantic retrieval; further domain and official artifact implementations once authoritative sources/specifications are available. Full application/official/workplace acceptance is still not complete.
+
+
+## Current verified increment 0.3.0
+
+178 module/integration tests PASS and all seven secondary HTTP browser suites PASS. The targeted accessibility suite contains30 passing checks; it originally exposed five real issues now fixed: lost focus after creation, focus after keyboard step navigation, skip-link route reset, and graph overflow at320/375 pixels. See docs/ACCESSIBILITY_AUDIT.md; full508/screen-reader/enterprise acceptance is not claimed.
+
+SQLite reader1.1.0 now reconstructs bounded overflow payloads, including UTF-8/UTF-16 and numeric/header splits, while rejecting cyclic/shared/truncated/borrowed page chains and preserving physical segment locators. Parser wrapper records its actual version.
+
+Source reindex preview/apply is available beside sources in Import. It reparses retained bytes, binds review to current case and parser-plan hashes, maps only exact unique text/locator/fields, remaps graph identities/endpoints and rule/claim references atomically in a new checkpoint, and blocks changed/ambiguous cited evidence. It does not migrate case schema or approve interpretations. Browser and unit cases verify originals/proposals remain unchanged and stale/mismatched plans refuse. See docs/REINDEX.md.
+
+PDF adapter1.1.0 fixes a verified repeatability defect: PDF.js document-global font handles changed between identical loads. Persisted font IDs are now deterministic document-local extraction IDs, explicitly not source font names. Repeated/concurrent extraction and PDF reindex no-op regressions pass.
+
+Remaining engineering and external gates from the prior queue still apply. Case-schema migrations/OPFS and broad format/model/official-output coverage are not completed by this parser-upgrade lifecycle. No additional user inputs were needed for this increment.

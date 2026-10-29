@@ -34,3 +34,8 @@ The coordinator owns index.html, app.js, CSS, package metadata, browser integrat
 
 
 The integrated advanced PDF path loads the audited self-contained vendor classic script before pdf-engine.js. parseFile prefers parsePDFAdvanced when present and records the engine/preflight version; direct legacy parsePDF remains independently tested. Native PDF source geometry is not treated as exact glyph bounds. Empty native-text pages are explicitly identified, and no-text documents refuse with an OCR limitation. The portable runtime carries all required notices and verifies vendor provenance hashes.
+
+
+Increment0.3 adds review-bound retained-source reindexing (docs/REINDEX.md). Preview and apply are separate; apply regenerates output and verifies both case and plan hashes. Only uniquely identical full text/locator/fields map; graph identities/endpoints and all contracted citations update together. Source bytes/identity/reference origin stay unchanged; exact mapped rule approvals are preserved, never inferred anew. Case schema remains1.
+
+SQLite overflow pages share a bounded ownership map with btrees, indexes, pointer maps and freelist pages; reconstructed logical records retain physical segment provenance. PDF opaque per-loading font handles never enter persisted records; document-local deterministic resource IDs stabilize repeat parsing. Keyboard routing focuses the workspace after user-triggered step changes, while skip navigation keeps the active route and initial startup does not steal focus.

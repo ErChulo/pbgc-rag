@@ -96,3 +96,17 @@ test('embedded-font and xref-stream records remain deterministic after unrelated
   const after = await Promise.all([parsePDFAdvanced(embedded), parsePDFAdvanced(unicode)]);
   assert.deepEqual(after, before);
 });
+
+test('stable PDF extraction produces a repeatable reviewed reindex no-op', async () => {
+  const { parseFile } = require('../js/parsers.js');
+  require('../js/artifacts.js');
+  const { reindexSources } = require('../js/reindex.js');
+  const source = await parseFile(new File([pdf()], 'synthetic-reindex-stability.pdf'));
+  const c = {schemaVersion:1,id:'pdf-reindex-stability',name:'Synthetic PDF reindex stability',createdAt:'2026-10-28T00:00:00.000Z',sources:[source],graph:{nodes:[],edges:[]},rules:[],calculations:[]};
+  const preview = await reindexSources(c, [source.id]);
+  assert.equal(preview.status, 'unchanged');
+  const result = await reindexSources(c, [source.id], {apply:true,reviewed:true,expectedCaseHash:preview.caseHash,expectedPlanHash:preview.planHash});
+  assert.equal(result.status, 'unchanged');
+  assert.equal(result.applied, false);
+  assert.deepEqual(result.candidateCase, c);
+});
