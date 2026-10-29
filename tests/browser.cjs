@@ -34,6 +34,34 @@ try {
  await page.getByText('1 results',{exact:true}).waitFor();
  assert.match(await page.locator('#results').innerText(),/65/);
  await page.getByRole('button',{name:'Add to evidence graph'}).click();
+ // A broad query places the clicked result below the page-wide notice. Feedback
+ // must remain beside that exact result, including refusal and repeated clicks.
+ await page.setViewportSize({width:900,height:600});
+ await page.getByLabel('Search text or query').fill('a');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ const amendmentHit=page.locator('#results article').filter({hasText:'An amendment proposed age 67'});
+ assert.equal(await amendmentHit.count(),1);
+ await page.evaluate(()=>{
+  globalThis.__originalValidateCase=PBGC.validateCase;
+  PBGC.validateCase=()=>({valid:false,errors:['Synthetic validation refusal.']});
+ });
+ await amendmentHit.getByRole('button',{name:'Add to evidence graph',exact:true}).click();
+ await amendmentHit.getByRole('status').getByText('Could not add evidence: Synthetic validation refusal.',{exact:true}).waitFor();
+ assert.equal(await amendmentHit.getByRole('link',{name:'View this evidence in graph',exact:true}).count(),0);
+ await page.evaluate(()=>{PBGC.validateCase=globalThis.__originalValidateCase;delete globalThis.__originalValidateCase;});
+ await amendmentHit.getByRole('button',{name:'Add to evidence graph',exact:true}).click();
+ await amendmentHit.getByRole('status').getByText('Added to evidence graph.',{exact:true}).waitFor();
+ const feedbackRect=await amendmentHit.getByRole('status').boundingBox();
+ assert.ok(feedbackRect && feedbackRect.y<600 && feedbackRect.y+feedbackRect.height>0,'Clicked result feedback stays in the viewport');
+ const viewEvidence=amendmentHit.getByRole('link',{name:'View this evidence in graph',exact:true});
+ assert.equal(await viewEvidence.getAttribute('href'),'#graph');
+ await amendmentHit.getByRole('button',{name:'Add to evidence graph',exact:true}).click();
+ await amendmentHit.getByRole('status').getByText('Already in evidence graph.',{exact:true}).waitFor();
+ await viewEvidence.click();
+ await page.getByRole('heading',{name:'Evidence graph',exact:true}).waitFor();
+ assert.equal(await page.locator('#evidence-diagram [data-node-id]').count(),2);
+ await page.setViewportSize({width:1280,height:720});
+ await page.getByRole('link',{name:'3 · Search',exact:true}).click();
  await page.getByLabel('Search mode',{exact:true}).selectOption('question');
  await page.getByLabel('Search text or query').fill('What is normal retirement age?');
  await page.getByRole('button',{name:'Search',exact:true}).click();

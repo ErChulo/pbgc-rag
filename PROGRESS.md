@@ -82,3 +82,12 @@ Case/source bounds now prevent repeated-text/shared-string amplification before 
 3. Implement/evaluate genuinely local semantic inference or an explicitly identified model-based method with audited local assets, while keeping deterministic fallback and truthful no-model status.
 4. Complete case-schema migrations, durable-file acceptance, mid-parser interruption, concurrent-edit conflict handling, broader resource/fuzz/accessibility/enterprise validation. OPFS recovery snapshots are not schema migration.
 5. Integrate actual authorized official contracts when available; never infer official fields, formulas or template validity. Overall application/workplace acceptance is still not complete.
+
+
+## Development fix 0.4.1: search-to-graph feedback
+
+A user testing the extracted development build in Brave confirmed synthetic search results and exact source/line citations render. They reported no visible response after clicking Add to evidence graph. This is a partial manual observation, not complete Windows/file-origin acceptance (browser version and graph mutation outcome remain unconfirmed).
+
+The prior action changed only a page-top notice, potentially outside the clicked result's viewport. Search result actions now show success, already-present, or refusal directly beside the button and expose a link to the evidence graph after success. Existing evidence is matched by source/record identity to avoid duplicates even when restored graph node IDs differ. Graph ID collisions refuse explicitly. The result remains on screen for continued search.
+
+Validation: 215 unit/integration tests pass; secondary HTTP query and accessibility checks pass. The main browser regression additionally covers the user's broad `a` query, per-result validation refusal, success, repeated-click feedback, graph navigation and two-node count without duplication. These checks do not prove Brave/file-origin compatibility; user retest remains pending. Overall application acceptance is incomplete.
