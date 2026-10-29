@@ -86,8 +86,49 @@ test('query, meaningful term, citation, record and aggregate budgets fail closed
   assert.throws(() => retrieveQuestionEvidence(c, 'x'.repeat(questionRetrievalLimits.queryChars + 1)), /1024/);
   assert.throws(() => retrieveQuestionEvidence(c, Array.from({ length: 33 }, (_, i) => 'term' + i).join(' ')), /32 meaningful/);
   for (const options of [{ limit: 0 }, { limit: 51 }, { limit: 1.5 }, { limit: '2' }, { semantic: true }, []]) assert.throws(() => retrieveQuestionEvidence(c, 'ordinary', options));
-  const big = clone(c); big.sources[0].records[0].text = 'x'.repeat(questionRetrievalLimits.recordChars + 1); assert.throws(() => retrieveQuestionEvidence(big, 'ordinary'), /text limit/);
-  const aggregate = clone(c); aggregate.sources[0].records = Array.from({ length: 65 }, (_, i) => ({ ...aggregate.sources[0].records[0], id: aggregate.sources[0].id + ':' + (i + 1), text: 'x'.repeat(questionRetrievalLimits.recordChars) }));
+  const big = clone(c); big.sources[0].records[0].text = 'x'.repeat(questionRetrievalLimits.recordChars + 1); assert.throws(() => retrieveQuestionEvidence(big, 'ordinary'), /text limit|blocked/);
+  const aggregate = clone(c); aggregate.sources[0].records = Array.from({ length: 17 }, (_, i) => ({ ...aggregate.sources[0].records[0], id: aggregate.sources[0].id + ':' + (i + 1), text: 'x'.repeat(questionRetrievalLimits.recordChars) }));
   assert.throws(() => retrieveQuestionEvidence(aggregate, 'ordinary'), /text limit/);
   const cyclic = clone(c); cyclic.loop = cyclic; assert.throws(() => retrieveQuestionEvidence(cyclic, 'ordinary'), /cyclic/);
+});
+test('actual long-line and 50001-row imports retrieve complete tail citations and preserve partial/abstention statuses', async () => {
+  const long = await workspace('ordinary '.repeat(13000) + 'unique-long-line-marker');
+  assert.ok(long.sources[0].records[0].text.length > 100 * 1024);
+  const longResult = retrieveQuestionEvidence(long, 'What is unique-long-line-marker?');
+  assert.equal(longResult.status, 'evidence-found'); assert.equal(longResult.citations[0].locator.line, 1); assert.equal(longResult.citations[0].excerpt, long.sources[0].records[0].text);
+  const many = await workspace('filler\n'.repeat(50000) + 'unique-tail-marker');
+  assert.equal(many.sources[0].records.length, 50001);
+  const found = retrieveQuestionEvidence(many, 'What is unique-tail-marker?');
+  assert.equal(found.status, 'evidence-found'); assert.equal(found.citations.length, 1); assert.equal(found.citations[0].locator.line, 50001); assert.equal(found.citations[0].recordId, many.sources[0].records[50000].id);
+  const partial = retrieveQuestionEvidence(many, 'unique-tail-marker unseen-rule');
+  assert.equal(partial.status, 'partial-evidence'); assert.deepEqual(partial.missingTerms, ['unseen-rule']);
+  const absent = retrieveQuestionEvidence(many, 'unrelated-mortality'); assert.equal(absent.status, 'insufficient-evidence'); assert.deepEqual(absent.citations, []);
+});
+test('100000-record valid working-case benchmark searches the unique final citation without truncating input', async t => {
+  const { search, querySQL } = require('../js/search.js');
+  let start = performance.now(); const c = await workspace('filler\n'.repeat(99999) + 'uniquetail'); const parseMs = performance.now() - start;
+  const serializedMiB = JSON.stringify(c).length / (1024 * 1024);
+  assert.ok(serializedMiB < 32); assert.equal(c.sources[0].records.length, 100000); assert.equal(globalThis.PBGC.validateCase(c).valid, true);
+  start = performance.now(); const hits = search(c.sources[0].records, 'uniquetail'); const keywordMs = performance.now() - start;
+  assert.equal(hits.length, 1); assert.equal(hits[0].record.locator.line, 100000);
+  start = performance.now(); const rows = querySQL(c.sources[0].records, "SELECT id FROM records WHERE text = 'uniquetail'"); const sqlMs = performance.now() - start;
+  assert.equal(rows[0].id, c.sources[0].records[99999].id);
+  start = performance.now(); const evidence = retrieveQuestionEvidence(c, 'What is uniquetail?'); const questionMs = performance.now() - start;
+  assert.equal(evidence.status, 'evidence-found'); assert.equal(evidence.citations[0].locator.line, 100000);
+  t.diagnostic(JSON.stringify({ records: 100000, serializedMiB: +serializedMiB.toFixed(2), parseMs: +parseMs.toFixed(1), keywordMs: +keywordMs.toFixed(1), sqlMs: +sqlMs.toFixed(1), questionMs: +questionMs.toFixed(1), processPeakRSSMiB: +(process.resourceUsage().maxRSS / 1024).toFixed(1) }));
+});
+test('32 MiB of accepted derived record text retains exact tail evidence', async () => {
+  const c = await workspace('Synthetic compressed-source-equivalent fixture.');
+  const template = c.sources[0].records[0];
+  c.sources[0].records = Array.from({ length: 16 }, (_, i) => ({ ...template, id: c.sources[0].id + ':' + (i + 1), text: 'x'.repeat(questionRetrievalLimits.recordChars) }));
+  c.sources[0].records[15].text = c.sources[0].records[15].text.slice(0, -12) + ' uniquetail.';
+  assert.equal(globalThis.PBGC.validateCase(c).valid, true);
+  const r = retrieveQuestionEvidence(c, 'uniquetail'); assert.equal(r.status, 'evidence-found'); assert.equal(r.citations[0].recordId, c.sources[0].records[15].id);
+  assert.equal(r.citations[0].excerpt, c.sources[0].records[15].text);
+});
+test('streamed token budget fails closed even when early evidence is found and remaining tokens are stopwords', async () => {
+  const c = await workspace('uniquetail'); const template = c.sources[0].records[0];
+  c.sources[0].records = [template, ...Array.from({ length: 9 }, (_, i) => ({ ...template, id: c.sources[0].id + ':' + (i + 2), text: 'a '.repeat(questionRetrievalLimits.recordChars / 2) }))];
+  assert.equal(globalThis.PBGC.validateCase(c).valid, true);
+  assert.throws(() => retrieveQuestionEvidence(c, 'uniquetail'), /token budget exceeded.*No partial result/);
 });

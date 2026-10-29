@@ -1,7 +1,7 @@
 /* PBGC-RAG search v1. Dependency-free, read-only, bounded execution. */
 (function (root) {
   'use strict';
-  const LIMITS = Object.freeze({ records: 50000, text: 65536, totalText: 4000000, query: 256, results: 1000, nodes: 10000, edges: 50000, depth: 8, regexOperations: 5000000, sqlOperations: 5000000 });
+  const LIMITS = Object.freeze({ records: 100000, text: 2 * 1024 * 1024, totalText: 32 * 1024 * 1024, query: 256, results: 1000, nodes: 10000, edges: 50000, depth: 8, regexOperations: 5000000, sqlOperations: 5000000, keywordTerms: 32, keywordCharacters: 128 * 1024 * 1024 });
   function fail(message) { throw new Error(message); }
   function operationBudget(label, maximum) {
     let remaining = maximum;
@@ -99,11 +99,26 @@
     if (!query.trim()) return [];
     let matcher;
     if (mode === 'regex') {
-      if (records.reduce((n, r) => n + r.text.length, 0) * Math.max(query.length, 1) > 20000000) fail('Regex work limit exceeded. Narrow the selected sources or simplify the pattern.');
       const regex = compileSafeRegex(query, operationBudget('Regex', LIMITS.regexOperations)); matcher = text => regex(text) ? 1 : 0; }
     else {
       const terms = mode === 'exact' ? [normalize(query)] : [...new Set(normalize(query).trim().split(/\s+/u))];
-      matcher = text => { const value = normalize(text); return terms.every(term => value.includes(term)) ? terms.reduce((n, term) => n + value.split(term).length - 1, 0) : 0; };
+      if (terms.length > LIMITS.keywordTerms) fail('Keyword queries may contain at most 32 terms.');
+      const spend = operationBudget('Keyword character scan', LIMITS.keywordCharacters);
+      matcher = text => {
+        spend(text.length);
+        const value = normalize(text);
+        let score = 0;
+        for (const term of terms) {
+          // Account for a full native scan before it runs. Count non-overlapping
+          // occurrences with offsets, without materializing a split array.
+          spend(value.length); let at = value.indexOf(term);
+          if (at < 0) return 0;
+          let from = 0;
+          do { score++; from = at + term.length; spend(); at = value.indexOf(term, from); }
+          while (at >= 0);
+        }
+        return score;
+      };
     }
     return records.map(record => ({ record, score: matcher(record.text), reason: mode === 'keyword' ? 'All terms occur in the source text.' : mode === 'exact' ? 'The exact phrase occurs in the source text (case insensitive).' : 'The supported regex matches the source text.' }))
       .filter(hit => hit.score > 0).sort((a, b) => b.score - a.score || a.record.id.localeCompare(b.record.id)).slice(0, LIMITS.results);
@@ -155,8 +170,6 @@
     if (is('LIMIT')) { i++; const value = tokens[i++]; if (!/^\d+$/.test(value || '') || Number(value) < 1 || Number(value) > LIMITS.results) fail('LIMIT must be 1 to 1000.'); limit = Number(value); }
     if (is(';')) i++;
     if (i !== tokens.length) fail('Unsupported SQL clause or multiple statements.');
-    const sqlWork = records.reduce((n, r) => n + r.text.length, 0) * conditions.reduce((n, c) => n + (c.op === 'LIKE' ? c.value.length : 1), 0);
-    if (sqlWork > 20000000) fail('SQL work limit exceeded. Narrow the selected sources or simplify LIKE conditions.');
     const spendSQL = operationBudget('SQL LIKE', LIMITS.sqlOperations);
     const like = (actual, pattern) => {
       // LIKE is a small dynamic-programming wildcard matcher, without regex backtracking.

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { search, querySQL, queryGraph } = require('../js/search.js');
+const { search, querySQL, queryGraph, searchLimits } = require('../js/search.js');
 const records = [
   { id: 'r1', sourceId: 's1', text: 'Normal retirement age is 65. Retirement provisions.', locator: { label: 'Line 1' }, fields: { age: 65, group: 'A' } },
   { id: 'r2', sourceId: 's2', text: 'Early retirement age is 55.', locator: { label: 'Line 2' }, fields: { age: 55, group: 'B' } },
@@ -36,9 +36,10 @@ test('regex rejects unsafe/unsupported patterns instead of executing them', () =
 });
 test('search validates resource limits and unsupported semantic mode', () => {
   assert.throws(() => search(records, 'a'.repeat(257)));
-  assert.throws(() => search([{ id: 'x', sourceId: 'x', text: 'x'.repeat(65537) }], 'x'));
+  assert.throws(() => search([{ id: 'x', sourceId: 'x', text: 'x'.repeat(searchLimits.text + 1) }], 'x'));
   assert.throws(() => search(records, 'benefit', 'semantic'), /unavailable/);
-  assert.throws(() => search(Array.from({ length: 8 }, (_, i) => ({ id: String(i), sourceId: 's', text: 'x'.repeat(65536) })), 'a'.repeat(100), 'regex'), /work limit/);
+  assert.throws(() => search(Array.from({ length: 17 }, (_, i) => ({ id: String(i), sourceId: 's', text: 'x'.repeat(searchLimits.text) })), 'a'), /text limit/);
+  assert.throws(() => search(records, Array.from({ length: 33 }, (_, i) => 'x' + i).join(' ')), /32 terms/);
   assert.throws(() => search([{}], 'x'));
 });
 test('SQL filters, projects, sorts, limits and returns detached rows', () => {
@@ -108,4 +109,45 @@ test('SQL LIKE budgets actual field characters and DP transitions, including non
   const query = "SELECT id FROM records WHERE fields.value LIKE '" + '%'.repeat(100) + "b'";
   assert.deepEqual(querySQL([record(1)], query), []);
   assert.throws(() => querySQL([record(1), record(2)], query), /operation budget exceeded/);
+});
+test('actual parser output with a 100 KB line remains searchable with its exact citation', async () => {
+  const { parseFile } = require('../js/parsers.js');
+  const text = 'ordinary '.repeat(13000) + 'unique-long-line-marker';
+  const source = await parseFile(new File([text], 'synthetic-long-line.txt'));
+  assert.ok(source.records[0].text.length > 100 * 1024);
+  for (const mode of ['keyword', 'exact']) {
+    const result = search(source.records, 'unique-long-line-marker', mode);
+    assert.equal(result.length, 1); assert.equal(result[0].record.id, source.records[0].id);
+    assert.equal(result[0].record.locator.line, 1); assert.equal(result[0].record.text, text);
+  }
+  assert.equal(querySQL(source.records, "SELECT id FROM records WHERE text LIKE '%unique-long-line-marker'")[0].id, source.records[0].id);
+});
+test('actual 50001-row parser output includes the last unique citation in keyword, exact, regex and SQL', async () => {
+  const { parseFile } = require('../js/parsers.js');
+  const source = await parseFile(new File(['filler\n'.repeat(50000) + 'unique-tail-marker'], 'synthetic-many-rows.txt'));
+  assert.equal(source.records.length, 50001);
+  for (const mode of ['keyword', 'exact', 'regex']) {
+    const hits = search(source.records, mode === 'regex' ? '^unique-tail-marker$' : 'unique-tail-marker', mode);
+    assert.equal(hits.length, 1); assert.equal(hits[0].record.id, source.records[50000].id); assert.equal(hits[0].record.locator.line, 50001);
+  }
+  assert.deepEqual(querySQL(source.records, "SELECT id FROM records WHERE text = 'unique-tail-marker'"), [{ id: source.records[50000].id }]);
+});
+test('aggregate 32 MiB input is scanned completely for a unique tail hit without changing the result cap', () => {
+  const records = Array.from({ length: 16 }, (_, i) => ({ id: 'r' + i, sourceId: 's', text: 'x'.repeat(searchLimits.text) }));
+  records[15].text = records[15].text.slice(0, -10) + 'uniquetail';
+  const hits = search(records, 'uniquetail'); assert.equal(hits.length, 1); assert.equal(hits[0].record.id, 'r15');
+  assert.equal(querySQL(records, "SELECT id FROM records WHERE id = 'r15'")[0].id, 'r15');
+  assert.equal(search(Array.from({ length: 1001 }, (_, i) => ({ id: String(i), sourceId: 's', text: 'hit' })), 'hit').length, 1000);
+});
+test('keyword occurrence counts avoid source splitting and retain non-overlapping exact-match scores', () => {
+  const text = 'a'.repeat(2 * 1024 * 1024);
+  assert.equal(search([{ id: 'r', sourceId: 's', text }], 'a')[0].score, text.length);
+  assert.equal(search([{ id: 'r', sourceId: 's', text: 'aaaaa' }], 'aa', 'exact')[0].score, 2);
+});
+test('keyword character-work budget is shared across records and fails without partial hits', () => {
+  const words = Array.from({ length: 32 }, (_, i) => 'term' + i), block = words.join(' ') + ' ';
+  const text = block.repeat(Math.floor(searchLimits.text / block.length));
+  const record = i => ({ id: String(i), sourceId: 's', text });
+  assert.equal(search([record(1)], words.join(' ')).length, 1);
+  assert.throws(() => search([record(1), record(2)], words.join(' ')), /Keyword character scan operation budget exceeded.*No partial result/);
 });

@@ -1,7 +1,7 @@
 /* Offline lexical question retrieval. This module never generates an answer. */
 (function (root) {
   'use strict';
-  const LIMITS = Object.freeze({ queryChars: 1024, terms: 32, records: 50000, recordChars: 65536, totalTextChars: 4 * 1024 * 1024, tokens: 1000000, citations: 50, structureNodes: 1500000, structureChars: 48 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ queryChars: 1024, terms: 32, records: 100000, recordChars: 2 * 1024 * 1024, totalTextChars: 32 * 1024 * 1024, tokens: 8 * 1024 * 1024, normalizedChars: 64 * 1024 * 1024, citations: 50, structureNodes: 1500000, structureChars: 48 * 1024 * 1024 });
   const STOP = new Set(('a an the what which who whom whose when where why how is are was were am be been being do does did can could would should please tell me about of for to in on at by from with as and or this that these those it its i my we our you your').split(' '));
   const NOTICE = 'Lexical matches are source excerpts, not an answer or a legal or actuarial interpretation. No authority, priority, participant applicability, approval, or factual validity is determined. Recorded source hashes identify originals; retrieval does not authenticate them.';
   const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
@@ -31,10 +31,17 @@
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > LIMITS.citations) throw new Error('Question evidence limit must be 1–50.');
     return limit;
   }
-  function tokens(value) {
-    // Retain internal punctuation in dates/decimal literals, signs, currencies,
-    // and percentages. No numerical conversion, stemming, synonym or date inference.
-    return value.normalize('NFKC').toLocaleLowerCase('en-US').match(/[$€£¥]?[+\-]?[\p{L}\p{M}\p{N}]+(?:[._:/,\u2044\-][\p{L}\p{M}\p{N}]+)*%?/gu) || [];
+  function* tokens(value, work) {
+    // Retain numeric/date punctuation; stream matches rather than allocate an
+    // array containing every source token. Budgets apply across the entire case.
+    const normalized = value.normalize('NFKC').toLocaleLowerCase('en-US');
+    if (work && (work.chars += normalized.length) > LIMITS.normalizedChars) throw new Error('Question retrieval normalized-character budget exceeded. Use a smaller source scope. No partial result is returned.');
+    const pattern = /[$€£¥]?[+\-]?[\p{L}\p{M}\p{N}]+(?:[._:/,\u2044\-][\p{L}\p{M}\p{N}]+)*%?/gu;
+    let match;
+    while ((match = pattern.exec(normalized))) {
+      if (work && ++work.tokens > LIMITS.tokens) throw new Error('Question retrieval token budget exceeded. Use a smaller source scope. No partial result is returned.');
+      yield match[0];
+    }
   }
   function validateCase(c) {
     safeData(c);
@@ -51,20 +58,17 @@
   function retrieveQuestionEvidence(caseData, query, options = {}) {
     const limit = optionsLimit(options);
     if (typeof query !== 'string' || query.length > LIMITS.queryChars) throw new Error('Questions must be text of at most 1024 characters.');
-    const terms = [...new Set(tokens(query).filter(term => !STOP.has(term)))];
+    const terms = [...new Set([...tokens(query)].filter(term => !STOP.has(term)))];
     if (terms.length > LIMITS.terms) throw new Error('Questions may contain at most 32 meaningful terms.');
     const count = validateCase(caseData);
     const base = { status: 'insufficient-evidence', method: 'lexical-question-retrieval', modelUsed: false, query, terms, citations: [], missingTerms: terms.slice(), notice: NOTICE };
     if (!terms.length) return { ...base, notice: 'No meaningful lexical retrieval terms remain after question stopwords are removed. ' + NOTICE };
     if (!count) return { ...base, notice: 'No imported source records are available. ' + NOTICE };
     const wanted = new Set(terms), documentFrequency = new Map(terms.map(term => [term, 0])), candidates = [];
-    let totalLength = 0, totalTokens = 0;
+    let totalLength = 0; const work = { chars: 0, tokens: 0 };
     for (const source of caseData.sources) for (const record of source.records) {
-      const all = tokens(record.text);
-      totalTokens += all.length;
-      if (totalTokens > LIMITS.tokens) throw new Error('Question retrieval token budget exceeded. Use a smaller case.');
       const frequencies = new Map(); let length = 0;
-      for (const token of all) if (!STOP.has(token)) {
+      for (const token of tokens(record.text, work)) if (!STOP.has(token)) {
         length++;
         if (wanted.has(token)) frequencies.set(token, (frequencies.get(token) || 0) + 1);
       }
