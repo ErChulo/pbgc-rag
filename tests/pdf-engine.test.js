@@ -1,11 +1,12 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),{deflateSync}=require('node:zlib');
 require('../vendor/pdfjs/pdfjs-local.js');
-const {parsePDFAdvanced,pdfAdvancedLimits}=require('../js/pdf-engine.js');
+const {parsePDFAdvanced,pdfAdvancedLimits,PDF_ADVANCED_PARSER_VERSION}=require('../js/pdf-engine.js');
 function stream(content,filter=''){const bytes=Buffer.isBuffer(content)?content:Buffer.from(content);return Buffer.concat([Buffer.from(`<< /Length ${bytes.length} ${filter} >>\nstream\n`),bytes,Buffer.from('\nendstream')]);}
-function pdf({content='BT /F1 12 Tf 72 720 Td (Synthetic PDF text) Tj ET',unicode=false,xrefStream=false,extra=[],compress=false}={}){
- const objects=[Buffer.from('<< /Type /Catalog /Pages 2 0 R >>'),Buffer.from('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>'),Buffer.from(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ${unicode?'/Encoding << /Type /Encoding /Differences [1 /A] >> /ToUnicode 6 0 R':'/Encoding /WinAnsiEncoding'} >>`),compress?stream(deflateSync(Buffer.from(content)),'/Filter /FlateDecode'):stream(content)];
+function pdf({content='BT /F1 12 Tf 72 720 Td (Synthetic PDF text) Tj ET',unicode=false,xrefStream=false,extra=[],compress=false,secondFont=false}={}){
+ const objects=[Buffer.from('<< /Type /Catalog /Pages 2 0 R >>'),Buffer.from('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R ${secondFont?'/F2 6 0 R':''} >> >> /Contents 5 0 R >>`),Buffer.from(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ${unicode?'/Encoding << /Type /Encoding /Differences [1 /A] >> /ToUnicode 6 0 R':'/Encoding /WinAnsiEncoding'} >>`),compress?stream(deflateSync(Buffer.from(content)),'/Filter /FlateDecode'):stream(content)];
  if(unicode)objects.push(stream('/CIDInit /ProcSet findresource begin 12 dict begin begincmap /CIDSystemInfo << /Registry (Synthetic) /Ordering (Synthetic) /Supplement 0 >> def /CMapName /Synthetic def /CMapType 2 def 1 begincodespacerange <01> <01> endcodespacerange 1 beginbfchar <01> <03A9> endbfchar endcmap CMapName currentdict /CMap defineresource pop end end'));
+ if(secondFont){if(unicode)throw Error('Test helper font options conflict.');objects.push(Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>'));}
  objects.push(...extra);const offsets=[0];let out=Buffer.from('%PDF-1.7\n');
  objects.forEach((o,i)=>{offsets.push(out.length);out=Buffer.concat([out,Buffer.from(`${i+1} 0 obj\n`),o,Buffer.from('\nendobj\n')]);});
  const position=out.length;
@@ -55,8 +56,43 @@ test('source wrapper prefers the audited engine and packages untouched originals
   const input = pdf({content:'BT /F1 12 Tf 72 720 Td <01> Tj ET',unicode:true,xrefStream:true,compress:true});
   const source = await parseFile(new File([input], 'synthetic-unicode.pdf'));
   assert.equal(source.records[0].text, 'Ω');
+  assert.deepEqual(await parseFile(new File([input], 'synthetic-unicode.pdf')), source);
   assert.match(source.parserVersion, /pdfjs-6\.4\.299/);
   assert.deepEqual(Buffer.from(source.originalBase64, 'base64'), Buffer.from(input));
   const c = {schemaVersion:1,id:'pdf-wrapper-case',name:'Synthetic PDF wrapper case',createdAt:'2026-10-28T00:00:00.000Z',sources:[source],graph:{nodes:[],edges:[]},rules:[],calculations:[]};
   assert.deepEqual(await importCase(await exportCase(c)), c);
+});
+
+test('identical PDF bytes produce deeply equal records across repeated extraction calls', async () => {
+  const input = pdf({compress:true});
+  const first = await parsePDFAdvanced(input);
+  const second = await parsePDFAdvanced(input);
+  assert.deepEqual(second, first);
+  assert.equal(first[0].fields.fontResourceId, 'font-1');
+  assert.equal(Object.hasOwn(first[0].fields, 'fontName'), false);
+  assert.equal(first[0].fields.adapterVersion, PDF_ADVANCED_PARSER_VERSION);
+  assert.equal(PDF_ADVANCED_PARSER_VERSION, '1.1.0');
+});
+
+test('document-local font identity is stable for multiple fonts and concurrent loading tasks', async () => {
+  const input = pdf({secondFont:true,content:'BT /F1 12 Tf 72 720 Td (First font) Tj /F2 12 Tf 0 -20 Td (Second font) Tj /F1 12 Tf 0 -20 Td (First font again) Tj ET'});
+  const first = await parsePDFAdvanced(input);
+  const transitions = first.map(r => r.fields.fontResourceId).filter((id, index, all) => index === 0 || id !== all[index - 1]);
+  assert.deepEqual(transitions, ['font-1', 'font-2', 'font-1']);
+  assert.equal(first[0].text, 'First font');
+  assert.equal(first.at(-1).text, 'First font again');
+  assert.equal(first.filter(r => r.fields.fontResourceId === 'font-2').map(r => r.text).join(' '), 'Second font');
+  assert.ok(first.every(r => /not a source font name/.test(r.fields.fontResourceIdKind)));
+  const parallel = await Promise.all([parsePDFAdvanced(input), parsePDFAdvanced(input)]);
+  assert.deepEqual(parallel[0], first);
+  assert.deepEqual(parallel[1], first);
+});
+
+test('embedded-font and xref-stream records remain deterministic after unrelated documents load', async () => {
+  const embedded = Uint8Array.from(Buffer.from(fixtures.embedded, 'base64'));
+  const unicode = pdf({content:'BT /F1 12 Tf 72 720 Td <01> Tj ET',unicode:true,xrefStream:true,compress:true});
+  const before = await Promise.all([parsePDFAdvanced(embedded), parsePDFAdvanced(unicode)]);
+  await parsePDFAdvanced(pdf());
+  const after = await Promise.all([parsePDFAdvanced(embedded), parsePDFAdvanced(unicode)]);
+  assert.deepEqual(after, before);
 });

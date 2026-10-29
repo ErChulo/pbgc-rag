@@ -1,6 +1,7 @@
 /* Bounded offline text extraction adapter for the pinned local Mozilla PDF.js engine. */
 (function (root) {
   'use strict';
+  const PDF_ADVANCED_PARSER_VERSION = '1.1.0';
   const LIMITS = Object.freeze({ bytes: 16 * 1024 * 1024, expandedStream: 8 * 1024 * 1024, expandedTotal: 32 * 1024 * 1024, streams: 10000, pages: 2000, items: 100000, textChars: 4 * 1024 * 1024, textItemChars: 65536, dictionaryTokens: 100000 });
   const fail = text => { throw Error('PDF import: ' + text); };
   function dictionary(source, start) {
@@ -110,7 +111,7 @@
     await preflight(bytes);
     const engine = root.PBGC_PDFJS;
     if (!engine || typeof engine.getDocument !== 'function') fail('the verified local PDF engine is unavailable.');
-    let loading, document, total = 0; const records = [], pagesWithoutNativeText = [];
+    let loading, document, total = 0; const records = [], pagesWithoutNativeText = [], fontResources = new Map();
     try {
       loading = engine.getDocument({ data: bytes, BinaryDataFactory: engine.LocalBinaryDataFactory, cMapUrl: 'local-cmaps/', standardFontDataUrl: 'local-fonts/', useWorkerFetch: false, useWasm: false, useSystemFonts: false, disableFontFace: true, disableAutoFetch: true, disableRange: true, disableStream: true, enableXfa: false, isOffscreenCanvasSupported: false, isImageDecoderSupported: false, maxImageSize: 1000000, stopAtErrors: true, verbosity: 0 });
       loading.onPassword = () => { loading.destroy().catch(()=>{}); };
@@ -130,7 +131,11 @@
                 index++; total += item.str.length;
                 if (records.length >= LIMITS.items || total > LIMITS.textChars) { await reader.cancel(); fail('extracted text exceeds limits.'); }
                 if (!Array.isArray(item.transform) || item.transform.length !== 6 || item.transform.some(n => !Number.isFinite(n)) || !Number.isFinite(item.width) || !Number.isFinite(item.height)) fail('invalid text geometry.');
-                records.push({ text: item.str, fields: { extraction: 'native PDF text; no OCR or image interpretation', direction: item.dir, fontName: item.fontName, hasEOL: item.hasEOL, extractor: 'Mozilla PDF.js ' + engine.version }, locator: { kind: 'pdf', label: `Page ${pageNumber} · text item ${index}`, page: pageNumber, textItem: index, transform: [...item.transform], width: item.width, height: item.height, boundingBox: null, coordinateSystem: 'PDF user space; transform and dimensions are extraction geometry, not exact glyph bounding boxes', pageView: [...page.view], rotation: page.rotate } });
+                if (typeof item.fontName !== 'string' || !item.fontName) fail('invalid native text font handle.');
+                // PDF.js names contain a per-load counter. Persist only document-local,
+                // first-seen identity; this is not the original PDF font/resource name.
+                if (!fontResources.has(item.fontName)) fontResources.set(item.fontName, `font-${fontResources.size + 1}`);
+                records.push({ text: item.str, fields: { extraction: 'native PDF text; no OCR or image interpretation', direction: item.dir, fontResourceId: fontResources.get(item.fontName), fontResourceIdKind: 'document-local first-seen font identity; not a source font name', hasEOL: item.hasEOL, extractor: 'Mozilla PDF.js ' + engine.version, adapterVersion: PDF_ADVANCED_PARSER_VERSION }, locator: { kind: 'pdf', label: `Page ${pageNumber} · text item ${index}`, page: pageNumber, textItem: index, transform: [...item.transform], width: item.width, height: item.height, boundingBox: null, coordinateSystem: 'PDF user space; transform and dimensions are extraction geometry, not exact glyph bounding boxes', pageView: [...page.view], rotation: page.rotate } });
               }
             }
           } finally { reader.releaseLock(); }
@@ -146,7 +151,7 @@
       fail('native text extraction failed: ' + (error.message || 'unsupported PDF'));
     } finally { if (loading) await loading.destroy(); }
   }
-  const api = { parsePDFAdvanced, pdfAdvancedLimits: LIMITS };
+  const api = { parsePDFAdvanced, pdfAdvancedLimits: LIMITS, PDF_ADVANCED_PARSER_VERSION };
   Object.assign(root.PBGC = root.PBGC || {}, api);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

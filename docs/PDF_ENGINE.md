@@ -1,6 +1,7 @@
 # Local PDF engine audit and bounded extraction
 
-`js/pdf-engine.js` exposes `PBGC.parsePDFAdvanced(Uint8Array)` and `pdfAdvancedLimits`.
+`js/pdf-engine.js` exposes `PBGC.parsePDFAdvanced(Uint8Array)`, `pdfAdvancedLimits`,
+and `PDF_ADVANCED_PARSER_VERSION` (adapter version **1.1.0**).
 It returns raw parser records, ready for the existing `parseFile` source-byte wrapper.
 Load `vendor/pdfjs/pdfjs-local.js`, then `js/pdf-engine.js` before the application.
 The small original `parsePDF` module is unchanged and remains separately testable.
@@ -53,6 +54,29 @@ asserted as exact per-glyph bounding boxes. Normalized logical text is not a vis
 layout reconstruction. First-record metadata identifies pages without native text.
 Scanned-image OCR remains unavailable; an all-image/no-text document is rejected.
 
+### Deterministic font metadata and parser revision
+
+PDF.js assigns opaque font handles such as `g_d7_f1` with a counter that changes
+for every loading task. Adapter 1.0.0 stored these as `fields.fontName`, making
+identical source bytes produce different records on repeated extraction. That
+was extraction bookkeeping drift, not a source-document change.
+
+Adapter **1.1.0** no longer persists that opaque handle. Each document assigns
+`fields.fontResourceId` values `font-1`, `font-2`, and so on in first text-appearance
+order. Repeated uses of the same PDF.js handle in that document share its local
+identifier, including across pages. The identifier does **not** claim an original
+PDF font-resource key, font-family name, or official field name, and it cannot be
+used to equate fonts across documents. `fontResourceIdKind` records this scope;
+`adapterVersion` identifies the adapter used for each record.
+
+Raw source text and returned geometry remain unchanged. Sequential, concurrent,
+and interleaved parses of the same tested input produce deeply equal complete
+records; the complete source wrapper is also repeatable. The coordinator must
+include the exported adapter version in source parser-version metadata, so a
+reviewed reindex can distinguish this one-time metadata migration from a no-op.
+Reindexing existing records is explicit; older saved cases are not silently
+rewritten or automatically reapproved.
+
 ## Conservative resource preflight
 
 A bounded independent preflight runs before PDF.js:
@@ -76,10 +100,11 @@ acceptance claim. Text interpretation and authority remain unverified source fac
 
 ## Verification
 
-`node --test --test-isolation=none tests/pdf-engine.test.js`: eight tests pass:
+`node --test --test-isolation=none tests/pdf-engine.test.js`: 12 tests pass:
 source-byte retention/geometry, xref-stream ToUnicode, actual embedded synthetic
 TrueType, no Worker/fetch resource path, encrypted/no-text/invalid inputs, bounded
-unsupported structure rejection, and decompression/literal bombs.
+unsupported structure rejection, decompression/literal bombs, complete-source
+repeatability, stable multi-font identity, and interleaved/concurrent extraction.
 
 The coordinator must still verify actual browser CSP/offline behavior and source
 package integration. Managed cloud Chromium blocks `file://`; secondary HTTP
