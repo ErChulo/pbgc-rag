@@ -59,7 +59,7 @@
     const shownNodes = selectedNodes.map((node, index) => ({ ...clone(node), label: node.label || node.id, type: node.type || 'evidence', status: node.status || 'unreviewed', x: 40 + index % columns * 300, y: 70 + Math.floor(index / columns) * 180 }));
     const shownEdges = selectedEdges.map(edge => ({ ...clone(edge), status: edge.status || 'proposed' }));
     const omittedNodes = graph.nodes.length - shownNodes.length, omittedEdges = graph.edges.length - shownEdges.length;
-    return { schemaVersion: 1, ...(caseIds.size ? { caseId: [...caseIds][0] } : {}), nodes: shownNodes, edges: shownEdges, totalNodes: graph.nodes.length, totalEdges: graph.edges.length, omittedNodes, omittedEdges, truncated: omittedNodes > 0 || omittedEdges > 0, width: Math.max(480, columns * 300 + 180), height: Math.max(220, Math.ceil(shownNodes.length / columns) * 180 + 60), interpretation: 'Layout and link labels express recorded research claims. They do not establish legal priority, approval, or official validity.' };
+    return { schemaVersion: 1, ...(caseIds.size ? { caseId: [...caseIds][0] } : {}), nodes: shownNodes, edges: shownEdges, totalNodes: graph.nodes.length, totalEdges: graph.edges.length, omittedNodes, omittedEdges, truncated: omittedNodes > 0 || omittedEdges > 0, width: Math.max(480, columns * 300 + 180), height: Math.max(220, Math.ceil(shownNodes.length / columns) * 180 + 60), interpretation: 'Links show research claims. They do not establish legal priority or approval. Official outputs remain blocked.' };
   }
   let rendering = 0;
   function renderEvidenceGraph(container, graph, options = {}) {
@@ -74,14 +74,15 @@
     const paragraph = content => { const p = doc.createElement('p'); p.textContent = content; return p; };
     const status = paragraph(`Showing ${model.nodes.length} of ${model.totalNodes} nodes and ${model.edges.length} of ${model.totalEdges} links.${model.truncated ? ` Display limit: ${model.omittedNodes} nodes and ${model.omittedEdges} links are omitted. The full graph is retained.` : ''}`);
     status.setAttribute('role', 'status');
-    const explanation = paragraph(model.interpretation + ' Select a node with a click, Enter, or Space to inspect its source evidence.');
+    const explanation = paragraph('Select a node to read its source. Use a click, Enter, or Space. Links need review.');
     if (!model.nodes.length) { container.replaceChildren(status, paragraph('No evidence nodes yet. Add source evidence from search.'), explanation); return model; }
-    const svg = element('svg', { xmlns: ns, viewBox: `0 0 ${model.width} ${model.height}`, width: '100%', role: 'group', 'aria-label': 'Evidence graph. Select nodes to inspect source evidence.' });
+    const svg = element('svg', { xmlns: ns, viewBox: `0 0 ${model.width} ${model.height}`, width: model.width, height: model.height, role: 'group', 'aria-label': 'Evidence graph. Select nodes to inspect source evidence.' });
     const titleId = `pbgc-evidence-graph-${++rendering}`;
     svg.append(element('title', { id: titleId }, 'Evidence graph with recorded link types'));
     svg.setAttribute('aria-labelledby', titleId);
     const arrow = titleId + '-arrow', defs = element('defs'), marker = element('marker', { id: arrow, viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' });
     marker.append(element('path', { d: 'M 0 0 L 10 5 L 0 10 Z', fill: 'var(--line, #81807f)' })); defs.append(marker); svg.append(defs);
+    const fittedText = [];
     const byId = new Map(model.nodes.map(node => [node.id, node]));
     for (const edge of model.edges) {
       const from = byId.get(edge.from), to = byId.get(edge.to), cx = from.x + 110, cy = from.y + 40, tx = to.x + 110, ty = to.y + 40;
@@ -100,10 +101,15 @@
     for (const node of model.nodes) {
       const group = element('g', { 'data-node-id': node.id, role: 'button', tabindex: 0, 'aria-label': `${node.label}; ${node.type}; ${node.status}. Select evidence.`, 'aria-pressed': 'false' });
       const shape = element('rect', { x: node.x, y: node.y, width: 220, height: 80, rx: 8, fill: 'var(--panel, #14191f)', stroke: 'var(--accent, #b3e5e3)', 'stroke-width': 2 });
-      group.append(shape, element('title', {}, `${node.label} · ${node.id}`));
+      group.append(shape, element('title', {}, `${node.label} · ${node.id} · ${node.type} · ${node.status}`));
       const compact = node.label.replace(/\s+/g, ' ').trim();
-      group.append(element('text', { x: node.x + 12, y: node.y + 29, fill: 'var(--text, #f2f2f2)', 'font-family': 'Arial, sans-serif', 'font-size': 14, 'aria-hidden': 'true' }, compact.length > 27 ? compact.slice(0, 26) + '…' : compact));
-      group.append(element('text', { x: node.x + 12, y: node.y + 57, fill: 'var(--muted, #bec6df)', 'font-family': 'Arial, sans-serif', 'font-size': 12, 'aria-hidden': 'true' }, `${node.type.slice(0, 15)} · ${node.status.slice(0, 15)}`));
+      const clipId = `${titleId}-node-${fittedText.length}`;
+      const clip = element('clipPath', {id:clipId, clipPathUnits:'userSpaceOnUse'});
+      clip.append(element('rect', {x:node.x+12,y:node.y+8,width:196,height:64}));defs.append(clip);
+      const labels = element('g', {'clip-path':`url(#${clipId})`});
+      const label = element('text', { x: node.x + 12, y: node.y + 29, fill: 'var(--text, #f2f2f2)', 'font-family': 'Arial, sans-serif', 'font-size': 14, 'aria-hidden': 'true' }, compact);
+      const metadata = element('text', { x: node.x + 12, y: node.y + 57, fill: 'var(--muted, #bec6df)', 'font-family': 'Arial, sans-serif', 'font-size': 12, 'aria-hidden': 'true' }, `${node.type} · ${node.status}`);
+      labels.append(label,metadata);group.append(labels);fittedText.push(label,metadata);
       const select = () => { for (const candidate of svg.querySelectorAll('[data-node-id]')) candidate.setAttribute('aria-pressed', String(candidate === group)); if (onSelect) onSelect(node.id); };
       group.addEventListener('click', select);
       group.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); select(); } });
@@ -111,7 +117,19 @@
       group.addEventListener('blur', () => shape.setAttribute('stroke-width', '2'));
       svg.append(group);
     }
-    container.replaceChildren(status, explanation, svg); return model;
+    const viewport=doc.createElement('div');viewport.className='evidence-graph-viewport';
+    viewport.setAttribute('tabindex','0');viewport.setAttribute('role','region');
+    viewport.setAttribute('aria-label','Evidence graph. Scroll to see all nodes.');
+    viewport.append(svg);container.replaceChildren(status, explanation, viewport);
+    // Measure actual font widths after attachment. Character counts do not bound glyph width.
+    for(const label of fittedText){
+      if(label.getComputedTextLength()<=196)continue;
+      const characters=Array.from(label.textContent);let low=0,high=characters.length;
+      while(low<high){const middle=Math.ceil((low+high)/2);label.textContent=characters.slice(0,middle).join('')+'…';
+        if(label.getComputedTextLength()<=196)low=middle;else high=middle-1;}
+      label.textContent=characters.slice(0,low).join('')+'…';
+    }
+    return model;
   }
   const api = { buildGraphViewModel, renderEvidenceGraph, graphViewLimits: LIMITS };
   Object.assign(root.PBGC = root.PBGC || {}, api);

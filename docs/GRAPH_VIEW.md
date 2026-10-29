@@ -30,3 +30,13 @@ The view model returns `{schemaVersion,caseId?,nodes,edges,totalNodes,totalEdges
 - `node --test --test-isolation=none tests/graph-view.test.js`: detached deterministic model, provenance, caps, unsupported graphs, hostile trees/labels, date/case consistency, renderer guards.
 - `PBGC_HTTP_CHECK=1 node tests/graph-browser.cjs`: real Chromium SVG DOM, keyboard/click selection, focus, dark/light palette, inert markup, cap/empty/error behavior, and zero external requests. It requires the browser's normal process/socket permissions outside the command sandbox.
 - `node tests/graph-browser.cjs` defaults to actual `file://`. Managed cloud policy currently blocks file navigation. A secondary HTTP pass does not satisfy mandatory file-origin or Windows enterprise-browser acceptance. No policy bypass is performed.
+
+
+### Text fit (0.4.2)
+
+The browser measures node text after the SVG is attached. Labels use a maximum
+width of 196 SVG units. Long labels end with an ellipsis. Clipping prevents text
+from crossing the inner node bounds. Full labels remain in accessible text and
+tooltips. Source records are unchanged. A scroll area keeps the graph text at its
+normal size on small screens. Playwright checks actual text bounds and screenshots
+at 1280, 640 and 375 pixel widths in both themes. This is not a browser-zoom test.

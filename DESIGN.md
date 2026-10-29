@@ -80,3 +80,11 @@ The guide discusses Section 508. Build keyboard navigation, logical headings, la
 ## Branding acceptance
 
 Verify official HEX tokens, typography fallback, visible placeholder for missing artwork, logo clear-space constraints once asset supplied, WCAG/508 checks, dark/light mode, readable line lengths, no remote assets/fonts, no promotional images, brief ASD-style text, app routes working through `file://`, and official artifact-template fidelity.
+
+
+## Current user writing preference
+
+Use ASD-STE100-style text in all assistant replies and app instructions. Use short,
+active sentences. Give one action per step. Show source IDs and other technical
+text in a details control when possible. Keep source text and official templates
+unchanged. Do not claim formal ASD-STE100 certification.

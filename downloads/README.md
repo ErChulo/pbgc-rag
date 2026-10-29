@@ -1,18 +1,22 @@
 # Development test download
 
-Download `pbgc-rag-development-0.4.1.zip`, extract all files, and open the extracted
-`index.html`. Select **Load synthetic demonstration**, search for `a`, and click
-**Add to evidence graph** beneath a result. A message should appear beside that
-button; **View this evidence in graph** opens the graph. Repeated clicks should
-say **Already in evidence graph** without duplicating the passage.
+Use `pbgc-rag-development-0.4.2.zip`.
 
-No installation is required. Use synthetic data for this compatibility check.
-Report your Windows browser name/version and any error shown.
+1. Download the ZIP.
+2. Extract all files into a new folder.
+3. Open `index.html`.
+4. Load the synthetic demonstration.
+5. Search for `a`.
+6. Add a result to the graph.
+7. Open the graph. Check that text stays inside the nodes.
 
-This is an incomplete development build, not the finished application or an
-approved official-output tool. See `ACCEPTANCE.md` inside the archive.
+Select a node to read its source. Scroll to see other nodes on a small screen.
+Use synthetic data only. Tell us your browser version and any error.
 
-The package builder verified 58 files against its SHA-256 manifest. Version 0.4.1
-archive SHA-256: `86fddbde7e740223c903f2b9c24850a6a5a9c6e7795457f230c46f95d86348d9`.
+This is a test build. The app is not complete. Official outputs remain blocked.
+See `ACCEPTANCE.md` inside the ZIP.
 
-Version 0.4.0 is retained only for comparison; use 0.4.1 for the feedback fix.
+The package check passed for 58 files.
+Archive SHA-256: `328aeca488c7ba0d3b3c7c6a650cfc96803495b2bbcec55fe9c097e8562b100a`.
+
+Older ZIP files are kept for comparison.

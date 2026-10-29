@@ -62,3 +62,5 @@ A shared-string workbook amplification fixture rejects at the extracted-text bud
 The required cloud file-origin check still returns ERR_BLOCKED_BY_ADMINISTRATOR. A user-side approved Windows synthetic deployment check has been requested; the user said they can test, but no observed browser/version/result has been supplied yet. This is pending, not a pass. The SheetJS three-domain settings draft is saved; current maintained-source access remains blocked until applied and rechecked.
 
 Development fix 0.4.1 adds adjacent search-to-graph action feedback and explicit duplicate/refusal behavior. Brave user observation confirms demonstration search/citations; no Brave version or successful graph action was reported, so full local-file acceptance remains pending. See PROGRESS.md for regression scope.
+
+Development fix 0.4.2: measured node text fits within node bounds. Playwright checks cover long/wide/Unicode labels, full accessible labels, dark/light themes and small screens. Graph, main workflow and 30 accessibility checks pass over HTTP. This does not replace Brave/local-file acceptance.

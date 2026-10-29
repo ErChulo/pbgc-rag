@@ -63,6 +63,48 @@ async function main() {
     await page.getByRole('button', { name: 'Use light theme', exact: true }).click();
     const lightColor = await a.locator('rect').evaluate(rect => getComputedStyle(rect).fill);
     assert.notEqual(darkColor, lightColor);
+    // Width depends on glyphs, not character count. Keep visible text inside
+    // each node while retaining the exact source label in accessible metadata.
+    const overflowNodes = [
+      { id: 'wide-label', label: 'W'.repeat(100), type: 'W'.repeat(90), status: 'W'.repeat(90) },
+      { id: 'unbroken-' + 'M'.repeat(180), type: 'long-unbroken-evidence-kind', status: 'long-unreviewed-status' },
+      { id: 'unicode-label', label: '漢字🙂 pension amendment WMWM '.repeat(12), type: 'evidence', status: 'proposed' },
+      { id: 'source-label', label: 'An amendment proposed age 67 effective January 1, 2030. Approval is unresolved.', type: 'evidence', status: 'unreviewed' }
+    ];
+    await page.evaluate(nodes => PBGC.renderEvidenceGraph(document.getElementById('graph-test-container'), { nodes, edges: [] }), overflowNodes);
+    async function assertNodeTextBounds(label) {
+      const measured = await box.locator('[data-node-id]').evaluateAll(groups => groups.flatMap(group => {
+        const rect = group.querySelector('rect').getBBox();
+        return [...group.querySelectorAll('text')].map(text => {
+          const bounds = text.getBBox();
+          return { id: group.getAttribute('data-node-id'), text: text.textContent,
+            left: bounds.x - rect.x, right: rect.x + rect.width - bounds.x - bounds.width,
+            top: bounds.y - rect.y, bottom: rect.y + rect.height - bounds.y - bounds.height };
+        });
+      }));
+      assert.ok(measured.length >= overflowNodes.length * 2, label + ': expected node labels');
+      for (const item of measured) {
+        assert.ok(item.left >= 10 && item.right >= 10 && item.top >= 8 && item.bottom >= 8,
+          label + ': text must stay inside node padding: ' + JSON.stringify(item));
+        assert.ok(item.text.length > 0, label + ': text remains visible');
+      }
+      for (const node of overflowNodes) {
+        const group = box.locator('[data-node-id]').filter({ has: page.locator('title', { hasText: node.id }) });
+        assert.equal(await group.count(), 1);
+        assert.equal(await group.getAttribute('aria-label'), `${node.label || node.id}; ${node.type}; ${node.status}. Select evidence.`);
+        assert.match(await group.locator('title').textContent(), new RegExp(node.id));
+      }
+    }
+    await assertNodeTextBounds('light theme');
+    await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
+    await assertNodeTextBounds('dark theme');
+    await box.screenshot({ path: '/tmp/pbgc-graph-fixed-desktop.png' });
+    await page.setViewportSize({ width: 640, height: 720 });
+    await assertNodeTextBounds('narrow desktop viewport');
+    await page.setViewportSize({ width: 375, height: 812 });
+    await assertNodeTextBounds('mobile viewport');
+    await box.screenshot({ path: '/tmp/pbgc-graph-fixed.png' });
+    await page.setViewportSize({ width: 1280, height: 720 });
     const caps = await page.evaluate(() => {
       const nodes = Array.from({ length: 105 }, (_, i) => ({ id: `cap-${String(i).padStart(3, '0')}`, label: `Synthetic ${i}` }));
       const edges = Array.from({ length: 205 }, (_, i) => ({ id: `cap-edge-${String(i).padStart(3, '0')}`, from: nodes[i % 100].id, to: nodes[(i + 1) % 100].id, type: 'proposed-link', sourceId: 'synthetic-source', recordId: 'synthetic-record' }));
@@ -81,7 +123,7 @@ async function main() {
       catch (error) { return box.textContent === before && /endpoints/.test(error.message); }
     });
     assert.equal(rejected, true); assert.deepEqual(errors, []); assert.deepEqual(external, []);
-    console.log(`PASS: ${server ? 'HTTP secondary graph check (file acceptance remains BLOCKED)' : 'file:// graph'}; real SVG nodes/types/provenance; click/Enter/Space ID callbacks; focus/selection and dark/light palette; hostile labels inert; explicit display caps preserve full input; empty/dangling graphs; zero external requests.`);
+    console.log(`PASS: ${server ? 'HTTP secondary graph check (file acceptance remains BLOCKED)' : 'file:// graph'}; real SVG nodes/types/provenance; click/Enter/Space ID callbacks; focus/selection and dark/light palette; wide/Unicode/unbroken labels fit node bounds at desktop and mobile widths; full accessible labels retained; hostile labels inert; explicit display caps preserve full input; empty/dangling graphs; zero external requests.`);
     await context.close();
   } finally { if (browser) await browser.close(); if (server) await new Promise(resolve => server.close(resolve)); }
 }

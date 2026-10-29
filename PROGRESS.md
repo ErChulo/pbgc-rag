@@ -91,3 +91,22 @@ A user testing the extracted development build in Brave confirmed synthetic sear
 The prior action changed only a page-top notice, potentially outside the clicked result's viewport. Search result actions now show success, already-present, or refusal directly beside the button and expose a link to the evidence graph after success. Existing evidence is matched by source/record identity to avoid duplicates even when restored graph node IDs differ. Graph ID collisions refuse explicitly. The result remains on screen for continued search.
 
 Validation: 215 unit/integration tests pass; secondary HTTP query and accessibility checks pass. The main browser regression additionally covers the user's broad `a` query, per-result validation refusal, success, repeated-click feedback, graph navigation and two-node count without duplication. These checks do not prove Brave/file-origin compatibility; user retest remains pending. Overall application acceptance is incomplete.
+
+
+## Development fix 0.4.2: graph text and short instructions
+
+The Brave user confirmed that graph-action feedback now appears. They reported
+text outside the graph nodes and asked for ASD-STE100-style instructions.
+
+Node labels now use actual SVG text widths. Long labels end with an ellipsis.
+Full labels remain in accessible text and tooltips. A clip bounds the drawing.
+The graph keeps its text size on small screens. Scroll to see other nodes.
+Source text is unchanged. Search record IDs are under Source details. Search and
+graph instructions use short sentences. DESIGN.md records the writing preference.
+
+Validation: 215 unit/integration tests pass. Playwright graph, main workflow and
+accessibility checks pass over secondary HTTP. Graph tests check text bounds for
+wide letters, long IDs, long type/status values and Unicode. Dark/light themes and
+1280, 640 and 375 pixel widths pass. Screenshots were inspected. The accessibility
+suite passes 30 checks. Browser zoom at 200% was not tested. Brave retest and full
+local-file acceptance remain pending. The full app is not complete.
