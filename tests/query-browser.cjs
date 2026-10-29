@@ -99,11 +99,14 @@ async function main() {
     assert.equal(await fullRecord.locator('pre').textContent(), longText);
     assert.ok((await article.innerText()).includes(longRecord.id));
 
-    await runQuery('question', longNeedle);
+    await runQuery('question', `What is ${longNeedle}?`);
     await page.getByText(/Retrieval status: evidence-found/).waitFor();
     article = page.locator('#results article');
     assert.equal(await article.count(), 1);
     assert.ok((await article.innerText()).includes(longNeedle));
+    const questionPreview = await article.getByText(/^Showing parsed record characters /).innerText();
+    assert.ok(Number(/^Showing parsed record characters (\d+)/.exec(questionPreview)[1]) > 6000);
+    assert.equal(await article.locator('details pre').count(), 0);
     await article.locator('details summary').click();
     assert.equal(await article.locator('details pre').textContent(), longText);
     assert.ok((await article.innerText()).includes(longRecord.id));
