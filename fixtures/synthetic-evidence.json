@@ -1,0 +1,8 @@
+{
+  "fixture": "Synthetic evidence only; not official PBGC fields",
+  "synthetic": {
+    "normalRetirementAge": 65,
+    "approved": false,
+    "effectiveDate": "2025-01-01"
+  }
+}
