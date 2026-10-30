@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-30",
+  "command": "PBGC_TEST_URL=http://127.0.0.1:8765/ node tools/check.js --browser",
+  "profile": "supplementary Linux Chromium HTTP development verification",
+  "exitCode": 0,
+  "tests": 121,
+  "pass": 121,
+  "fail": 0,
+  "suites": [
+    {
+      "file": "accessibility.test.js",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0
+    },
+    {
+      "file": "browser.test.js",
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "file": "core.test.js",
+      "tests": 9,
+      "pass": 9,
+      "fail": 0
+    },
+    {
+      "file": "formats.test.js",
+      "tests": 13,
+      "pass": 13,
+      "fail": 0
+    },
+    {
+      "file": "graph.test.js",
+      "tests": 8,
+      "pass": 8,
+      "fail": 0
+    },
+    {
+      "file": "ingest.test.js",
+      "tests": 8,
+      "pass": 8,
+      "fail": 0
+    },
+    {
+      "file": "integration-core.test.js",
+      "tests": 8,
+      "pass": 8,
+      "fail": 0
+    },
+    {
+      "file": "legacy.test.js",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    {
+      "file": "package.test.js",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0
+    },
+    {
+      "file": "pdf-security.test.js",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "file": "pdf.test.js",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "file": "performance.test.js",
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    {
+      "file": "query.test.js",
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "file": "ranking.test.js",
+      "tests": 5,
+      "pass": 5,
+      "fail": 0
+    },
+    {
+      "file": "reports.test.js",
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "file": "review.test.js",
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "file": "security.test.js",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "file": "sqlite.test.js",
+      "tests": 9,
+      "pass": 9,
+      "fail": 0
+    },
+    {
+      "file": "storage.test.js",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    }
+  ],
+  "performance": {
+    "packageBytes": 1133951,
+    "manifestFiles": 34,
+    "runtimeEntryAssets": 14,
+    "delivery": "supplementary loopback HTTP from extracted ZIP; file profile remains blocked"
+  },
+  "actualFileProfile": {
+    "command": "node tests/accessibility.test.js",
+    "exitCode": 1,
+    "status": "BLOCKED",
+    "error": "net::ERR_BLOCKED_BY_ADMINISTRATOR at file:///workspace/pbgc-rag/index.html"
+  },
+  "officialRelease": "BLOCKED"
+}

@@ -44,3 +44,17 @@ Browser storage is not an encrypted case vault. Browser profiles, operating-syst
 - Test actual file:// execution, network isolation, malformed packages, storage failures, case isolation and independently calculated actuarial expectations.
 
 Report security findings to the repository owner through an authorized private channel. Do not include confidential participant data, credentials or live restricted case documents in public issues or fixtures.
+
+## Integrated 0.2 evidence and remaining limits
+
+First-party text/Office/legacy/SQLite extraction runs in a generated dedicated classic Blob worker with one active request, bounded queue, deadline and cancellation. Worker ambient network/external-code APIs are denied. Small text at or below 128 KiB has an explicit bounded synchronous fallback; binary import has none. Archive decompression output/ratio/CRC, XML nesting/entities, CFB sector chains, SQLite pages/overflow and source/record/text sizes have adversarial tests. Unsupported encrypted/legacy/WAL/schema variants reject before workspace mutation. No parser executes uploaded SQL, macros or formulas.
+
+PDF.js 6.4.299 has a separate pinned Apache-licensed source/bundle inventory. Its adapter accepts bytes only, disables active features and external assets/eval, and runs inside a dedicated hard-terminated worker. Independent adversarial PDFs with JavaScript, XFA, links/Launch actions and attachments yield inert text without external requests or actions. PDF item/page/output limits are post-decoding limits, not a hard decoded-stream allocation bound. A worker can still exhaust browser renderer memory before timeout; no OS memory quota or hostile-document certification is claimed.
+
+Safe regex never compiles a user expression into native JavaScript RegExp. It uses bounded state simulation with a documented subset and operation budget. Read-only SQL uses a strict tokenizer/plan over evidence records, not eval or an uploaded database SQL engine. BM25 is lexical retrieval. Proposed graph links and timeline dates remain explicitly unverified and source-bound.
+
+Recovery keeps revisioned current/prior snapshots, validates source hashes/reparses records, isolates cases from reference-library search, and holds completed import checkpoints separately from active sources. Failed batch, cancellation, corrupt package and stale-tab write paths are tested. Explicit clear removes current/prior/legacy recovery and resets app memory; it does not promise secure erasure of OS/browser caches or exported files.
+
+Reviewer package restoration verifies original bytes/artifact hashes and regenerates R1/BSRS/report text before accepting. Tests prove rehashed forged drafts fail without mutating active work. Source hashes alone do not authenticate a package. All data/export formats remain plaintext.
+
+Supplementary HTTP tests observe no external requests for the covered synthetic workflows. Actual file:// remains administrator-blocked. Basic automated contrast, labels, keyboard/dialog, mobile, boundaries and workload checks are evidence for tested controls only; they are not full Section 508, enterprise or actuarial acceptance. See ACCEPTANCE.md.

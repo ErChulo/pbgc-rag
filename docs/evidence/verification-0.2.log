@@ -1,0 +1,313 @@
+
+accessibility.test.js
+✔ visible text contrast, labeled controls and keyboard skip navigation in both themes (743.897ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 749.300369
+
+browser.test.js
+✔ supplementary HTTP only workflow, inert source text, integrity and no external network (1933.281589ms)
+✔ unavailable local storage keeps import, search and portable export usable (697.760463ms)
+✔ advanced queries, evidence viewer, graph, provisional reports and IndexedDB recovery (1820.020774ms)
+✔ local PDF extraction and inert HTML/XML imports preserve locators without external requests (1157.823054ms)
+✔ cancelled batch checkpoint survives reload, resumes without duplicates and isolates case/library searches (2171.529734ms)
+✔ DOCX, compressed XLSX and SQLite worker imports retain document/table locators and formulas (1064.274708ms)
+✔ all-workspace backup confirmation, restore and source-verified previous snapshots reject corrupt recovery (1344.837334ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10195.67327
+
+core.test.js
+✔ text locators preserve original CRLF, blank lines and UTF-16 offsets (1.769902ms)
+✔ CSV quoted delimiters, multiline, escaping and trailing empty field (0.373812ms)
+✔ TSV does not interpret formulas (0.194412ms)
+✔ malformed CSV and invalid JSON fail atomically (0.5122ms)
+✔ JSON pointer escapes keys and preserves primitives without trusting prototype names (0.217638ms)
+✔ limits reject unsupported, binary, oversized, overly nested and too many records (11.779048ms)
+✔ keyword requires all terms and ranks by occurrence; exact preserves phrase order (1.97431ms)
+✔ search rejects unsafe unsupported regex and bounded query overload (0.481264ms)
+✔ empty input and BOM handling (0.534243ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26.128833
+
+formats.test.js
+✔ DOCX preserves paragraph and table cell locators from original part (3.770782ms)
+✔ deflated Office package uses native bounded decompression (11.573358ms)
+✔ XLSX names cells, preserves formulas and cached values without evaluation (4.779839ms)
+✔ XLSM never executes macro entries and emits limitation (1.003009ms)
+✔ HTML is inert text only, skips scripts/styles and retains exact offsets (0.826072ms)
+✔ XML paths and source offsets are honest; custom entities/DTD rejected (0.825993ms)
+✔ archive traversal, encryption, local mismatch and CRC corruption fail (1.164732ms)
+✔ archive expansion budget and oversized sources are rejected before output allocation (42.951348ms)
+✔ worksheet external references, invalid shared index and missing locators fail (1.404302ms)
+✔ text dispatch works and unsupported binaries/invalid UTF-8 fail explicitly (1.68798ms)
+✔ entities decode once; invalid attribute entities and impossible grid cells reject (1.094536ms)
+✔ nested Word tables do not change the outer table locator (0.224308ms)
+✔ CDATA and BOM source offsets point to actual original content (0.271368ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 78.703207
+
+graph.test.js
+✔ documentary graph preserves exact source identity, text and locators without inferred dates (2.410236ms)
+✔ documentary edges reject dangling nodes, forged hash/locator, wrong parent and missing containment (2.383396ms)
+✔ optional verified source binding rejects self-consistent altered text and source hashes (0.888466ms)
+✔ explicit links remain proposed and retain documentary provenance (1.457583ms)
+✔ assertions reject invalid dates, reverse validity, missing evidence and duplicate IDs (1.227566ms)
+✔ bounded multi-hop traversal is deterministic, cycle-safe and depth-aware (1.385434ms)
+✔ temporal and edge-type filters apply only to explicit links, with inclusive endpoints (0.906163ms)
+✔ query options and graph inputs fail closed at explicit limits (1.279264ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 18.473549
+
+ingest.test.js
+✔ isolated parser serializes workers, copies inputs and releases each worker URL (2.960523ms)
+✔ active and queued cancellation reject without running cancelled queue entries (1.386976ms)
+✔ hard timeout terminates stalled workers and later requests can run (6.183352ms)
+✔ worker startup/runtime/message errors reject and release resources (2.09418ms)
+✔ bounded text fallback is explicit and binary formats never fall back (2.435152ms)
+✔ queue, byte and timeout limits reject malformed requests before extra allocation (4.954163ms)
+✔ generated source is self-contained and current for available parser modules (38.873634ms)
+✔ real Chromium Blob worker supports strict-CSP parsing, failure, timeout and cancellation without external requests (850.253328ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 914.65311
+
+integration-core.test.js
+✔ archive rejects traversal, duplicate paths, CRC corruption, encryption and claimed expansion bombs (3.930231ms)
+✔ DTD/external entities are rejected and inert markup cannot resolve resources (1.068547ms)
+✔ DOCX nested tables preserve the identity of subsequent outer cells (0.910249ms)
+✔ strict XML rejects bare ampersands and illegal XML control characters in attributes (0.368895ms)
+✔ advanced queries reject mutation/extra SQL and preserve exact source locators (1.570682ms)
+✔ regex catastrophic native patterns are rejected and valid heavy patterns hit deterministic budget (128.574133ms)
+✔ graph verification binds query results to exact verified parser evidence (2.454282ms)
+✔ safe regex subset agrees with independently evaluated small reference patterns (11.378817ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 157.978885
+
+legacy.test.js
+✔ DOC Unicode piece-table paragraphs preserve exact CP and stream byte spans (4.229462ms)
+✔ DOC compressed text, literal controls and normal FAT streams are supported (0.576797ms)
+✔ DOC encryption, corrupt signature and truncated files reject explicitly (1.057731ms)
+✔ CFB FAT and MiniFAT cycles, stream overlap and malformed directories reject (0.926623ms)
+✔ XLS BIFF8 shared strings, RK, cached formula, Boolean and sheet/cell provenance (2.484247ms)
+✔ XLS SST continuation and formula cached STRING remain inert text (0.54512ms)
+✔ XLS rejects encryption, missing SST references and unsupported file types (0.710619ms)
+✔ CFB version 4 uses 4096-byte sectors and bounded mini-stream allocation (0.532812ms)
+✔ CFB invalid mini cutoff, FAT marker and oversized stream reject before extraction (0.443678ms)
+✔ XLS invalid Unicode, numeric NaN, unsupported old cell records and repeated cells reject (1.087406ms)
+✔ XLS negative RK and MULRK coordinates retain cached numbers without recalculation (0.757951ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20.045483
+
+package.test.js
+✔ extracted portable package serves all runtime assets, supports isolated import/search and clears both recovery snapshots (1465.753462ms)
+ℹ {"packageBytes":1133951,"manifestFiles":34,"runtimeEntryAssets":14,"delivery":"supplementary loopback HTTP from extracted ZIP; file profile remains blocked"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1469.762022
+
+pdf-security.test.js
+✔ PDF extraction security configuration excludes document actions, network assets, eval and XFA (1.228167ms)
+✔ hostile JavaScript/OpenAction/XFA/URI/Launch/attachment PDF remains inert during text extraction (1038.622291ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1043.965138
+
+pdf.test.js
+✔ PDF preflight rejects invalid bytes and unavailable local assets (1.68178ms)
+✔ classic bundled PDF.js extracts synthetic text and source geometry under strict CSP without external assets (1319.311714ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1325.251951
+
+performance.test.js
+✔ 18,000-record worker import, retrieval, bounded graph, far-record viewer and package export (4585.736011ms)
+ℹ {"importMs":1191,"keywordMs":108,"rankedMs":125,"sqlMs":97,"graphMs":1254,"exportMs":773,"workflowMs":3646,"cancelMs":11,"cancelHeartbeatTicks":6,"rendererJSHeapUsedBytes":127711600,"rendererJSHeapTotalBytes":214732800,"records":18000,"sourceBytes":1889999,"memoryScope":"Chromium renderer JavaScript heap only; excludes worker heaps and total process memory"}
+✔ legacy DOC and XLS import through the generated isolated worker dispatch (1114.034187ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5705.630034
+
+query.test.js
+✔ safe regex literals, anchors, classes, quantifiers and escapes retain evidence (2.42564ms)
+✔ quantifier zero-length and anchor behavior (0.240883ms)
+✔ unsupported regex is rejected instead of delegated to native engine (0.37197ms)
+✔ SQL filtering, ordering, numeric locators, limit and provenance (0.726323ms)
+✔ SQL LIKE wildcard matching is anchored and supports escapes through SQL quotes (0.282615ms)
+✔ SQL mutations, extensions and injection fail closed (0.294523ms)
+✔ bounded execution rejects overload and no mutation occurs (601.331993ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 611.748777
+
+ranking.test.js
+✔ BM25 matches independently calculated two-document numeric regression (3.161467ms)
+✔ rare terms, repeated terms and length normalization behave as BM25 specifies (0.556006ms)
+✔ Unicode case, punctuation and natural-language query remain lexical and transparent (0.621526ms)
+✔ stable ties, empty documents and result limits preserve record order (0.182344ms)
+✔ input, query, record, character and token budgets fail before partial results (321.978824ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 335.152726
+
+reports.test.js
+✔ reusable versioned report layout selects tables and preserves provenance (3.054766ms)
+✔ timeline dates are explicit and must resolve to actual source records (9.60298ms)
+✔ invalid layouts, impossible dates, unbounded fields and executable templates fail (0.702487ms)
+✔ CSV quotes delimiters, Unicode and embedded quotes without losing source references (0.881456ms)
+✔ CSV neutralizes formula injection after whitespace and dangerous control prefixes (1.752407ms)
+✔ standalone HTML escapes malicious content and denies scripts and remote assets (0.860876ms)
+✔ report coverage discloses truncated excerpts and selected evidence limit (0.258218ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24.809471
+
+review.test.js
+✔ review keeps exact source provenance and separates text from approved facts (2.81817ms)
+✔ empty review and bounded excerpt coverage never pretend complete facts (3.025823ms)
+✔ malformed provenance and excessive review resources fail explicitly (0.912523ms)
+✔ unapproved, stale-version and official-like rules are rejected (1.376612ms)
+✔ independently expected decimal arithmetic avoids floating point errors (0.616788ms)
+✔ rounding is explicit half away from zero with normalized zero (0.316186ms)
+✔ effective dates, approvals and decimal input contract block unsafe calculation (0.353252ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17.436408
+
+security.test.js
+✔ entry point denies network, plugins, base replacement and form submission (1.703984ms)
+✔ runtime source has no network clients, dynamic execution or HTML insertion (10.287189ms)
+✔ runtime assets are local files and styles have no remote imports (1.3092ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24.845916
+
+sqlite.test.js
+✔ SQLite extracts named typed cells and exact rowids without executing SQL (22.943244ms)
+✔ interior b-trees and overflow payloads retain full source text (24.005011ms)
+✔ integer serial widths, negatives, zero and one decode independently (21.451093ms)
+✔ UTF-16 SQLite text is decoded without changing source locators (23.656305ms)
+✔ WAL mode, WITHOUT ROWID, generated columns and record/schema migration fail explicitly (78.879911ms)
+✔ malformed headers and page pointers are rejected without partial result (23.256314ms)
+✔ quoted identifiers and table-level INTEGER primary key preserve rowid alias (23.527502ms)
+✔ punctuation in quoted names/defaults and exact INTEGER type aliases are preserved (55.866033ms)
+✔ meaningful text BOM and stored nonfinite real values stay explicit (24.032913ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 307.893885
+
+storage.test.js
+✔ memory fallback is explicit and copies inputs and outputs (2.82471ms)
+✔ local snapshots survive reinitialization and retain one previous version (1.164963ms)
+✔ failed durable write rejects and preserves both last-good snapshots (2.652902ms)
+✔ legacy workspace migration retains original and clear removes all recovery (0.501154ms)
+✔ catalog payload and bounded serialized bytes support coordinator schema (6.295934ms)
+✔ corrupt recovery is reported and never overwritten until explicit clear (0.71743ms)
+✔ revision corruption is rejected and metadata cannot impersonate a snapshot (0.463187ms)
+✔ concurrent saves serialize revisions and stale tabs detect conflicts (0.608936ms)
+✔ IndexedDB is preferred, commits snapshots atomically and rejects failed writes (10.598782ms)
+✔ IndexedDB failure falls back; inaccessible legacy storage does not break healthy IndexedDB (4.016785ms)
+✔ bad options and dates reject explicitly (0.541284ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36.303501

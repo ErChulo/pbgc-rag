@@ -1,0 +1,37 @@
+{
+  "name": "pdfjs-dist",
+  "version": "6.4.299",
+  "license": "Apache-2.0",
+  "upstreamBuild": "d0991a0d5",
+  "npmIntegrity": "sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==",
+  "bundler": {
+    "name": "esbuild",
+    "version": "0.28.2",
+    "license": "MIT",
+    "developmentOnly": true
+  },
+  "bundles": {
+    "pdf.js": {
+      "sha256": "61367f96aa9bc61e8cecc9cb8bb1a3e3dc5a6d589cd824b11afeffd75a9c2c6d",
+      "source": "build/pdf.mjs",
+      "sourceSha256": "dd13af821c9c3e1778653340d6539a1ba07bc56cba40073a4c727864cf0c232a"
+    },
+    "pdf.worker.js": {
+      "sha256": "84d300235d377d5d72b998b149103a13ac6537dcf742e02920a80d41a833068d",
+      "source": "build/pdf.worker.mjs",
+      "sourceSha256": "07ceb740d746e5d9012fcf9f27d5c7dea09f7d2f5e74f5c8109e5787551a2333"
+    }
+  },
+  "isolation": "Dedicated classic Blob worker; no synchronous fallback",
+  "workerArtifacts": {
+    "parser-core.js": {
+      "sha256": "5b1380a9df430d0fc6cf4e20202a943f70e7938bb414e08d9848798357787580"
+    },
+    "build-worker-source.py": {
+      "sha256": "cd9241ce55f122c9257a4950d12bd284d2a75c112269657210dd6c16ff2edb56"
+    },
+    "parser-worker-source.js": {
+      "sha256": "3f6cc3d80168a3f2770e2d742aa5ed76dc7be4275ff35bdd510c256cd482c9c6"
+    }
+  }
+}

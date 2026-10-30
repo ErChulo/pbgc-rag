@@ -1,7 +1,9 @@
 # Specification status
 
-KICKOFF.md is the authoritative requirements baseline and DESIGN.md governs visuals/editorial choices. No requirement is waived by the initial implementation.
+KICKOFF.md remains the authoritative requirements baseline; DESIGN.md governs visuals and editorial choices. No requirement is waived by implemented extraction/query subsets.
 
-The current increment covers isolated active-case memory, best-effort recovery, verified portable source-byte packages, bounded UTF-8 text/CSV/TSV/JSON parsing, keyword/exact retrieval with locators, a local classic-script shell, light/dark themes and a hash-routed guide. Search provides excerpts, not legal or actuarial conclusions. See ARCHITECTURE.md interface v1 and ACCEPTANCE.md for evidence and gaps.
+Increment 0.2 adds case/reference-library isolation; versioned catalog recovery with previous snapshots, backups and checked-import checkpoints; hard worker isolation/cancellation; bounded native text, Office/legacy/SQLite and PDF text extraction; source viewing; keyword/exact/BM25/safe-regex/read-only-record-SQL search; source-bound typed documentary/proposed graphs; provisional source-linked review/report/layout/timeline exports and validated reviewer packages. See ARCHITECTURE.md for contracts and ACCEPTANCE.md for evidence and limitations.
 
-A source version is its SHA-256 over original bytes. Parsed text uses versioned locators. Changed source bytes are imported as another source version; equal bytes are skipped. Library-wide references, applicability dates, authority/conflict reconciliation and source-version relationships are future schema work.
+Original-byte SHA-256 identifies source versions. Equal bytes dedupe. Changed source bytes coexist as another source; no amendment authority or legal applicability is inferred. Parsed text has versioned locators; raw originals remain authoritative. Case records and reference records never combine in a search implicitly.
+
+Official source fields must come from the approved versioned data_dictionary_complete.xlsm when supplied. Current metadata is internal; synthetic arithmetic is not a PBGC actuarial engine. Proposed links/date annotations are not activated interpretations. No official artifact release is allowed.
