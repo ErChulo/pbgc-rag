@@ -50,5 +50,8 @@ test('visible text contrast, labeled controls and keyboard skip navigation in bo
     }
     await page.setViewportSize({width:375,height:812});
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile viewport has no horizontal overflow');
+  } catch(error) {
+    if(process.env.GITHUB_ACTIONS){const message=String(error.message||'Accessibility assertion failed').split('\n')[0].slice(0,220).replace(/%/g,'%25').replace(/\r/g,'%0D');process.stdout.write('::error title=Static UI accessibility detail::'+message+'\n');}
+    throw error;
   } finally { await browser.close(); }
 });

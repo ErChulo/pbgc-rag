@@ -43,6 +43,8 @@ jobs:
           node "$RUNNER_TEMP/pbgc-office-verification/node_modules/playwright/cli.js" install --with-deps chromium
           echo "NODE_PATH=$RUNNER_TEMP/pbgc-office-verification/node_modules" >> "$GITHUB_ENV"
           echo "CHROMIUM_PATH=$(NODE_PATH="$RUNNER_TEMP/pbgc-office-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Check static UI accessibility before model preparation
+        run: node tools/check-accessibility.js --both
       - name: Prepare model before office delivery
         run: python tools/prepare-models.py
       - name: Build complete office ZIP
