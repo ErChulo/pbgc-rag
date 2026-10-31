@@ -60,11 +60,15 @@ function windowsCollectorScript(rootPid, sampleMs) {
   if (!Number.isInteger(rootPid) || !Number.isInteger(sampleMs)) throw Error('Invalid collector options');
   return `
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$InformationPreference = 'SilentlyContinue'
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch { } # JSON protocol uses ASCII-only scalar names/values
 $taskRoot = ${rootPid}
 $taskSample = ${sampleMs}
 $collectorPid = $PID
 while (Get-Process -Id $taskRoot -ErrorAction SilentlyContinue) {
   try {
+    $stage = 'process-enumeration'
     $map = @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId)
     $selected = [System.Collections.Generic.HashSet[int]]::new()
     [void]$selected.Add($taskRoot)
@@ -75,6 +79,7 @@ while (Get-Process -Id $taskRoot -ErrorAction SilentlyContinue) {
         if ([int]$item.ProcessId -ne $collectorPid -and $selected.Contains([int]$item.ParentProcessId) -and $selected.Add([int]$item.ProcessId)) { $changed = $true }
       }
     }
+    $stage = 'process-counters'
     $rows = @()
     $missing = 0
     foreach ($item in $map) {
@@ -86,7 +91,7 @@ while (Get-Process -Id $taskRoot -ErrorAction SilentlyContinue) {
     }
     @{timestamp=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();rows=@($rows);missingProcesses=$missing} | ConvertTo-Json -Compress -Depth 4 | Write-Output
   } catch {
-    @{collectorError='Windows process metrics unavailable'} | ConvertTo-Json -Compress | Write-Output
+    @{collectorError='Windows process metrics unavailable';collectorStage=$stage} | ConvertTo-Json -Compress | Write-Output
   }
   Start-Sleep -Milliseconds $taskSample
 }`;
@@ -108,7 +113,7 @@ function createAccumulator({budgetBytes = DEFAULT_BUDGET, onLimit = () => {}} = 
   let exceeded = false, browserPid = null, baselineCpuMs = null;
   const peak = {rssBytes:0, pssBytes:0, privateBytes:0, browserRssBytes:0, browserPssBytes:0, processCount:0, budgetMetricBytes:0};
   function accept(snapshot) {
-    if (snapshot.collectorError) throw Error(snapshot.collectorError);
+    if (snapshot.collectorError) throw Error(snapshot.collectorError + (snapshot.collectorStage ? ' ('+snapshot.collectorStage+')' : ''));
     if (!Array.isArray(snapshot.rows) || !snapshot.rows.length) throw Error('No workload process metrics were collected');
     const total = aggregateRows(snapshot.rows, cpu);
     if (baselineCpuMs === null) baselineCpuMs = total.cpuMs;
@@ -158,13 +163,13 @@ async function monitorResources({rootPid = process.pid, intervalMs = 200, budget
     collector.stderr.on('data', () => {const error=Error('Windows process collector wrote an error');errors.push(error.message);if(onLimit)onLimit(error);});
     collector.stdout.on('data', block => {
       pending += block.toString(); const lines = pending.split(/\r?\n/); pending = lines.pop();
-      for (const line of lines) if (line.trim()) try { accumulator.accept(JSON.parse(line)); } catch (error) { errors.push(error.message);if(onLimit)onLimit(error); }
+      for (const line of lines) if (line.trim()) try { accumulator.accept(JSON.parse(line.replace(/^\uFEFF/,''))); } catch (error) { errors.push(error.message);if(onLimit)onLimit(error); }
     });
     await new Promise((resolve, reject) => {
       const start = Date.now();
       const first = setInterval(() => {
         if (accumulator.summary().samples) { clearInterval(first); resolve(); }
-        else if (errors.length || Date.now()-start > 10000) { clearInterval(first); reject(Error(errors[0] || 'Windows process sampler did not initialize')); }
+        else if (errors.length || Date.now()-start > 20000) { clearInterval(first); reject(Error(errors[0] || 'Windows process sampler did not initialize')); }
       },100);
     }).catch(error=>{collector.kill();throw error;});
   }

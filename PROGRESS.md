@@ -86,3 +86,5 @@ Pinned RAG-Anything source/license/architecture and PDF.js package/license/build
 4. Extend optional semantic/OCR, binary-format/query coverage and malformed-document/resource corpus only with explicit licenses/assets/contracts and honest acceptance limits.
 
 Current build is substantial but not final application acceptance or an official actuarial system. No official release path is enabled. Use only synthetic/public fixtures in this repository and remote development environment.
+
+Windows portability repair: the first extended CI run found a native-newline/encoding mismatch when regenerating the PDF OCR worker and a live PowerShell sampler initialization failure. The generator now explicitly reads UTF-8 and writes LF on all platforms. The sampler suppresses PowerShell progress/information records, uses a bounded cold-start allowance and retains strict counter-error handling; scalar-only initialization diagnostics make further CI failures inspectable without user log checks. Affected PDF/OCR and process-collector tests pass locally; the new exact head must pass Windows CI before merge.
