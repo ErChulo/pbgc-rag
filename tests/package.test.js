@@ -18,6 +18,7 @@ test('extracted portable package serves all runtime assets, supports isolated im
     execFileSync('python',['-c','import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z: z.extractall(sys.argv[2])',zipPath,extracted]);
     const manifest=JSON.parse(await fs.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
     assert.equal(manifest.kind,'pbgc-rag-workplace-build');assert.equal(manifest.official,false);assert.match(manifest.fileProfileAcceptance,/BLOCKED/);
+    for(const item of manifest.files)assert.ok(!item.path.includes('\\')&&!/^[A-Za-z]:/.test(item.path),'ZIP manifest paths use portable forward slashes');
     assert.ok(manifest.files.length>10);
     for(const entry of manifest.files){
       const file=path.resolve(extracted,entry.path);assert.ok(file.startsWith(extracted+path.sep));assert.doesNotMatch(entry.path,/(?:^|\/)(?:\.git|tests|fixtures)(?:\/|$)/);

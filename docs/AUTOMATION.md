@@ -41,3 +41,5 @@ It inspects first-party source extensions in the repository root and `assets`, `
 Artifact upload is narrowly scoped to generated verification logs/JSON and the portable source-build ZIP, retained for seven days. No arbitrary workspace, case export, user upload, credential directory or temporary-directory glob is uploaded. Keep confidential case material out of this public repository and out of CI. The generated source bundle and manifest are not official PBGC outputs or a publication operation.
 
 On failure, `tools/ci-summary.js` publishes at most 12 bounded, escaped synthetic test names as annotations/step summary. It does not publish captured diagnostic values or arbitrary workspace files, so public status can be inspected without exposing case data.
+
+Portable build ZIP manifests always use forward slashes, regardless of the runner OS. Repository text/bundle bytes use LF checkout attributes. All browser tests honor CHROMIUM_PATH; Linux system paths are fallback defaults only.

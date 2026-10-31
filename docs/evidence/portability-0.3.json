@@ -1,0 +1,16 @@
+{
+  "tests": 183,
+  "pass": 183,
+  "fail": 0,
+  "skipped": 0,
+  "command": "node tools/verify-browser.js --timeout-ms 240000",
+  "exitCode": 0,
+  "profile": "supplementary Linux Chromium plus worker/package/lifecycle checks",
+  "version": "0.3",
+  "platformFixes": [
+    "portable POSIX ZIP manifest paths",
+    "configured Chromium path in all PDF tests",
+    "canonical LF repository text and bundle bytes"
+  ],
+  "remoteCI": "See GitHub Actions for the tested commit and platform-specific results."
+}

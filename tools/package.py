@@ -25,12 +25,12 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
 manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.3',
             'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
-            'files': [{'path': str(p.relative_to(root)), 'bytes': p.stat().st_size,
+            'files': [{'path': p.relative_to(root).as_posix(), 'bytes': p.stat().st_size,
                        'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in paths]}
 args.out.parent.mkdir(parents=True, exist_ok=True)
 with zipfile.ZipFile(args.out, 'w', compression=zipfile.ZIP_DEFLATED) as package:
     for path in paths:
-        package.write(path, str(path.relative_to(root)))
+        package.write(path, path.relative_to(root).as_posix())
     package.writestr('build-manifest.json', json.dumps(manifest, indent=2))
 with zipfile.ZipFile(args.out) as package:
     if package.testzip():

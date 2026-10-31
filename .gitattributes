@@ -1,0 +1,2 @@
+# Keep audited source/bundle bytes and locators stable on every checkout.
+* text=auto eol=lf

@@ -1,5 +1,9 @@
 # Progress
 
+## Cross-platform verification hardening
+
+The first Ubuntu/Windows matrix isolated two portability defects: PDF-specific tests bypassed CHROMIUM_PATH with a Linux-only executable path, and ZIP manifests used host-native Windows separators. Those are fixed; package paths are POSIX-canonical and every PDF test honors the configured browser. Git text attributes preserve audited LF source/bundle bytes across checkout platforms. The coordinator complete local run passes 183 checks with zero failures/skips. Durable evidence: docs/evidence/portability-0.3.json and .log. Remote platform outcomes remain inspectable in GitHub Actions for each commit; no manual user checks are required.
+
 ## GitHub integration and independent CI
 
 The 0.3 source increment was committed as 1c3ce6e, pushed to codex/source-review-0.3 and fast-forwarded into main. GitHub Actions run 41152768376 completed Success in 1m 37s, including the supplementary HTTP and actual file:// steps and packaged synthetic evidence. This establishes actual-file evidence on the tested Linux Chromium runner without bypassing managed local browser policy. It does not establish locked-down workplace Windows approval.
