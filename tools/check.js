@@ -5,10 +5,11 @@ const {spawnSync} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname,'..');
-const browser = new Set(['browser.test.js','accessibility.test.js','pdf.test.js','pdf-security.test.js','ingest.test.js','performance.test.js','package.test.js','restore-feedback.test.js','workflow-0.3.test.js','persistence-0.3.test.js','template-worker.test.js','rag-browser.test.js','local-llm.test.js']);
+const browser = new Set(['browser.test.js','accessibility.test.js','pdf.test.js','pdf-security.test.js','ingest.test.js','performance.test.js','package.test.js','restore-feedback.test.js','workflow-0.3.test.js','persistence-0.3.test.js','template-worker.test.js','rag-browser.test.js','local-llm.test.js','office-package.test.js']);
 const includeBrowser = process.argv.includes('--browser');
 let failed = false;
 for (const file of fs.readdirSync(path.join(root,'tests')).filter(name=>name.endsWith('.test.js')).sort()) {
+  if (file === 'office-package.test.js' && process.env.PBGC_REQUIRE_OFFICE !== '1') continue;
   if (browser.has(file) && !includeBrowser) continue;
   process.stdout.write(`\n${file}\n`);
   const result=spawnSync(process.execPath,[path.join(root,'tests',file)],{cwd:root,stdio:'inherit',env:process.env});

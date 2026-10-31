@@ -32,3 +32,8 @@
 ## Offline local RAG model boundary — 0.4
 
 Authoritative PBGC content remains deferred by user direction. Implement local learned retrieval and real CPU generation using synthetic fixtures. The browser never downloads models: the core ZIP embeds the verified MIT Ternlight sentence encoder and single-thread wllama runtime; the Apache-2.0 Qwen GGUF is a separately prepared, exact-hash local file. No model input is imported as a case source. CSP grants only narrow WebAssembly compilation in addition to existing local scripts and Blob workers, retaining connect-src none. Citation quotes, numbers and conservative synthesis checks gate release; those checks do not prove legal applicability or semantic entailment. Missing models, unsupported evidence, conflicts, cancellation and deadlines abstain explicitly. Generation quality and latency must be measured with real weights independently of mock orchestration tests.
+
+
+## Complete office delivery boundary — 0.4.1
+
+A core source ZIP plus an outside download/preparation command is not an office deliverable. The public release must contain one complete ZIP with the exact verified GGUF and all local assets. Native model-file selection inside the app is permitted; a browser cannot silently open adjacent arbitrary files under the file profile. Do not require users to assemble model parts or run developer tools. Publish the ordinary downloadable release only after extracted-package real offline-file inference passes on Ubuntu and Windows. Test the actual delivered bytes before reporting completion.

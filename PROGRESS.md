@@ -1,5 +1,12 @@
 # Progress
 
+## Complete office delivery fix — 0.4.1
+
+The previous workspace links and core-only ZIP did not satisfy delivery. The complete `--office` package now includes the verified 491400032-byte Qwen GGUF, model manifest/license, all application assets and a root office-start guide. Preparation commands are developer-only. Office use is extraction, opening index.html and ordinary in-app file selection of the already included model; no terminal, Python, installation, server or network is required.
+
+An independent extracted-ZIP test streams every member against the package manifest, uses a directory with spaces, loads the actual included Qwen, generates a source-quoted answer and checks evidence navigation and absence of external/outside-package loads. Supplementary local test PASS in45seconds; actual file with browser network disabled is gated on Ubuntu/Windows CI. The release workflow stages the exact tested ZIP privately, waits for both platform jobs, re-downloads/checks the exact bytes, then exposes a normal GitHub release download. Large weights remain out of Git history and no environment publication is performed.
+
+
 ## Local RAG increment — build 0.4
 
 Implemented source-bound chunking, verified 384d learned sentence embeddings in an isolated worker, semantic/BM25 hybrid retrieval and real local Qwen CPU generation. Heavy packs load lazily. The question flow displays readable source quotations with View evidence, retains model files separately from case sources, clears workspace-derived answers/indexes on changes, and supports hard cancellation. Network remains blocked by CSP.

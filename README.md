@@ -4,7 +4,7 @@ An independent offline-first pension casework application in development. This i
 
 ## Open the workplace build
 
-Double-click `index.html` with its adjacent `assets` and `vendor` folders intact. The application requires no installation, build, server, Python, Node or network. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports. This environment's managed Chromium forbids `file://`: workplace acceptance remains blocked, even though supplementary HTTP tests pass. Do not bypass enterprise policy.
+Use the complete **PBGC-RAG-0.4-office.zip** delivery. Extract it and double-click `index.html`, keeping its adjacent `assets`, `vendor` and `models` folders intact. The model is included; ordinary browser file selection loads it under **Local model settings**. See [office start](docs/OFFICE-START.md). Do not use the small core developer ZIP or GitHub source archive as the complete office package. The application requires no installation, build, server, Python, Node or network. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports. This environment's managed Chromium forbids `file://`: workplace acceptance remains blocked, even though supplementary HTTP tests pass. Do not bypass enterprise policy.
 
 Create a case or load the synthetic example. The workspace selector keeps up to eight cases and a separate reference library. Search uses only the selected workspace. Original files remain unchanged. Save original downloads the exact bytes. Reading views show clear source locations; Source details holds optional verification metadata. View evidence opens nearby parsed records with precise locators; it does not reproduce original page layout.
 
@@ -29,7 +29,7 @@ Limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; ei
 
 ## Ask your documents
 
-The 0.4 RAG work adds source-bound chunks, local learned sentence embeddings, semantic/lexical retrieval and an optional local instruction model. The core build includes the sentence encoder and single-thread WebAssembly generation runtime. The much larger Qwen GGUF weights are a separate local model pack. The application does not download models or send prompts or documents to a service.
+The 0.4 RAG work adds source-bound chunks, local learned sentence embeddings, semantic/lexical retrieval and an optional local instruction model. The core build includes the sentence encoder and single-thread WebAssembly generation runtime. The complete office ZIP includes the Qwen GGUF weights under `models/`; the smaller core developer ZIP omits those weights. The application does not download models or send prompts or documents to a service.
 
 Select a workspace with documents, then use **Ask documents**. For generated answers, select the prepared GGUF in the local-model controls and load it. The supplied model manifest is the default; a different supported model needs its own exact-size/hash manifest. Model files are not imported as case documents. Without a loaded generation model, use the explicitly labeled extractive mode or existing search tools.
 
@@ -71,11 +71,12 @@ node tools/verify-browser.js
 node tools/verify-browser.js --file
 python tools/build-ingest-worker.py --check
 python tools/package.py
+python tools/package.py --office
 ```
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `node tools/verify-browser.js` owns the test server, full Playwright run and cleanup; no manual browser walkthrough or separately managed server is needed. It labels HTTP evidence as supplementary. `--file` uses actual local file URLs without modifying browser policy; the managed Chromium here still blocks that entry. GitHub CI runs both profiles on its test browser. See docs/AUTOMATION.md. Reviewed process-sandbox escalation is needed in this coding environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.4.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The core ZIP includes the bundled sentence encoder and generation runtime; it excludes GGUF weights. Prepare and transfer the separate local model pack as described in docs/LOCAL-MODELS.md.
+`tools/package.py` creates `dist/PBGC-RAG-0.4.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The default core ZIP includes the sentence encoder and generation runtime but excludes GGUF weights. Developers prepare the model outside the office, then run `python tools/package.py --office` to produce the complete `dist/PBGC-RAG-0.4-office.zip`. That profile fails unless the exact pinned model size and SHA-256 pass, includes model/manifest/license assets, and verifies ZIP CRC plus every packaged file hash. Transfer that complete ZIP to the office. No preparation command is a workplace runtime step.
 
 ## Remaining gates
 

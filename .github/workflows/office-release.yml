@@ -1,0 +1,94 @@
+name: Verify and deliver complete offline office package
+
+on:
+  push:
+    branches: ['codex/office-delivery-*']
+    tags: ['office-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: office-delivery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  office:
+    name: extracted offline office package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    env:
+      PBGC_REQUIRE_MODEL: '1'
+      PBGC_REQUIRE_OFFICE: '1'
+      PBGC_OFFICE_FILE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install development verification browser
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-office-verification" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-office-verification/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-office-verification/node_modules" >> "$GITHUB_ENV"
+          echo "CHROMIUM_PATH=$(NODE_PATH="$RUNNER_TEMP/pbgc-office-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Prepare model before office delivery
+        run: python tools/prepare-models.py
+      - name: Build complete office ZIP
+        run: python tools/package.py --office --out dist/PBGC-RAG-0.4-office.zip
+      - name: Test extracted ZIP offline with actual file URL and real Qwen
+        run: node tests/office-package.test.js
+      - name: Write delivery checksum
+        if: ${{ success() && matrix.os == 'ubuntu-latest' }}
+        run: python tools/office-checksum.py
+      - name: Stage exact tested ZIP as an unpublished release asset
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/office-v') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: >-
+          gh release create "$RELEASE_TAG"
+          dist/PBGC-RAG-0.4-office.zip dist/SHA256SUMS.txt
+          --draft --verify-tag --title "PBGC-RAG complete offline office package"
+          --notes-file docs/OFFICE-RELEASE.md
+      - name: Retain synthetic office verification evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: office-verification-${{ matrix.os }}
+          path: test-results/office-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  release:
+    name: Deliver verified office ZIP
+    needs: office
+    if: ${{ startsWith(github.ref, 'refs/tags/office-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Retrieve staged tested package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.4-office.zip --pattern SHA256SUMS.txt
+      - name: Verify downloaded release bytes match tested ZIP
+        run: python tools/office-checksum.py --verify
+      - name: Make complete tested download available
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release edit "$RELEASE_TAG" --draft=false
