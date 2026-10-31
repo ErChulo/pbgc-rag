@@ -289,9 +289,12 @@ test('local PDF extraction and inert HTML/XML imports preserve locators without 
     ]);
     await page.waitForFunction(() => !document.querySelector('#files').disabled);
     assert.equal(await page.locator('#sources li').count(),3, await page.locator('#status').innerText());
-    for (const [query,locator] of [['PdfEvidence947','pdf-text-item'],['HtmlEvidence947','html'],['XmlEvidence947','xml']]) {
+    for (const [query,label,locator] of [['PdfEvidence947','Page 1 · Text excerpt 1','pdf-text-item'],['HtmlEvidence947','HTML text excerpt','html-text-offset'],['XmlEvidence947','XML element:','xml-text']]) {
       await page.locator('#query').fill(query);await page.locator('#search').click();await page.waitForFunction(() => !document.querySelector('#search').disabled);
       assert.match(await page.locator('#results').innerText(),new RegExp(query));
+      assert.match(await page.locator('#results').innerText(),new RegExp(label));
+      assert.doesNotMatch(await page.locator('#results').innerText(),new RegExp(locator));
+      await page.locator('#results article details > summary').first().click();
       assert.match(await page.locator('#results').innerText(),new RegExp(locator));
     }
     assert.equal(await page.evaluate(() => window.injected),undefined);

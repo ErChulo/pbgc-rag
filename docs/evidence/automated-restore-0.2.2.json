@@ -1,0 +1,13 @@
+{
+  "tests": 124,
+  "pass": 124,
+  "fail": 0,
+  "version": "0.2.2",
+  "files": 21,
+  "command": "PBGC_TEST_URL=http://127.0.0.1:8765/ node tools/check.js --browser",
+  "exitCode": 0,
+  "profile": "supplementary Linux Chromium HTTP and isolated worker/package checks",
+  "liveUserFirefoxControlled": false,
+  "actualManagedFileEntry": "BLOCKED by administrator policy",
+  "officialRelease": "BLOCKED"
+}

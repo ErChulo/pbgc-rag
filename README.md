@@ -40,7 +40,7 @@ Export layouts and graphs to keep annotations across reloads, or use a reviewer 
 
 ## Recovery, exports and privacy
 
-IndexedDB, then localStorage, then memory are capability-selected. Recovery retains one prior snapshot and checks stale-tab write conflicts. Portable source-only case packages, all-workspace backups and reviewer packages are available. Restore verifies SHA-256 and reparses originals before replacing/adding work. Keep portable backups: browser storage can be cleared, denied or tied to this file location. Clear all local recovery removes current/prior snapshots and closes workspaces; exported files remain on disk.
+IndexedDB, then localStorage, then memory are capability-selected. Recovery retains one prior snapshot and checks stale-tab write conflicts. Portable source-only case packages, all-workspace backups and reviewer packages are available. Restore verifies SHA-256 and reparses originals before replacing/adding work. A visible summary beside the picker shows the restored filename, active case and document count. Same-named cases have distinct display labels. Keep portable backups: browser storage can be cleared, denied or tied to this file location. Clear all local recovery removes current/prior snapshots and closes workspaces; exported files remain on disk.
 
 Exports and recovery are plaintext. SHA-256 detects inconsistent content; it does not authenticate authorship. Original bytes may be sensitive. Only synthetic fixtures belong in this public repository or remote development environment.
 
@@ -55,7 +55,7 @@ python tools/package.py
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `--browser` uses actual `file://` by default and currently encounters administrator blocking. Set `PBGC_TEST_URL=http://127.0.0.1:8765/` only for explicitly supplementary HTTP tests; start a loopback server with `python -m http.server 8765 --bind 127.0.0.1` during development. Reviewed process-sandbox escalation is needed in this managed environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.2.1.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported.
+`tools/package.py` creates `dist/PBGC-RAG-0.2.2.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported.
 
 ## Remaining gates
 

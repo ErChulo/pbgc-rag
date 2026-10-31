@@ -1,5 +1,13 @@
 # Progress
 
+## Automated restore verification — build 0.2.2
+
+The user asked to stop the manual walkthrough and use Playwright. Playwright reproduced the UX problem: a successful same-file restore left an empty picker and two identical case labels, with feedback only in the distant global status. Restoration itself preserved the source data.
+
+Fixed adjacent restore feedback with the chosen filename, active copy, document/excerpt counts and a Search restored case action. Pending, error and cancellation feedback is local to the picker. Duplicate case names receive distinct display labels while stored names and source bytes remain unchanged. Workspace changes clear stale restore summaries.
+
+Independent Playwright verified the extracted 0.2.2 package through repeated same-file restores, search, original-data/export integrity, tamper rejection and cancellation with no mutation on failed restore. Coordinator ran the full automated suite: 124 PASS, zero FAIL across 21 files. Two older PDF/legacy assertions were updated to verify readable default locations and exact locators inside Source details. Evidence: docs/evidence/automated-restore-0.2.2.json and .log. Tests use supplementary Chromium HTTP; the user's live Firefox session is not connected, and local Firefox automation is unavailable here. No manual walkthrough is required for the tested flows. No publication or push performed.
+
 ## Reading view correction — build 0.2.1
 
 User feedback during the guided manual check identified hashes and raw JSON locators dominating source reading. The default source list, search results, graph excerpts and evidence dialog now use readable locations (for example, Line 2, Paragraph 7 or Sheet · Cell B2). File fingerprints, parser versions, exact locators and extraction warnings remain in collapsed Source details. Original sources, hashes, parser output, package schemas and export validation are unchanged. Evidence dialog scrolling and selected-excerpt spacing were simplified.

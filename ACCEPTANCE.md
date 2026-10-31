@@ -1,5 +1,11 @@
 # Acceptance evidence
 
+## Build 0.2.2 automated restore check
+
+Coordinator full suite: **124 tests PASS, zero FAIL across 21 files**, including Playwright, on the documented supplementary HTTP development profile. The extracted-package restore test covers repeated identical filenames, distinct copy labels/active identities, local visible filename/document/excerpt feedback, the search shortcut, byte-preserving exports, tamper rejection and cancellation without mutating the current case. The automation replaces the repeated manual walkthrough for those flows. Source/export schemas and immutable case names are unchanged.
+
+The initial missing visual change was reproduced before the patch: successful restores created identical visible names and cleared the picker without nearby confirmation. That usability defect is fixed. Full test log and summary are docs/evidence/automated-restore-0.2.2.log and .json. This is not an assertion that Playwright controlled the user's Firefox session or passed actual Windows file:// acceptance; the prior environment limits remain.
+
 ## Build 0.2.1 reading-view patch
 
 Readable source locations replace default hashes/raw JSON in the reading UI. Technical metadata is available through closed-by-default Source details. Original bytes, exact locators, fingerprints and exports remain intact. Targeted browser regressions, location formatting, source/export integrity, security, accessibility and extracted-package startup pass; this patch does not claim a rerun of the unchanged entire 0.2 suite below.

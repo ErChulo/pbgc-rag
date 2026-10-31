@@ -145,14 +145,37 @@
   }
   $('resume-import').addEventListener('click',()=>operation(async()=>{const count=await keepCheckpoint();status(`Kept ${count} checked sources. Reselect any remaining files to continue importing.`);}));
   $('discard-import').addEventListener('click',()=>operation(async()=>{await commit({...catalog,pending:null});status('Import checkpoint discarded. Active sources were unchanged.');}));
+  function workspaceLabel(caseData) {
+    const matches=catalog.cases.filter(c=>c.name===caseData.name);
+    if(matches.length<2)return caseData.name;
+    return `${caseData.name} (${matches.findIndex(c=>c.id===caseData.id)+1})`;
+  }
+  function showRestoreFeedback(state,message,fileName,caseData) {
+    const panel=$('restore-feedback');panel.hidden=false;panel.dataset.state=state;
+    panel.replaceChildren(el('h3',message));
+    if(fileName)panel.append(el('p',`File: ${fileName}`));
+    if(caseData){
+      const count=caseData.sources.reduce((sum,source)=>sum+source.records.length,0);
+      panel.append(el('p',`Active case: ${workspaceLabel(caseData)}`),el('p',`${caseData.sources.length} ${caseData.sources.length===1?'document':'documents'} · ${count} ${count===1?'excerpt':'excerpts'}`));
+      const search=el('button','Search restored case');search.type='button';
+      search.addEventListener('click',()=>{
+        $('query').scrollIntoView({block:'center'});$('query').focus();
+      });
+      panel.append(search);
+    }
+    if(state!=='pending'){
+      panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest'});
+    }
+  }
   function render() {
     const active = workspace();
-    $('active-case').textContent = active ? `Active ${catalog.activeId === LIBRARY ? 'library' : 'case'}: ${active.name}` : 'No active case';
+    $('active-case').textContent = active ? `Active ${catalog.activeId === LIBRARY ? 'library' : 'case'}: ${workspaceLabel(active)}` : 'No active case';
     $('case-name').value = '';
     $('workspace-select').replaceChildren(new Option('Select a workspace', ''));
-    for (const c of catalog.cases) $('workspace-select').append(new Option(c.name, c.id));
+    for (const c of catalog.cases) $('workspace-select').append(new Option(workspaceLabel(c), c.id));
     $('workspace-select').append(new Option('Reference library (separate)', LIBRARY));
     $('workspace-select').value = catalog.activeId || '';
+    $('restore-feedback').hidden=true;$('restore-feedback').replaceChildren();
     $('sources').replaceChildren(); $('graph-start').replaceChildren(); $('graph-target').replaceChildren();
     for (const source of active?.sources || []) {
       const item = el('li', `${source.name} · ${source.records.length} records`);
@@ -402,12 +425,19 @@
   $('import-case').addEventListener('change', event => {
     const file = event.target.files[0]; if (!file) return; event.target.value='';
     operation(async () => {
-      if (file.size > MAX_PACKAGE) throw Error('Package exceeds the 40 MB limit.');
-      const restored = await validatePackage(JSON.parse(await file.text())); checkCancelled();
-      // A portable case never silently replaces another open case with the same identity.
-      if (catalog.cases.some(c => c.id === restored.id)) restored.id = crypto.randomUUID();
-      await commit({...catalog,activeId:restored.id,cases:[...catalog.cases,restored]});
-      $('import-case').value = ''; status('Case restored. Original byte hashes verified; records rebuilt.');
+      showRestoreFeedback('pending','Restoring case…',file.name);
+      try{
+        if (file.size > MAX_PACKAGE) throw Error('Package exceeds the 40 MB limit.');
+        const restored = await validatePackage(JSON.parse(await file.text())); checkCancelled();
+        // Preserve the original case and make the restored copy independently selectable.
+        if (catalog.cases.some(c => c.id === restored.id)) restored.id = crypto.randomUUID();
+        await commit({...catalog,activeId:restored.id,cases:[...catalog.cases,restored]});
+        showRestoreFeedback('success','Case restored — ready to search',file.name,restored);
+        status('Case restored. Documents checked and ready to search.');
+      }catch(error){
+        const message=abortRequested?'Restore cancelled. Your active case was kept.':`Restore failed: ${error.message||'The package could not be read.'}`;
+        showRestoreFeedback('error',message,file.name);throw error;
+      }
     },true);
   });
   $('recover-previous').addEventListener('click', () => operation(async () => {
