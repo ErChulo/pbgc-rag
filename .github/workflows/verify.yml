@@ -14,14 +14,19 @@ concurrency:
 
 jobs:
   verification:
-    runs-on: ubuntu-latest
+    name: verification (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
       - name: Install pinned development browser tooling
@@ -37,14 +42,17 @@ jobs:
       - name: Verify actual file browser workflow
         if: ${{ !cancelled() }}
         run: node tools/verify-browser.js --file
+      - name: Annotate failed synthetic checks
+        if: ${{ failure() }}
+        run: node tools/ci-summary.js
       - name: Package synthetic source build
         if: ${{ success() }}
         run: python tools/package.py --out dist/PBGC-RAG-ci.zip
       - name: Upload scoped development evidence
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: synthetic-verification-evidence
+          name: synthetic-verification-evidence-${{ matrix.os }}
           path: |
             test-results/verification-*.log
             test-results/verification-*.json

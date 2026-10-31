@@ -1,5 +1,11 @@
 # Progress
 
+## GitHub integration and independent CI
+
+The 0.3 source increment was committed as 1c3ce6e, pushed to codex/source-review-0.3 and fast-forwarded into main. GitHub Actions run 41152768376 completed Success in 1m 37s, including the supplementary HTTP and actual file:// steps and packaged synthetic evidence. This establishes actual-file evidence on the tested Linux Chromium runner without bypassing managed local browser policy. It does not establish locked-down workplace Windows approval.
+
+CI now uses pinned Node24 GitHub actions and an Ubuntu/Windows matrix, with distinct artifact names and bounded failure annotations containing synthetic test names only. This removes the Node20-action deprecation warning and automates Windows compatibility checks. Local supervisor/CI replace manual browser walkthroughs; no environment publication is performed.
+
 ## Case-review increment — build 0.3
 
 Continued autonomously with source-bound field dictionary mapping, evidence observations and exact-content human review claims, conservative conflict/abstention checks, typed read-only source-table queries, isolated mapped DOCX/XLSX test generation, and version 2 case persistence. Source-only v1 imports remain compatible. Reports/graph links, dictionary bindings, explicit headers and annotations revalidate against original source bytes on reload/import. Unknown schemas or forged review/source fields reject before case mutation. Official release remains disabled.

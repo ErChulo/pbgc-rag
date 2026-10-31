@@ -36,6 +36,8 @@ It inspects first-party source extensions in the repository root and `assets`, `
 
 ## CI
 
-`.github/workflows/verify.yml` runs on push, pull request or manual dispatch with read-only repository permissions. It installs pinned development Playwright in the runner's temporary directory, runs supplementary HTTP and actual-file verification, and packages only a passing source build. GitHub-maintained actions use explicit stable major versions. Full transitive action/browser supply-chain attestation is not claimed.
+`.github/workflows/verify.yml` runs on push, pull request or manual dispatch with read-only repository permissions. It installs pinned development Playwright in the runner's temporary directory, runs supplementary HTTP and actual-file verification, and packages only a passing source build. The workflow runs an Ubuntu/Windows matrix. GitHub-maintained Node24 actions are pinned to full verified commit SHAs, and matrix jobs use distinct artifact names. Full transitive action/browser supply-chain attestation is not claimed.
 
 Artifact upload is narrowly scoped to generated verification logs/JSON and the portable source-build ZIP, retained for seven days. No arbitrary workspace, case export, user upload, credential directory or temporary-directory glob is uploaded. Keep confidential case material out of this public repository and out of CI. The generated source bundle and manifest are not official PBGC outputs or a publication operation.
+
+On failure, `tools/ci-summary.js` publishes at most 12 bounded, escaped synthetic test names as annotations/step summary. It does not publish captured diagnostic values or arbitrary workspace files, so public status can be inspected without exposing case data.

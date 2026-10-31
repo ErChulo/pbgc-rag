@@ -1,5 +1,11 @@
 # Acceptance evidence
 
+## Independent GitHub actual-file evidence
+
+GitHub Actions [run 41152768376](https://github.com/ErChulo/pbgc-rag/actions/runs/41152768376) for commit 1c3ce6e completed **Success**. The workflow runs both the complete supplementary HTTP suite and the actual-file suite before packaging; its success therefore supplies actual file:// evidence on that Linux Chromium runner. The managed coding environment still blocks local file entry, and the user's Firefox checks remain narrower manual evidence. No browser policy was changed. Neither CI nor those user checks establish locked-down Windows workplace approval or official actuarial validity.
+
+The workflow now extends this automatic verification to Ubuntu and Windows with pinned Node24 actions. Public failure summaries expose only bounded synthetic test names, not source/case/credential diagnostic values. The older matrices below remain historical release evidence.
+
 ## Build 0.3 source-bound review increment
 
 **Coordinator full suite: 181 PASS, zero FAIL, zero skipped across 29 files.**

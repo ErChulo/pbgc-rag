@@ -2,7 +2,7 @@
 
 ## External gates requiring authorized input or environment
 
-- **Actual file:// workplace execution:** managed Chromium blocks local file URLs through administrator policy. Actual entry tests return `ERR_BLOCKED_BY_ADMINISTRATOR`. An approved environment/browser that permits local documents is needed. No policy bypass was attempted. Linux loopback-HTTP evidence does not satisfy this gate.
+- **Actual file:// workplace execution:** managed Chromium blocks local file URLs through administrator policy. Local entry tests return `ERR_BLOCKED_BY_ADMINISTRATOR`. Independent GitHub CI run 41152768376 passed its actual-file suite on Linux Chromium; the workflow now also tests Windows. Actual approved workplace policy/browser acceptance is still needed. No policy bypass was attempted. Linux loopback-HTTP evidence does not satisfy this gate.
 - **Official inputs:** approved versioned `data_dictionary_complete.xlsm`; authorized original R1/R5/DEL/PF/V1/436 and review templates/maps; authoritative BSRS grammar/validator; ATPBGC reference specifications/factors are absent. A reviewer must supply/approve official interpretations and rules before actuarial activation. These gaps block their affected official validations and outputs.
 - **Enterprise acceptance:** Windows 11 browser policy, full 508/manual assistive-technology checks and final CPU/RAM acceptance require the actual approved workplace environment. Current synthetic Linux workload metrics are narrower evidence.
 - **Semantic/OCR assets:** no approved local model package and tested deployment contract is supplied. BM25/keyword/regex/SQL remain available. Model inference and OCR are not claimed.
