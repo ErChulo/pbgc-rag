@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-local-llm-runtime",
+  "runtime": "@wllama/wllama",
+  "version": "2.3.7",
+  "source": "https://registry.npmjs.org/@wllama/wllama/-/wllama-2.3.7.tgz",
+  "license": "MIT",
+  "llamaCpp": "b7179-4abef75",
+  "cpuOnly": true,
+  "singleThread": true,
+  "inputs": [
+    {
+      "path": "upstream/index.js",
+      "sha256": "1a4c0b01578eeaf6b10ab290037d34fa727b362bb27bd6a60bfa5786c8d160fc"
+    },
+    {
+      "path": "upstream/single-thread.wasm",
+      "sha256": "529c780d43cb57cb9ac7ef4c42e16463afb0b2dec4ecaae9a6df8179c435fd71"
+    }
+  ],
+  "output": {
+    "path": "wllama-classic.js",
+    "bytes": 3152663,
+    "sha256": "800c37902920446882bf8e737e17e00d2a5baf50d1d4b7d287a8d6a674e358e6"
+  },
+  "modifications": [
+    "Embed single-thread WASM in module config; no runtime binary fetch",
+    "Use classic Blob worker and expose its URL for disposal",
+    "Disable network/import worker entrypoints and model URL/HF loaders"
+  ]
+}

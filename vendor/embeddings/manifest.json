@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "learned-sentence-embedding-pack",
+  "model": "@ternlight/base",
+  "version": "0.1.1",
+  "dimension": 384,
+  "tokenLimit": 128,
+  "tokenizer": "embedded BERT-base-uncased WordPiece,30522 entries",
+  "architecture": "MiniLM-distilled 2-layer transformer; ternary projections,int4 embeddings; CPU WASM SIMD",
+  "source": "https://registry.npmjs.org/@ternlight/base/-/base-0.1.1.tgz",
+  "sourceRevision": "c6d2c0a35d14c574ed2898b3dbf95977bca07208",
+  "npmIntegrity": "sha512-G+/awDQq6AdLGR7GaIq7RCTdriR+DlqpSjiqfYdev6mCDR0HKLhlp5ZF2GiXX3CM6ZwY8g2AI8937IERqTxIkQ==",
+  "license": "MIT",
+  "wasmSha256": "27819b70b83fb24a493792db7bdf6b9cae4a1531df408809d1e57d580a3e9087",
+  "wasmBytes": 10228415,
+  "upstreamGlueSha256": "330b974f140c1b24db4190cbad63b8d9ba5ec61911cf4eb837a55b778bb9ddc5",
+  "requires": [
+    "WebAssembly SIMD",
+    "WebAssembly reference types",
+    "CSP wasm-unsafe-eval"
+  ],
+  "threads": 1,
+  "sharedMemory": false,
+  "runtimeNetwork": false,
+  "id": "ternlight-base-v0.1.1-27819b70b83fb24a",
+  "modelScriptSha256": "f7e7dcf03a1ff07cb260f2526b7ae2037863e835de6ff5397b365c29a3829cae",
+  "modelScriptBytes": 13649384
+}

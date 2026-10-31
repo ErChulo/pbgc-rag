@@ -28,3 +28,7 @@
 - Exact source/mapping/content/version must match the visible saved review target. Unsaved edits cannot receive review of an older hidden scope. Edits reset review; unknown authority/dates/group or conflicts cause abstention.
 - Preserve original field names/int64 values; no schema/type/legal inference. Generic template outputs remain nonofficial and require authorized-part/anchor/hash/numeric checks in an isolated worker.
 - Own development server/child lifecycles in one Playwright supervisor; run actual-file checks separately and never change managed browser policy. CI artifacts are limited to synthetic evidence and source builds.
+
+## Offline local RAG model boundary — 0.4
+
+Authoritative PBGC content remains deferred by user direction. Implement local learned retrieval and real CPU generation using synthetic fixtures. The browser never downloads models: the core ZIP embeds the verified MIT Ternlight sentence encoder and single-thread wllama runtime; the Apache-2.0 Qwen GGUF is a separately prepared, exact-hash local file. No model input is imported as a case source. CSP grants only narrow WebAssembly compilation in addition to existing local scripts and Blob workers, retaining connect-src none. Citation quotes, numbers and conservative synthesis checks gate release; those checks do not prove legal applicability or semantic entailment. Missing models, unsupported evidence, conflicts, cancellation and deadlines abstain explicitly. Generation quality and latency must be measured with real weights independently of mock orchestration tests.

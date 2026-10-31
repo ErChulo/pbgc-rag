@@ -14,7 +14,7 @@
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
-  let caseReviewUI;
+  let caseReviewUI, ragUI;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   const workspace = () => catalog.activeId === LIBRARY ? catalog.library : catalog.cases.find(c => c.id === catalog.activeId);
@@ -218,7 +218,7 @@
     if(!$('report-sections').value){const option=new Option(reportLayout.sections.join(', '),reportLayout.sections.join(','));$('report-sections').append(option);$('report-sections').value=option.value;}
     $('timeline-list').replaceChildren(...(reportLayout.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); $('report-preview').replaceChildren();
     $('results').replaceChildren(); $('review-results').replaceChildren(); $('graph-results').replaceChildren();
-    renderCheckpoint();caseReviewUI?.refresh();
+    renderCheckpoint();caseReviewUI?.refresh();ragUI?.refresh();
     if ($('source-view').open) $('source-view').close(); sourceView = null;
   }
   function openSource(source, index) {
@@ -488,6 +488,7 @@
     for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
     document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
+  ragUI=API.mountRag({getWorkspace:workspace,operation,getSignal:()=>operationAbort.signal,cancel:()=>{abortRequested=true;operationAbort?.abort();},openSource});
   caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();
   for (const text of [

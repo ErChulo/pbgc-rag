@@ -4,3 +4,6 @@
 /test-results/
 /playwright-report/
 __pycache__/
+# Separately prepared local inference weights; never commit model packs.
+*.gguf
+*.gguf.partial

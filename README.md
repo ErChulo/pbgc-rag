@@ -27,6 +27,14 @@ Imports use dedicated local workers with cancellation and 15-second hard deadlin
 
 Limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; eight cases and 80 MB per recovery catalog. Text extraction is bounded at 2,000,000 UTF-16 code units per source. Archives and each parser have additional limits. Browser workers have no hard OS memory quota; elapsed-time and output limits do not certify hostile-document safety.
 
+## Ask your documents
+
+The 0.4 RAG work adds source-bound chunks, local learned sentence embeddings, semantic/lexical retrieval and an optional local instruction model. The core build includes the sentence encoder and single-thread WebAssembly generation runtime. The much larger Qwen GGUF weights are a separate local model pack. The application does not download models or send prompts or documents to a service.
+
+Select a workspace with documents, then use **Ask documents**. For generated answers, select the prepared GGUF in the local-model controls and load it. The supplied model manifest is the default; a different supported model needs its own exact-size/hash manifest. Model files are not imported as case documents. Without a loaded generation model, use the explicitly labeled extractive mode or existing search tools.
+
+Answers retain supporting quotations and links to the original evidence records. Insufficient, conflicting or rejected model output must produce an abstention, not an unsupported answer. Citation and grounding guards do not establish legal correctness or prove semantic entailment. Model generation does not approve a rule or an official artifact. See [local model preparation and limits](docs/LOCAL-MODELS.md), [chunking](docs/CHUNKING.md), [semantic retrieval](docs/SEMANTIC.md) and [answer grounding](docs/RAG.md). Integration and actual-model acceptance evidence are recorded separately in ACCEPTANCE.md; module or mock-provider tests do not prove real inference quality.
+
 ## Search and review
 
 - Keywords require all terms in the same record. Exact phrases preserve word order.
@@ -67,8 +75,8 @@ python tools/package.py
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `node tools/verify-browser.js` owns the test server, full Playwright run and cleanup; no manual browser walkthrough or separately managed server is needed. It labels HTTP evidence as supplementary. `--file` uses actual local file URLs without modifying browser policy; the managed Chromium here still blocks that entry. GitHub CI runs both profiles on its test browser. See docs/AUTOMATION.md. Reviewed process-sandbox escalation is needed in this coding environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.3.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported.
+`tools/package.py` creates `dist/PBGC-RAG-0.4.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The core ZIP includes the bundled sentence encoder and generation runtime; it excludes GGUF weights. Prepare and transfer the separate local model pack as described in docs/LOCAL-MODELS.md.
 
 ## Remaining gates
 
-Official dictionary authorization/type definitions, legal/actuarial definitions and approvals, reference factors, original templates, BSRS syntax and official artifacts require authorized authoritative inputs. Local semantic models/OCR, comprehensive PDF tables/layout, broader format/query support and complete enterprise accessibility/performance acceptance remain pending. No official output is enabled. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for exact evidence and unfinished work.
+Official dictionary authorization/type definitions, legal/actuarial definitions and approvals, reference factors, original templates, BSRS syntax and official artifacts require authorized authoritative inputs. Actual-model quality, browser-policy and whole-process resource acceptance must be supported by the current test evidence. OCR, comprehensive PDF tables/layout, broader format/query support and complete enterprise accessibility/performance acceptance remain pending. No official output is enabled. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for exact evidence and unfinished work.

@@ -9,13 +9,14 @@ import zipfile
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
-parser.add_argument('--out', type=Path, default=root / 'dist' / 'PBGC-RAG-0.3.zip')
+parser.add_argument('--out', type=Path, default=root / 'dist' / 'PBGC-RAG-0.4.zip')
 args = parser.parse_args()
 paths = [root / 'index.html', root / 'README.md', root / 'ACCEPTANCE.md', root / 'BLOCKERS.md']
 paths += sorted((root / 'assets').glob('*.js')) + sorted((root / 'assets').glob('*.css'))
 paths += sorted((root / 'docs').glob('*.md'))
 paths += sorted((root / 'vendor').rglob('*'))
-paths = sorted({p for p in paths if p.is_file()})
+# GGUF weights are distributed separately, never copied into the core ZIP.
+paths = sorted({p for p in paths if p.is_file() and p.suffix.lower() != '.gguf'})
 for path in paths:
     if not path.resolve().is_relative_to(root):
         raise SystemExit(f'Package path escapes the repository: {path}')
@@ -23,7 +24,7 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
     ref = match[1]
     if '://' in ref or not (root / ref).is_file():
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
-manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.3',
+manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.4',
             'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
             'files': [{'path': p.relative_to(root).as_posix(), 'bytes': p.stat().st_size,
                        'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in paths]}

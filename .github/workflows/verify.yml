@@ -21,6 +21,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    env:
+      PBGC_REQUIRE_MODEL: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -37,6 +39,8 @@ jobs:
           echo "NODE_PATH=$RUNNER_TEMP/pbgc-verification/node_modules" >> "$GITHUB_ENV"
           CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
           echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Prepare hash-verified local model for actual CPU inference
+        run: python tools/prepare-models.py
       - name: Verify source and supplementary HTTP browser workflow
         run: node tools/verify-browser.js
       - name: Verify actual file browser workflow

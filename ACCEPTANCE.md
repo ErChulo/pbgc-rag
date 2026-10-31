@@ -1,5 +1,14 @@
 # Acceptance evidence
 
+## Build 0.4 local RAG increment
+
+The user deferred authoritative PBGC material. This increment uses synthetic sources and a local learned sentence encoder plus a separately selected Qwen instruction model. It does not waive official-output gates.
+
+- Learned embeddings: PASS, exact-hash MIT Ternlight 384d transformer, isolated browser worker, long-text windows, cancellation and recovery. Six synthetic synonym topics rank first. Independent four-question paraphrase corpus: recall@1 0.75; recall@3 1.00. The cash-out query is weak and must not be represented as reliable top-one retrieval.
+- Provenance and orchestration: PASS, exact source-bound chunks, conservative conflict/abstention, quote resolution and synthesis guards, fabricated numbers/entities/negation rejected. Mock providers test protocol behavior only; they do not establish real generation.
+- Real Qwen: standalone CPU inference PASS and integrated browser answer/citation/cancellation PASS on one synthetic retirement-age question (about 39 seconds including model load). The local model produces a short plain answer; code selects one exact supporting source sentence and rejects novel content terms, dropped conditions or unsupported numeric/entity/negation changes. Generic JSON providers retain explicit quote checks. Coordinator full suite: 221 PASS, zero FAIL/skipped; real model required. Durable evidence: docs/evidence/rag-0.4.json and .log. Linux/Windows actual-file gates follow in GitHub CI.
+- Limits: small synthetic evaluation; no production quality, legal authority, semantic entailment proof, or 16 GB whole-process peak-memory acceptance is established. Runtime remains network-blocked. Workplace browser policy approval remains BLOCKED.
+
 ## Independent GitHub actual-file evidence
 
 GitHub Actions [run 41152768376](https://github.com/ErChulo/pbgc-rag/actions/runs/41152768376) for commit 1c3ce6e completed **Success**. The workflow runs both the complete supplementary HTTP suite and the actual-file suite before packaging; its success therefore supplies actual file:// evidence on that Linux Chromium runner. The managed coding environment still blocks local file entry, and the user's Firefox checks remain narrower manual evidence. No browser policy was changed. Neither CI nor those user checks establish locked-down Windows workplace approval or official actuarial validity.
@@ -60,7 +69,7 @@ The coordinator separately ran actual `file://` entry verification. It exits 1 w
 | Actual double-click file:// execution | BLOCKED | Managed Chromium administrator URL policy denies local entry before load. Approved policy-permitted browser/environment needed |
 | Official dictionary/templates/BSRS syntax/reference validation | BLOCKED | Authorized authoritative fixtures/specifications absent; no fabricated substitute |
 | Official actuarial rules, computations and artifacts | BLOCKED / NOT IMPLEMENTED | No approved interpretations/reference factors supplied; only synthetic arithmetic exists. Dictionary mapping/approval UX, complete engine and template-preserving official generation remain engineering work. Official release disabled |
-| Full ontology/authority/contradiction workflow, semantic/OCR, broader formats/SQL | NOT IMPLEMENTED | Documentary/proposed graph and explicit query/parser subsets only. Approved ontology/model/reference contracts plus engineering needed |
+| Full ontology/authority workflow, OCR, broader formats/SQL | NOT IMPLEMENTED | Documentary/proposed graph and explicit query/parser subsets only. Approved ontology/model/reference contracts plus engineering needed |
 | Windows enterprise/full 508/whole-process resource acceptance | BLOCKED / UNVERIFIED | Current Linux tests cannot establish actual workplace policy, assistive-technology or RAM/CPU acceptance |
 
 ## Reproduction

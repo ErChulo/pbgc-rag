@@ -1,0 +1,17 @@
+{
+  "profile": "supplementary HTTP only",
+  "command": "PBGC_REQUIRE_MODEL=1 node tools/verify-browser.js",
+  "counts": {
+    "tests": 221,
+    "pass": 221,
+    "fail": 0,
+    "skipped": 0
+  },
+  "realModel": "Qwen2.5-0.5B-Instruct-Q4_K_M",
+  "modelBytes": 491400032,
+  "loadAndAnswerMs": 37801,
+  "fileProfile": "Pending GitHub Linux/Windows actual-file gate; managed local browser policy blocks file entry",
+  "semanticRecallAt1": 0.75,
+  "semanticRecallAt3": 1.0,
+  "official": false
+}

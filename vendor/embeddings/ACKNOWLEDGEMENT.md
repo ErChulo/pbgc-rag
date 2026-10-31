@@ -1,0 +1,1 @@
+Bundled runtime, tokenizer and trained weights: @ternlight/base0.1.1,MIT,Copyright2026 Wenshu Tang. Source https://github.com/soycaporal/ternlight at c6d2c0a35d14c574ed2898b3dbf95977bca07208. Upstream documents a MiniLM-distilled trained sentence encoder, not a GloVe model. See UPSTREAM-README.md and docs/EMBEDDINGS.md for independently tested limits.

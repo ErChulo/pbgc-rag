@@ -1,5 +1,14 @@
 # Progress
 
+## Local RAG increment — build 0.4
+
+Implemented source-bound chunking, verified 384d learned sentence embeddings in an isolated worker, semantic/BM25 hybrid retrieval and real local Qwen CPU generation. Heavy packs load lazily. The question flow displays readable source quotations with View evidence, retains model files separately from case sources, clears workspace-derived answers/indexes on changes, and supports hard cancellation. Network remains blocked by CSP.
+
+The local Qwen profile generates one short factual sentence. Code independently selects an exact supporting source sentence with every substantive term present and numerical/entity/negation/qualification checks; it abstains on unsupported relations, joined claims and dropped conditions. Diagnostics distinguish automatic supporting-source selection from model-emitted citations. Generic JSON providers keep their explicit citation contract. These checks do not prove semantic entailment or legal applicability. Coordinator full suite: 221 PASS, zero FAIL/skipped, with real model required. Actual UI answer/source citation/cancellation passed in37.8seconds. Durable evidence: docs/evidence/rag-0.4.json and .log. Linux/Windows actual-file gates follow in GitHub CI.
+
+The independent four-question paraphrase set returns recall@1 .75 and recall@3 1.00; the cash-out query remains weak. Official PBGC authority is deferred by user direction, and official-output/enterprise gates remain unchanged. The491400032-byte Apache Qwen pack is ignored by Git and excluded from the core ZIP; tools/prepare-models.py verifies every download part and the whole file before separate local delivery. No environment publication.
+
+
 ## Cross-platform verification hardening
 
 The first Ubuntu/Windows matrix isolated two portability defects: PDF-specific tests bypassed CHROMIUM_PATH with a Linux-only executable path, and ZIP manifests used host-native Windows separators. Those are fixed; package paths are POSIX-canonical and every PDF test honors the configured browser. Git text attributes preserve audited LF source/bundle bytes across checkout platforms. The coordinator complete local run passes 183 checks with zero failures/skips. Durable evidence: docs/evidence/portability-0.3.json and .log. Remote platform outcomes remain inspectable in GitHub Actions for each commit; no manual user checks are required.

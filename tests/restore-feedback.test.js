@@ -17,7 +17,7 @@ test('extracted current package makes same-file restore visible and preserves ca
     execFileSync('python',[path.join(root,'tools/package.py'),'--out',zip],{encoding:'utf8'});
     execFileSync('python',['-c','import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z: z.extractall(sys.argv[2])',zip,extracted]);
     const manifest=JSON.parse(await fs.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
-    assert.equal(manifest.version,'0.3');
+    assert.equal(manifest.version,'0.4');
     server=http.createServer(async(request,response)=>{
       try{
         const pathname=decodeURIComponent(new URL(request.url,'http://localhost').pathname);
