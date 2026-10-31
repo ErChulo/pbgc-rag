@@ -1,5 +1,11 @@
 # Acceptance evidence
 
+## Build 0.2.1 reading-view patch
+
+Readable source locations replace default hashes/raw JSON in the reading UI. Technical metadata is available through closed-by-default Source details. Original bytes, exact locators, fingerprints and exports remain intact. Targeted browser regressions, location formatting, source/export integrity, security, accessibility and extracted-package startup pass; this patch does not claim a rerun of the unchanged entire 0.2 suite below.
+
+User-confirmed Firefox/Linux file:// checks: application entry, synthetic example loading, keyword search and highlighted evidence viewing PASS for those observed steps. Browser version, binary worker imports, recovery and offline network isolation have not yet been checked in that environment. Actual entry remains BLOCKED in this managed Chromium environment. No Windows enterprise acceptance is inferred.
+
 Development build 0.2, October 30, 2026. **Final workplace/official acceptance is NOT COMPLETE.**
 
 The coordinator independently ran `PBGC_TEST_URL=http://127.0.0.1:8765/ node tools/check.js --browser`: **121 tests PASS, zero FAIL across 19 test files**. This includes source/parser/numerical checks and explicitly supplementary Linux Chromium HTTP evidence. Exact log, per-file counts, workload metrics and advisory snapshot are in docs/evidence/.

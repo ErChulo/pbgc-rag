@@ -9,7 +9,7 @@ import zipfile
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
-parser.add_argument('--out', type=Path, default=root / 'dist' / 'PBGC-RAG-0.2.zip')
+parser.add_argument('--out', type=Path, default=root / 'dist' / 'PBGC-RAG-0.2.1.zip')
 args = parser.parse_args()
 paths = [root / 'index.html', root / 'README.md', root / 'ACCEPTANCE.md', root / 'BLOCKERS.md']
 paths += sorted((root / 'assets').glob('*.js')) + sorted((root / 'assets').glob('*.css'))
@@ -23,7 +23,7 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
     ref = match[1]
     if '://' in ref or not (root / ref).is_file():
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
-manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.2',
+manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.2.1',
             'official': False, 'fileProfileAcceptance': 'BLOCKED: managed browser policy',
             'files': [{'path': str(p.relative_to(root)), 'bytes': p.stat().st_size,
                        'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in paths]}

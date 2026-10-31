@@ -1,5 +1,13 @@
 # Progress
 
+## Reading view correction — build 0.2.1
+
+User feedback during the guided manual check identified hashes and raw JSON locators dominating source reading. The default source list, search results, graph excerpts and evidence dialog now use readable locations (for example, Line 2, Paragraph 7 or Sheet · Cell B2). File fingerprints, parser versions, exact locators and extraction warnings remain in collapsed Source details. Original sources, hashes, parser output, package schemas and export validation are unchanged. Evidence dialog scrolling and selected-excerpt spacing were simplified.
+
+Targeted independent and coordinator checks cover hidden-by-default/revealable metadata, readable locations, byte-preserving source/package export, Office/SQLite citations, graph/report recovery and both-theme accessibility. A separate extracted-package check verifies the added local presentation asset. No publication or push performed. Guided walkthrough remains paused at the user's request.
+
+User-reported manual evidence now confirms a basic file:// workflow in Firefox on the user's Linux computer: entry, synthetic example, keyword result and selected evidence dialog. This narrows the earlier file-profile uncertainty for those specific checks; it does not establish Windows enterprise, binary import, recovery or network-isolation acceptance. Managed Chromium here remains blocked by its administrator policy.
+
 ## Latest integrated milestone — build 0.2, October 30, 2026
 
 Continued from tested foundation commit 37226b7 without resetting prior work. Added bounded worker-isolated extraction for PDF, DOC/DOCX, XLS/XLSX/XLSM, SQLite, HTML/XML and existing text; transparent BM25, safe regex and strict record SQL; exact supported evidence locators/source viewing; bounded source-bound graph traversal/proposed temporal links; case/reference-library isolation; IndexedDB/localStorage/memory recovery with prior snapshots, verified backups and resumable checked-source checkpoints; provisional R1/internal BSRS, report layouts/timelines/HTML/formula-safe CSV, verified reviewer packages and portable ZIP tooling.

@@ -6,7 +6,7 @@ An independent offline-first pension casework application in development. This i
 
 Double-click `index.html` with its adjacent `assets` and `vendor` folders intact. The application requires no installation, build, server, Python, Node or network. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports. This environment's managed Chromium forbids `file://`: workplace acceptance remains blocked, even though supplementary HTTP tests pass. Do not bypass enterprise policy.
 
-Create a case or load the synthetic example. The workspace selector keeps up to eight cases and a separate reference library. Search uses only the selected workspace. Original files remain unchanged. Save original downloads the exact bytes. View evidence opens nearby parsed records with precise locators; it does not reproduce original page layout.
+Create a case or load the synthetic example. The workspace selector keeps up to eight cases and a separate reference library. Search uses only the selected workspace. Original files remain unchanged. Save original downloads the exact bytes. Reading views show clear source locations; Source details holds optional verification metadata. View evidence opens nearby parsed records with precise locators; it does not reproduce original page layout.
 
 ## Supported extraction
 
@@ -55,7 +55,7 @@ python tools/package.py
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `--browser` uses actual `file://` by default and currently encounters administrator blocking. Set `PBGC_TEST_URL=http://127.0.0.1:8765/` only for explicitly supplementary HTTP tests; start a loopback server with `python -m http.server 8765 --bind 127.0.0.1` during development. Reviewed process-sandbox escalation is needed in this managed environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.2.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported.
+`tools/package.py` creates `dist/PBGC-RAG-0.2.1.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported.
 
 ## Remaining gates
 

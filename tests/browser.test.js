@@ -169,7 +169,11 @@ test('advanced queries, evidence viewer, graph, provisional reports and IndexedD
     await page.locator('#results').getByRole('button',{name:'View evidence'}).first().click();
     await page.waitForFunction(() => document.querySelector('#source-view').open);
     assert.match(await page.locator('#source-records').innerText(), /Normal retirement age is 65/);
-    assert.match(await page.locator('#source-meta').innerText(), /[a-f0-9]{64}/);
+    assert.equal(await page.locator('#source-details').evaluate(node => node.open), false);
+    assert.doesNotMatch(await page.locator('#source-view').innerText(), /[a-f0-9]{64}/);
+    await page.locator('#source-details > summary').click();
+    assert.match(await page.locator('#source-details').innerText(), /[a-f0-9]{64}/);
+    await page.locator('#source-details > summary').click();
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#source-view').evaluate(n => n.open), false);
     await page.locator('#search-mode').selectOption('sql');
@@ -185,7 +189,7 @@ test('advanced queries, evidence viewer, graph, provisional reports and IndexedD
     await page.locator('#graph-search').click();
     await page.waitForFunction(() => document.querySelector('#graph-results').textContent.length > 0);
     assert.match(await page.locator('#graph-results').innerText(), /synthetic-plan|record|document/i);
-    await page.locator('#graph-tools details > summary').click();
+    await page.locator('#graph-tools').getByText('Proposed evidence links',{exact:true}).click();
     await page.locator('#graph-label').fill('Synthetic evidence link');await page.locator('#graph-author').fill('Synthetic reviewer');
     await page.locator('#graph-recorded').fill('2025-01-01');await page.locator('#graph-from').fill('2025-01-01');await page.locator('#graph-to').fill('2025-12-31');
     await page.locator('#graph-link').click();await page.waitForFunction(() => !document.querySelector('#graph-link').disabled);
@@ -351,7 +355,7 @@ test('DOCX, compressed XLSX and SQLite worker imports retain document/table loca
     ]);
     await page.waitForFunction(()=>!document.querySelector('#files').disabled);
     assert.equal(await page.locator('#sources li').count(),3,await page.locator('#status').innerText());
-    for(const [query,locator]of [['OfficeEvidence736','word-paragraph'],['WorkbookEvidence736','excel-cell'],['DatabaseEvidence736','sqlite-cell']]){
+    for(const [query,locator]of [['OfficeEvidence736','Paragraph 1'],['WorkbookEvidence736','Synthetic · Cell A1'],['DatabaseEvidence736','evidence · Row 7 · excerpt']]){
       await page.locator('#query').fill(query);await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);
       assert.match(await page.locator('#results').innerText(),new RegExp(query));assert.match(await page.locator('#results').innerText(),new RegExp(locator));
     }
@@ -387,4 +391,57 @@ test('all-workspace backup confirmation, restore and source-verified previous sn
     await page.reload();await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.equal(await page.locator('#workspace-select').inputValue(),disposableId);
     await page.locator('#recover-previous').click();await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.match(await page.locator('#status').innerText(),/Integrity check failed/);assert.equal(await page.locator('#workspace-select').inputValue(),disposableId);assert.match(await page.locator('#sources').innerText(),/disposable.txt/);
   }finally{await context.close();await browser.close();await fs.rm(directory,{recursive:true,force:true});}
+});
+
+
+test('readable evidence presentation keeps technical provenance collapsed and original exports intact', async () => {
+  const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+  const context = await browser.newContext({acceptDownloads:true});
+  const page = await context.newPage();
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'pbgc-readable-'));
+  const source = 'Synthetic heading\nReadableEvidence529 annual amount 1250\nNearby context\n';
+  try {
+    await page.goto(targetURL);
+    await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
+    await page.locator('#case-name').fill('Readable evidence verification');
+    await page.locator('#create-case').click();
+    await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
+    await page.locator('#files').setInputFiles({name:'readable-evidence.txt',mimeType:'text/plain',buffer:Buffer.from(source)});
+    await page.waitForFunction(() => !document.querySelector('#files').disabled);
+    assert.match(await page.locator('#sources').innerText(), /readable-evidence\.txt/);
+    assert.doesNotMatch(await page.locator('#sources').innerText(), /[a-f0-9]{64}|\{"type"/);
+    await page.locator('#query').fill('ReadableEvidence529');
+    await page.locator('#search').click();
+    await page.waitForFunction(() => !document.querySelector('#search').disabled);
+    assert.match(await page.locator('#results').innerText(), /Line 2/);
+    assert.doesNotMatch(await page.locator('#results').innerText(), /[a-f0-9]{64}|\{"type"/);
+    await page.locator('#results').getByRole('button',{name:'View evidence',exact:true}).click();
+    await page.waitForFunction(() => document.querySelector('#source-view').open);
+    assert.equal(await page.locator('#source-title').innerText(), 'readable-evidence.txt');
+    assert.match(await page.locator('#source-view').innerText(), /Line 2/);
+    assert.match(await page.locator('#source-records').innerText(), /ReadableEvidence529 annual amount 1250/);
+    assert.equal(await page.locator('#source-details').evaluate(node => node.open), false);
+    assert.doesNotMatch(await page.locator('#source-view').innerText(), /[a-f0-9]{64}|\{"type"/);
+    await page.evaluate(() => document.body.classList.add('light'));
+    await page.locator('#source-view').screenshot({path:'/tmp/pbgc-readable-evidence-dialog.png'});
+    await page.locator('#source-details > summary').click();
+    assert.match(await page.locator('#source-details').innerText(), /[a-f0-9]{64}/);
+    assert.match(await page.locator('#source-details').innerText(), /text-line/);
+    await page.keyboard.press('Escape');
+    const originalPending = page.waitForEvent('download');
+    await page.locator('#sources').getByRole('button',{name:'Save original',exact:true}).click();
+    const original = await originalPending;
+    const originalPath = path.join(directory,'original.txt');
+    await original.saveAs(originalPath);
+    assert.equal(await fs.readFile(originalPath,'utf8'),source);
+    const packagePending = page.waitForEvent('download');
+    await page.locator('#export-case').click();
+    const packageDownload = await packagePending;
+    const packagePath = path.join(directory,'case.json');
+    await packageDownload.saveAs(packagePath);
+    const data = JSON.parse(await fs.readFile(packagePath,'utf8'));
+    assert.equal(Buffer.from(data.sources[0].bytesBase64,'base64').toString(),source);
+    assert.match(data.sources[0].hash,/^[a-f0-9]{64}$/);
+    assert.equal(data.sources[0].records[1].locator.line,2);
+  } finally {await context.close();await browser.close();await fs.rm(directory,{recursive:true,force:true});}
 });

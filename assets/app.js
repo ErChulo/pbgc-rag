@@ -39,6 +39,13 @@
     const link = document.createElement('a'); link.href = url; link.download = name; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
+  function sourceDetails(hash,locator,parserVersion) {
+    const details=el('details','');details.className='source-details';details.append(el('summary','Source details'));
+    if(hash)details.append(el('p','File fingerprint (SHA-256)'),el('code',hash));
+    if(parserVersion)details.append(el('p',`Parser version: ${parserVersion}`));
+    if(locator)details.append(el('p','Exact source locator'),el('pre',JSON.stringify(locator,null,2)));
+    return details;
+  }
   const yieldUI = () => new Promise(resolve => setTimeout(resolve, 0));
   function checkCancelled() { if (abortRequested) throw Error('Operation cancelled. Existing sources were kept unchanged.'); }
   async function operation(fn, cancelable = false) {
@@ -149,8 +156,10 @@
     $('sources').replaceChildren(); $('graph-start').replaceChildren(); $('graph-target').replaceChildren();
     for (const source of active?.sources || []) {
       const item = el('li', `${source.name} · ${source.records.length} records`);
-      item.append(el('small', ` · SHA-256 ${source.hash}`));
-      for (const warning of source.warnings || []) item.append(el('p', String(warning)));
+      const details=sourceDetails(source.hash,null,source.parserVersion);
+      for(const warning of source.warnings||[])details.append(el('p',String(warning)));
+      item.append(details);
+
       const view = el('button', 'View source'); view.type = 'button'; view.addEventListener('click', () => openSource(source, 0));
       const original = el('button', 'Save original'); original.type = 'button';
       original.addEventListener('click', () => download(source.name, decode(source.bytesBase64), 'application/octet-stream'));
@@ -186,12 +195,17 @@
   function renderSource() {
     const {source,index,page} = sourceView;
     $('source-title').textContent = source.name;
-    $('source-meta').textContent = `SHA-256 ${source.hash}. Parser ${source.parserVersion}. Parsed text only; original layout is not reproduced.`;
+    $('source-meta').textContent='Extracted text. Use Save original to view the document’s original layout.';
+    $('source-details').open=false;
+    const verification=$('source-verification');verification.replaceChildren(el('p','File fingerprint (SHA-256)'),el('code',source.hash),el('p',`Parser version: ${source.parserVersion}`));
+    for(const warning of source.warnings||[])verification.append(el('p',String(warning)));
+    const selected=source.records[index];
+    if(selected)verification.append(el('p',`Exact locator: ${API.formatLocation(selected.locator)}`),el('pre',JSON.stringify(selected.locator,null,2)));
     $('source-records').replaceChildren();
     for (let i = page * 40; i < Math.min(source.records.length, (page + 1) * 40); i++) {
       const record = source.records[i], article = el('article','');
       if (i === index) article.classList.add('selected');
-      article.append(el('h3', `Record ${i + 1}`), el('small', JSON.stringify(record.locator)), el('pre', record.text));
+      article.append(el('h3',API.formatLocation(record.locator,`Excerpt ${i+1}`)),el('pre',record.text));
       if (record.formula !== undefined) article.append(el('p', `Formula (not evaluated): ${record.formula}`));
       $('source-records').append(article);
     }
@@ -257,17 +271,19 @@
     return active.sources.flatMap(source => source.records.map((record,index) => ({...record,sourceId:source.id,sourceName:source.name,sourceHash:source.hash,recordIndex:index})));
   }
   function resultArticle(record) {
-    const article = el('article',''); article.append(el('h3',record.sourceName), el('small',`Locator: ${JSON.stringify(record.locator)} · SHA-256 ${record.sourceHash}`), el('pre',record.text));
+    const article = el('article',''); article.append(el('h3',record.sourceName),el('p',API.formatLocation(record.locator)),el('pre',record.text));
     const view = el('button','View evidence');
     view.addEventListener('click', () => { const source = requireCase().sources.find(s => s.id === record.sourceId); if (source) openSource(source, record.recordIndex ?? source.records.findIndex(r => JSON.stringify(r.locator) === JSON.stringify(record.locator))); });
-    if(record.explanation)article.append(el('small',`BM25 lexical score ${record.score.toFixed(4)}; matching terms: ${record.explanation.matchedTerms.map(term=>term.term).join(', ')}`));
-    article.append(view); return article;
+    article.append(view);
+    const details=sourceDetails(record.sourceHash,record.locator);
+    if(record.explanation)details.append(el('p',`BM25 lexical score ${record.score.toFixed(4)}; matching terms: ${record.explanation.matchedTerms.map(term=>term.term).join(', ')}`));
+    article.append(details);return article;
   }
   $('search').addEventListener('click', () => operation(async () => {
     const records = flatRecords(requireCase()), mode = $('search-mode').value;
     status('Searching…'); await yieldUI();
     lastResults = mode==='ranked'?API.rankRecords(records,$('query').value,{limit:100}):['regex','sql'].includes(mode)?API.queryRecords(records,$('query').value,mode):API.search(records,$('query').value,mode);
-    $('results').replaceChildren(el('p',`${lastResults.length} results`));
+    $('results').replaceChildren(el('p',`${lastResults.length} ${lastResults.length===1?'result':'results'}`));
     for (const record of lastResults.slice(0,100)) $('results').append(resultArticle(record));
     status(lastResults.length > 100 ? 'Showing the first 100 results. Refine your query.' : 'Search complete. Verify evidence in the original source.');
   }));

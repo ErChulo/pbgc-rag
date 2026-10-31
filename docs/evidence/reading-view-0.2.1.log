@@ -1,0 +1,12 @@
+✔ visible text contrast, labeled controls and keyboard skip navigation in both themes (1183.248139ms)
+✔ advanced queries, evidence viewer, graph, provisional reports and IndexedDB recovery (2564.273761ms)
+✔ DOCX, compressed XLSX and SQLite worker imports retain document/table locators and formulas (1137.114875ms)
+✔ readable evidence presentation keeps technical provenance collapsed and original exports intact (1034.313127ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5119.940808
