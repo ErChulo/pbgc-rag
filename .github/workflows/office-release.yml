@@ -46,7 +46,7 @@ jobs:
       - name: Prepare model before office delivery
         run: python tools/prepare-models.py
       - name: Build complete office ZIP
-        run: python tools/package.py --office --out dist/PBGC-RAG-0.4-office.zip
+        run: python tools/package.py --office --out dist/PBGC-RAG-0.5-office.zip
       - name: Test extracted ZIP offline with actual file URL and real Qwen
         run: node tests/office-package.test.js
       - name: Write delivery checksum
@@ -59,7 +59,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: >-
           gh release create "$RELEASE_TAG"
-          dist/PBGC-RAG-0.4-office.zip dist/SHA256SUMS.txt
+          dist/PBGC-RAG-0.5-office.zip dist/SHA256SUMS.txt
           --draft --verify-tag --title "PBGC-RAG complete offline office package"
           --notes-file docs/OFFICE-RELEASE.md
       - name: Retain synthetic office verification evidence
@@ -84,7 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.4-office.zip --pattern SHA256SUMS.txt
+        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.5-office.zip --pattern SHA256SUMS.txt
       - name: Verify downloaded release bytes match tested ZIP
         run: python tools/office-checksum.py --verify
       - name: Make complete tested download available

@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-rag-whole-process-resource-benchmark",
+  "status": "PASS",
+  "profile": "supplementary HTTP only",
+  "hardware": {
+    "platform": "linux",
+    "osRelease": "6.18.57",
+    "logicalCpus": 5,
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "hostTotalMemoryBytes": 35743748096,
+    "cgroupMemoryMaxBytes": 34359738368,
+    "cgroupCpuQuotaCores": 4
+  },
+  "budgets": {
+    "targetMachineMemoryBytes": 16000000000,
+    "workloadMemoryBytes": 12000000000,
+    "totalTimeMs": 300000,
+    "sampleIntervalMs": 200
+  },
+  "scope": "Harness Node process and its full Chromium descendant tree, including browser/renderers/worker hosts/utility processes. Model load, learned index, retrieval and one generated answer. Parser/import/recovery and other desktop applications are not exercised.",
+  "measurement": {
+    "method": "Linux smaps_rollup PSS (preferred) plus RSS/private bytes and /proc CPU ticks",
+    "limits": "Sampled peaks are lower bounds between samples. RSS/WorkingSet sums can double count shared pages. Sampling overhead is included in Node on Linux; the independent Windows PowerShell collector is excluded. CPU can miss short-lived processes between samples."
+  },
+  "stagesMs": {
+    "browserLaunchAndEntry": 593,
+    "modelHashAndLoad": 1934,
+    "chunkAndIndex": 54445,
+    "chunking": 206,
+    "fourRetrievals": 247,
+    "generatedAnswerAndGrounding": 34431,
+    "disposeAndBrowserCleanup": 116
+  },
+  "quality": {
+    "retrieval": [
+      {
+        "question": "What is the normal retirement age?",
+        "target": "retirement",
+        "rank": 1,
+        "weak": false,
+        "score": 0.9027984806459263
+      },
+      {
+        "question": "What money is available to a widow?",
+        "target": "widow",
+        "rank": 2,
+        "weak": false,
+        "score": 0.4430516498191666
+      },
+      {
+        "question": "Does illness need a doctor's verification?",
+        "target": "medical",
+        "rank": 1,
+        "weak": false,
+        "score": 0.5796625922865849
+      },
+      {
+        "question": "How should I report a residential relocation?",
+        "target": "address",
+        "rank": 1,
+        "weak": false,
+        "score": 0.4596220207243193
+      }
+    ],
+    "answer": {
+      "status": "answered",
+      "answer": "The normal retirement age is 65. [C1]",
+      "citations": [
+        {
+          "sourceId": "retirement",
+          "excerpt": "Normal retirement age is 65."
+        }
+      ],
+      "diagnosticReason": "cited-synthesis-guarded",
+      "rawOutput": "The normal retirement age is 65."
+    },
+    "externalRequests": 0
+  },
+  "errors": [],
+  "model": {
+    "id": "local-gguf:qwen2.5-0.5b-instruct-q4-k-m:74a4da8c9fdbcd15",
+    "model": "Qwen2.5 0.5B Instruct Q4_K_M",
+    "license": "Apache-2.0",
+    "source": "https://github.com/rtynbirf/singulyar-llm/releases/tag/weights-v1",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "modelBytes": 491400032,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048,
+    "loaded": true,
+    "disposed": false,
+    "hparams": {
+      "nVocab": 151936,
+      "nCtxTrain": 32768,
+      "nEmbd": 896,
+      "nLayer": 24
+    }
+  },
+  "workload": {
+    "sourceBytes": 1048805,
+    "sourceCount": 128,
+    "records": 3586,
+    "parserMeasured": false,
+    "chunks": 748
+  },
+  "embeddingProvider": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+  "resources": {
+    "samples": 595,
+    "measurementMs": 119039,
+    "effectiveSampleIntervalMs": 200,
+    "maximumSampleGapMs": 314,
+    "peak": {
+      "rssBytes": 2061463552,
+      "pssBytes": 1778615296,
+      "privateBytes": 1666920448,
+      "browserRssBytes": 1827835904,
+      "browserPssBytes": 1546619904,
+      "processCount": 10,
+      "budgetMetricBytes": 1778615296
+    },
+    "cpuMs": 139130,
+    "browserCpuMs": 94910,
+    "pssComplete": true,
+    "missingProcessSamples": 2,
+    "exceeded": false,
+    "errors": []
+  },
+  "totalMs": 119086
+}

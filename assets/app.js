@@ -85,6 +85,8 @@
     }
   }
   async function commit(candidate,rememberView=true) {
+    const versioned=entry=>entry?.sources.some(source=>source.processing)?{...entry,schemaVersion:3}:entry;
+    candidate={...candidate,cases:candidate.cases.map(versioned),library:versioned(candidate.library)};
     checkCatalog(candidate);
     if(rememberView&&catalog.activeId)viewStates.set(catalog.activeId,{layout:currentLayout(),assertions:graphAssertions.slice()});
     const priorCase=catalog.activeId,priorEvidence=selectedEvidence,priorRecordId=selectedGraphRecordId;
@@ -98,30 +100,39 @@
   async function updateWorkbench(patch) {
     const active=requireCase();
     const state=API.validateWorkbench({...API.emptyWorkbench(),...(active.workbench||{}),...patch},active);
-    const updated={...active,schemaVersion:2,workbench:state};
+    const updated={...active,schemaVersion:active.sources.some(source=>source.processing)?3:2,workbench:state};
     if(new Blob([JSON.stringify(updated)]).size>MAX_PACKAGE)throw Error('Case and review state exceed the 40 MB portable budget.');
     await commit(active.id===LIBRARY?{...catalog,library:updated}:{...catalog,cases:catalog.cases.map(c=>c.id===active.id?updated:c)});
   }
   async function saveCurrentReviewView(){await updateWorkbench({reportLayout:currentLayout(),graphAssertions});}
-  async function sourceFromBytes(name, bytes, id, knownHash) {
+  function sourceProcessing(value, name) {
+    if (value === undefined) return undefined;
+    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['schemaVersion','pdfOcr','engineId'].includes(key)) || value.schemaVersion !== 1 || value.pdfOcr !== 'missing-text' || typeof value.engineId !== 'string' || !API.OCR_ENGINE?.id || !name.toLowerCase().endsWith('.pdf') || value.engineId !== API.OCR_ENGINE?.id) throw Error('Unsupported or changed OCR processing profile. Keep the original package and engine version.');
+    return {schemaVersion:1,pdfOcr:'missing-text',engineId:value.engineId};
+  }
+  async function sourceFromBytes(name, bytes, id, knownHash, processing) {
     if (typeof name !== 'string' || !name.trim() || name.length > 255) throw Error('Invalid source name.');
     if (!(bytes instanceof Uint8Array) || bytes.length > MAX_FILE) throw Error('Source exceeds the 5 MB limit.');
-    const parsed = name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
-    return {id: id || crypto.randomUUID(), name, hash: knownHash || await hash(bytes), bytesBase64: base64(bytes), ...parsed};
+    const profile=sourceProcessing(processing,name);
+    const parsed = profile ? await API.parsePdfWithOcr(bytes,{signal:operationAbort?.signal,mode:'missing-text',onProgress:progress=>status(`Reading scanned PDF pages${progress.page ? ` · page ${progress.page}` : ''}. You can cancel.`)}) : name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
+    const {sourceProcessing:parsedProfile,...content}=parsed;
+    if(profile && JSON.stringify(sourceProcessing(parsedProfile,name))!==JSON.stringify(profile))throw Error('OCR output does not match the requested processing profile.');
+    return {id: id || crypto.randomUUID(), name, hash: knownHash || await hash(bytes), bytesBase64: base64(bytes), ...content,...(profile?{processing:profile}:{})};
   }
   const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) && value !== LIBRARY;
   async function validatePackage(data) {
-    if (!data || ![1,2].includes(data.schemaVersion) || typeof data.name !== 'string' || !data.name.trim() || data.name.length > 100 || !Array.isArray(data.sources) || data.sources.length > 200) throw Error('Invalid case package schema.');
+    if (!data || ![1,2,3].includes(data.schemaVersion) || typeof data.name !== 'string' || !data.name.trim() || data.name.length > 100 || !Array.isArray(data.sources) || data.sources.length > 200) throw Error('Invalid case package schema.');
     const clean = newCase(data.name, validId(data.id) ? data.id : undefined);
     const seenHashes = new Set(), seenIds = new Set(); let total = 0;
     for (let index = 0; index < data.sources.length; index++) {
       checkCancelled();
       const source = data.sources[index];
       if (!source || typeof source !== 'object') throw Error('Invalid source record.');
+      if(source.processing!==undefined&&data.schemaVersion!==3)throw Error('OCR sources require case package version 3.');
       const bytes = decode(source.bytesBase64); total += bytes.length;
       if (total > MAX_CASE) throw Error('Workspace exceeds the 20 MB limit.');
       const id = validId(source.id) && !seenIds.has(source.id) ? source.id : crypto.randomUUID();
-      const rebuilt = await sourceFromBytes(source.name, bytes, id);
+      const rebuilt = await sourceFromBytes(source.name, bytes, id, undefined, source.processing);
       if (rebuilt.hash !== source.hash) throw Error(`Integrity check failed: ${source.name}`);
       if (seenHashes.has(rebuilt.hash)) throw Error('Duplicate source in package.');
       seenHashes.add(rebuilt.hash); seenIds.add(rebuilt.id); clean.sources.push(rebuilt);
@@ -129,12 +140,13 @@
       await yieldUI();
     }
     checkSources(clean.sources);
-    if(data.schemaVersion===2){clean.schemaVersion=2;clean.workbench=API.validateWorkbench(data.workbench,clean);}
+    if(data.schemaVersion===3)clean.schemaVersion=3;
+    if(data.schemaVersion===2||data.schemaVersion===3&&data.workbench!==undefined){clean.schemaVersion=data.schemaVersion;clean.workbench=API.validateWorkbench(data.workbench,clean);}
     if(new Blob([JSON.stringify(clean)]).size>MAX_PACKAGE)throw Error('Case package exceeds the 40 MB limit.');
     return clean;
   }
   async function validateCatalog(data) {
-    if ([1,2].includes(data?.schemaVersion)&&Array.isArray(data?.sources)) { const migrated = await validatePackage(data); return {schemaVersion:2,activeId:migrated.id,cases:[migrated],library:null}; }
+    if ([1,2,3].includes(data?.schemaVersion)&&Array.isArray(data?.sources)) { const migrated = await validatePackage(data); return {schemaVersion:2,activeId:migrated.id,cases:[migrated],library:null}; }
     if (!data || data.schemaVersion !== 2 || !Array.isArray(data.cases) || data.cases.length > 8) throw Error('Invalid recovery catalog.');
     checkCatalog(data);
     const clean = {schemaVersion:2,activeId:null,cases:[],library:null};
@@ -197,6 +209,7 @@
     $('sources').replaceChildren(); $('graph-start').replaceChildren(); $('graph-target').replaceChildren();
     for (const source of active?.sources || []) {
       const item = el('li', `${source.name} · ${source.records.length} records`);
+      if(source.records.some(record=>record.locator?.type==='pdf-ocr-line'))item.append(el('p','Contains machine-read text (OCR). Check the original scanned pages, especially numbers.'));
       const details=sourceDetails(source.hash,null,source.parserVersion);
       for(const warning of source.warnings||[])details.append(el('p',String(warning)));
       item.append(details);
@@ -236,7 +249,7 @@
   function renderSource() {
     const {source,index,page} = sourceView;
     $('source-title').textContent = source.name;
-    $('source-meta').textContent='Extracted text. Use Save original to view the document’s original layout.';
+    $('source-meta').textContent=source.records.some(record=>record.locator?.type==='pdf-ocr-line')?'This source includes machine-read text (OCR). Character and number errors are possible. Use Save original to check the scanned pages.':'Extracted text. Use Save original to view the document’s original layout.';
     $('source-details').open=false;
     const verification=$('source-verification');verification.replaceChildren(el('p','File fingerprint (SHA-256)'),el('code',source.hash),el('p',`Parser version: ${source.parserVersion}`));
     for(const warning of source.warnings||[])verification.append(el('p',String(warning)));
@@ -247,6 +260,7 @@
       const record = source.records[i], article = el('article','');
       if (i === index) article.classList.add('selected');
       article.append(el('h3',API.formatLocation(record.locator,`Excerpt ${i+1}`)),el('pre',record.text));
+      if(record.locator?.type==='pdf-ocr-line')article.append(el('p','Machine-read text. This is a transcription, not original PDF text.'));
       if (record.formula !== undefined) article.append(el('p', `Formula (not evaluated): ${record.formula}`));
       $('source-records').append(article);
     }
@@ -290,9 +304,11 @@
         status(`Checking source ${i + 1} of ${files.length}: ${file.name}`); await yieldUI();
         const bytes=new Uint8Array(await file.arrayBuffer()), sourceHash=await hash(bytes);checkCancelled();
         if(!active.sources.concat(additions).some(s=>s.hash===sourceHash)){
-          const source=await sourceFromBytes(file.name,bytes,undefined,sourceHash);checkCancelled();total+=file.size;if(total>MAX_CASE)throw Error('Workspace exceeds the 20 MB limit.');
+          if(total+file.size>MAX_CASE)throw Error('Workspace exceeds the 20 MB limit.');
+          const processing=$('pdf-ocr').checked&&file.name.toLowerCase().endsWith('.pdf')?{schemaVersion:1,pdfOcr:'missing-text',engineId:API.OCR_ENGINE?.id}:undefined;
+          const source=await sourceFromBytes(file.name,bytes,undefined,sourceHash,processing);checkCancelled();total+=file.size;
           checkSources(active.sources.concat(additions,source));additions.push(source);
-          const candidate={...catalog,pending:{targetId:active.id,package:{schemaVersion:1,id:crypto.randomUUID(),name:'Pending checked sources',sources:additions.slice()}}};
+          const candidate={...catalog,pending:{targetId:active.id,package:{schemaVersion:additions.some(source=>source.processing)?3:1,id:crypto.randomUUID(),name:'Pending checked sources',sources:additions.slice()}}};
           checkCatalog(candidate);catalog=candidate;await save();
         }
         $('progress').value = i + 1; await yieldUI();
@@ -439,7 +455,7 @@
   $('export-case').addEventListener('click', () => operation(async () => {
     const verified = await validatePackage(requireCase()); checkCancelled();
     const json = JSON.stringify(verified); if (new Blob([json]).size > MAX_PACKAGE) throw Error('Case package exceeds the export budget.');
-    download('pbgc-rag-case-v1.json',json,'application/json'); status('Case package verified and exported. This is not an official artifact.');
+    download(`pbgc-rag-case-v${verified.schemaVersion}.json`,json,'application/json'); status('Case package verified and exported. This is not an official artifact.');
   }, true));
   $('import-case').addEventListener('change', event => {
     const file = event.target.files[0]; if (!file) return; event.target.value='';
@@ -511,5 +527,5 @@
       recoveryBlocked = true; $('storage').textContent = `Recovery unavailable: ${error.message} Current work will remain in memory. Export it before closing.`;
       status('Recovery validation failed. Restore a verified portable package or a previous snapshot.'); render();
     }
-  });
+  }, true);
 })();

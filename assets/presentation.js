@@ -20,6 +20,7 @@
       case 'excel-cell': return typeof locator.sheet==='string'&&typeof locator.cell==='string'?`${locator.sheet} · Cell ${locator.cell}`:fallback;
       case 'sqlite-cell': return typeof locator.table==='string'&&typeof locator.column==='string'&&locator.rowid!==undefined?`${locator.table} · Row ${locator.rowid} · ${locator.column}`:fallback;
       case 'pdf-text-item': return number(locator.page)?`Page ${locator.page}${number(locator.item)?` · Text excerpt ${locator.item}`:''}`:fallback;
+      case 'pdf-ocr-line': return number(locator.page)?`Page ${locator.page} · Machine-read line${number(locator.line)?` ${locator.line}`:''}`:'Machine-read PDF excerpt';
       case 'json-pointer': {
         if(typeof locator.pointer!=='string')return fallback;
         if(locator.pointer==='')return 'Document value';

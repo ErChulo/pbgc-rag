@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "kind": "offline-ocr-pack",
+  "id": "tesseract-core-6.0.0-eng-fast-4.1.0-7d4322bd2a774972",
+  "runtime": "tesseract.js-core",
+  "runtimeVersion": "6.0.0",
+  "license": "Apache-2.0",
+  "language": "eng",
+  "coreSource": "https://registry.npmjs.org/tesseract.js-core/-/tesseract.js-core-6.0.0.tgz",
+  "npmIntegrity": "sha512-1Qncm/9oKM7xgrQXZXNB+NRh19qiXGhxlrR8EwFbK5SaUbPZnS5OMtP/ghtqfd23hsr1ZvZbZjeuAGcMxd/ooA==",
+  "traineddataSource": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/eng.traineddata",
+  "traineddataSha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+  "traineddataBytes": 4113088,
+  "wasmSha256": "220e2e87551edccb85519796a170469f8ab2a8055216789e3b8b1ada18b7bc2b",
+  "wasmBytes": 2871085,
+  "upstreamGlueSha256": "48a3ee8e00924cb8c7f0cc0d099b1318fea120af56b3ee8fb3a70dd2311806c2",
+  "patchedGlueSha256": "b7e38bf521da081e813b1c236b4af02aad7662152f19dd9038b270b9064440c2",
+  "threads": 1,
+  "runtimeNetwork": false,
+  "sharedMemory": false,
+  "sourceRevision": "8135c61fadee753821cb6a9916e17e1309a6bbf7",
+  "thirdPartyNotices": [
+    {
+      "path": "third-party-licenses/giflib-MIT.txt",
+      "sha256": "0c9b7990ecdca88b676db232c226548ac408b279f550d424d996f0d83591dd8e"
+    },
+    {
+      "path": "third-party-licenses/leptonica-BSD.txt",
+      "sha256": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806"
+    },
+    {
+      "path": "third-party-licenses/libjpeg-README.txt",
+      "sha256": "c791da525733040e622ed257c7b096b8f5191b332604ead0c6bc2b54cbd8e0d1"
+    },
+    {
+      "path": "third-party-licenses/libpng-LICENSE.txt",
+      "sha256": "33ba4e187d8b0c8d7ab2bc2e522bb095219e03089e9aa0122b4fb9eb2b7de82b"
+    },
+    {
+      "path": "third-party-licenses/libtesseract-LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "third-party-licenses/libtiff-COPYRIGHT.txt",
+      "sha256": "fbd6fed7938541d2c809c0826225fc85e551fdbfa8732b10f0c87e0847acafd7"
+    },
+    {
+      "path": "third-party-licenses/libwebp-COPYING.txt",
+      "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+    },
+    {
+      "path": "third-party-licenses/libwebp-PATENTS.txt",
+      "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"
+    },
+    {
+      "path": "third-party-licenses/openlibm-LICENSE.txt",
+      "sha256": "b1843fbf5b03f519a5f0a44fce751bdd1022ae7148614923f9d6293e17a18b17"
+    },
+    {
+      "path": "third-party-licenses/zlib-README.txt",
+      "sha256": "fc2c3368901700f0acdeb1d8afeaca5923296768ec6824ecdf627aac396001fd"
+    }
+  ],
+  "modifications": [
+    "Supply embedded WASM and English traineddata; no downloads or persistence",
+    "Replace upstream browser network calls with hard-denied functions",
+    "Run direct TessBaseAPI only in a terminable Blob worker"
+  ],
+  "packScriptSha256": "d591325800d34889fe3bbcccbd1b680e00fe295bdad42f24bd4ce6628480b82c",
+  "packScriptBytes": 9441821
+}

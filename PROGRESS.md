@@ -1,5 +1,15 @@
 # Progress
 
+## Increment 0.5: local integration verified
+
+Implemented real offline English OCR, bounded PDF rasterization and case schema 3 processing profiles. Original scans are preserved; derived text and estimated regions are labelled. Unknown engines and profiles hidden in older schemas reject. Versions 1 and 2 remain readable. The complete office ZIP includes all models, runtimes, licenses and offline audit evidence.
+
+Fixed evaluation: 12 retrieval questions (recall@1 .8333, recall@3 1.0), 32 source-release challenge cases and 20 orchestration tests. Real Qwen releases 3 correct source-bound answers out of 4 frozen factual questions, conservatively abstains on 1, and blocks all 4 unsafe contexts. Fixes cover same-chunk conflicts, subject/number/order swaps, unrelated-question answers, dropped conditions, partial multi-part answers, archival identifiers and prompt distraction. The local single-statement profile intentionally cannot claim general multi-document/table synthesis or verified legal applicability.
+
+The 1 MiB/128-source/748-chunk whole-process workload passed: sampled Linux PSS peak 1,778,615,296 bytes, indexing 54.4 s, real Qwen generation/grounding 34.4 s. The hard workload threshold is 12 GB under the 16 GB target; this does not certify every maximum-size/OCR/parser/desktop workload. Eight measurement helpers validate accounting; the expensive duplicate test is opt-in and the actual resource CLI is required separately in CI.
+
+Local regression covered 279 tests: 277 passed, 1 initial checkbox boundary defect was fixed and its accessibility rerun passed, 1 duplicate resource invocation was intentionally skipped. Real-quality and extracted complete-ZIP inference/OCR also pass. Initial failing evidence is retained honestly. Durable results are under docs/evidence/*0.5*. Actual Ubuntu/Windows file-profile, quality and resource gates precede merge; the complete office-v0.5.0 ZIP release must be anonymously downloaded, checksummed, extracted and tested before delivery. No office preparation commands and no environment publication. Authoritative PBGC work remains deferred.
+
 ## Complete office delivery fix — 0.4.1
 
 The previous workspace links and core-only ZIP did not satisfy delivery. The complete `--office` package now includes the verified 491400032-byte Qwen GGUF, model manifest/license, all application assets and a root office-start guide. Preparation commands are developer-only. Office use is extraction, opening index.html and ordinary in-app file selection of the already included model; no terminal, Python, installation, server or network is required.

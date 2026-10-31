@@ -1,5 +1,17 @@
 # Acceptance evidence
 
+## Build 0.5: OCR, question relevance and measured resources
+
+Local integration: the regression run covered 279 tests, with 277 passing, one OCR-checkbox boundary defect and one opt-in resource duplicate skipped. The boundary defect was fixed and its full accessibility test passed. The resource workload passed separately through its required real-inference CLI. These are separate, inspectable results; the original failed run is retained with the repair evidence.
+
+- Real OCR: local English Tesseract/WASM, image-only PDF rendering, bounded workers and original-byte preservation pass. Integrated version 3 export/rebuild rejects unsupported processing engines and ignores forged machine-record caches. Source text/regions remain explicitly unverified machine transcription. Mixed pages with native text are not OCR-processed.
+- Fixed retrieval: 12 questions, recall@1 0.8333 and recall@3 1.0; weak cosine matches remain weak. Fixed source-release challenges cover 32 cases. Generic JSON table/multi-document mocks are protocol evidence, not proof of actual Qwen spreadsheet reasoning.
+- Actual Qwen: 4 fixed factual questions, 3 correct source-bound answers and 1 conservative abstention; 4 unsafe contexts blocked, zero accepted wrong answers in this small set. Initial tests exposed unrelated-question acceptance and prompt distraction; question binding, full retrieved-evidence checks and focused prompts repaired them. Listing grammar preserves explicit item/document roles. This small evaluation does not prove general entailment or actuarial correctness.
+- Whole-process benchmark: 1 MiB/128 sources/748 chunks, real learned index and correctly grounded Qwen answer, sampled Linux PSS peak 1,778,615,296 bytes, indexing 54.4 seconds and generation/grounding 34.4 seconds. The 12 GB workload budget was respected. This does not certify maximum-size cases, parser/OCR peaks, other desktop programs or a specific office machine.
+- Complete ZIP: includes Qwen, sentence encoder, OCR assets and licenses. Local extracted-package inference and OCR pass. Ubuntu/Windows actual offline-file, independent real-quality and resource gates are mandatory in CI before merging; the release tests its exact extracted ZIP and verifies uploaded/downloaded bytes.
+
+Durable local evidence: docs/evidence/engineering-0.5.json, quality-0.5.json, resources-0.5.json, regression-0.5.log and accessibility-0.5.log. Authoritative PBGC material, official outputs and workplace policy approval remain deferred/blocked as documented below.
+
 ## Build 0.4 local RAG increment
 
 The user deferred authoritative PBGC material. This increment uses synthetic sources and a local learned sentence encoder plus a separately selected Qwen instruction model. It does not waive official-output gates.
@@ -50,7 +62,7 @@ The coordinator separately ran actual `file://` entry verification. It exits 1 w
 | DOCX/XLSX/XLSM | PASS (documented subset) | Word paragraphs/cells/nested tables, compressed packages/CRC/path/expansion guards, sheet/cell/cached values/formula metadata; macros never execute. Broader layout/date/revision semantics unimplemented |
 | Legacy DOC/XLS | PASS (documented subset) | CFB v3/v4 FAT/MiniFAT and malformed/cycle/overlap tests; DOC piece-table spans; BIFF8 cells/SST/formulas. Genuine generated-worker browser dispatch/search/export verified. Other/encrypted variants reject |
 | SQLite native extraction | PASS (documented subset) | Typed scalars/int64/UTF-16/overflow/interior pages/quoted schema names/rowids; genuine browser import; WAL/virtual/generated/WITHOUT ROWID/default-record mismatches reject. No uploaded SQL execution |
-| PDF text extraction | PASS (documented subset) | Pinned local PDF.js worker; page/item raw geometry and explicitly approximate regions. Embedded actions/XFA/attachments inert. No OCR/table layout/exact glyph-bound claim; no hard decoded-memory quota |
+| PDF text extraction | PASS (documented subset) | Pinned local PDF.js worker; page/item raw geometry and explicitly approximate regions. Embedded actions/XFA/attachments inert. Native parser has no OCR/table layout/exact glyph-bound claim; optional image-only OCR is separately bounded; no hard decoded-memory quota |
 | Isolation, cancellation and deadlines | PASS (HTTP development evidence) | Dedicated workers, hard timeout of synthetic infinite loops, active/queued AbortSignal cancellation, URL cleanup and bounded queue; binary fails when workers unavailable; small text fallback bounded |
 | Incremental hashing/checkpoints | PASS (HTTP development evidence) | Duplicate bytes skip; failed batches leave active sources unchanged; completed-source checkpoints survive reload; reselect resumes/dedupes; keep/discard actions tested |
 | Source viewer and original download | PASS (HTTP development evidence) | Byte-exact originals; source hashes/locators; dialog/Escape and far-record pagination; parsed text only |
@@ -69,7 +81,7 @@ The coordinator separately ran actual `file://` entry verification. It exits 1 w
 | Actual double-click file:// execution | BLOCKED | Managed Chromium administrator URL policy denies local entry before load. Approved policy-permitted browser/environment needed |
 | Official dictionary/templates/BSRS syntax/reference validation | BLOCKED | Authorized authoritative fixtures/specifications absent; no fabricated substitute |
 | Official actuarial rules, computations and artifacts | BLOCKED / NOT IMPLEMENTED | No approved interpretations/reference factors supplied; only synthetic arithmetic exists. Dictionary mapping/approval UX, complete engine and template-preserving official generation remain engineering work. Official release disabled |
-| Full ontology/authority workflow, OCR, broader formats/SQL | NOT IMPLEMENTED | Documentary/proposed graph and explicit query/parser subsets only. Approved ontology/model/reference contracts plus engineering needed |
+| Full ontology/authority workflow, broader formats/SQL | NOT IMPLEMENTED | Documentary/proposed graph and explicit query/parser subsets only. Approved ontology/model/reference contracts plus engineering needed |
 | Windows enterprise/full 508/whole-process resource acceptance | BLOCKED / UNVERIFIED | Current Linux tests cannot establish actual workplace policy, assistive-technology or RAM/CPU acceptance |
 
 ## Reproduction

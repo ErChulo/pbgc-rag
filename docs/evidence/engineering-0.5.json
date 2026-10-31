@@ -1,0 +1,14 @@
+{
+  "profile": "supplementary HTTP only",
+  "regressionInitial": {
+    "tests": 279,
+    "pass": 277,
+    "fail": 1,
+    "skipped": 1
+  },
+  "repair": "The one OCR checkbox boundary/contrast failure was fixed; targeted accessibility test passed. The expensive opt-in resource duplicate is intentionally skipped in the ordinary suite and passed via the dedicated real-resource CLI.",
+  "realQwenQuality": "PASS: three of four independently specified source-bound answers; one conservative abstention; four unsafe cases blocked; no external requests.",
+  "resourceGate": "PASS: 1 MiB/128 sources/748 chunks, correct real-Qwen answer, whole-process sampled PSS peak 1778615296 bytes, under 12 GB workload budget.",
+  "actualFileWindowsLinux": "Pending mandatory CI",
+  "official": false
+}

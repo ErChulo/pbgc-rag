@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'none'; worker-src blob:; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>PBGC-RAG · Local case workspace</title>
 <link rel="stylesheet" href="assets/style.css">
-<script defer src="vendor/pdfjs/parser-worker-source.js"></script><script defer src="assets/pdf.js"></script>
+<script defer src="vendor/pdfjs/parser-worker-source.js"></script><script defer src="assets/pdf.js"></script><script defer src="assets/ocr.js"></script><script defer src="assets/pdf-ocr.js"></script>
 <script defer src="assets/core.js"></script><script defer src="assets/formats.js"></script>
 <script defer src="vendor/ingest-worker-source.js"></script><script defer src="assets/ingest.js"></script>
 <script defer src="assets/ranking.js"></script><script defer src="assets/query.js"></script><script defer src="assets/graph.js"></script>
@@ -16,7 +16,7 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to workspace</a>
-<header><div><span class="logo">[PBGC-approved logo asset]</span><h1>PBGC-RAG</h1><p>Local case workspace · Development build 0.4</p></div><button id="theme-toggle" type="button">Use light theme</button></header>
+<header><div><span class="logo">[PBGC-approved logo asset]</span><h1>PBGC-RAG</h1><p>Local case workspace · Development build 0.5</p></div><button id="theme-toggle" type="button">Use light theme</button></header>
 <nav aria-label="Main"><a href="#workspace">Workspace</a><a href="#case-review">Case review</a><a href="#help">Search guide</a></nav>
 <main id="main" tabindex="-1">
 <p class="notice">Independent development project. Not an approved Pension Benefit Guaranty Corporation (PBGC) product. Use synthetic data in this build.</p>
@@ -26,6 +26,7 @@
 <label for="case-name">New case name</label><div class="row"><input id="case-name" maxlength="100" placeholder="Synthetic test case"><button id="create-case">Create case</button><button id="demo" class="secondary">Load synthetic example</button><button id="close-case" class="secondary">Close case</button></div><p id="active-case">No active case</p><p>Each case has its own sources. The reference library is separate. Search uses only the selected workspace.</p></div>
 <div class="step"><span>02 / Import</span><h2>Add source documents</h2>
 <label for="files">Select documents, spreadsheets, SQLite or text files</label><input id="files" type="file" multiple accept=".txt,.md,.csv,.tsv,.json,.html,.htm,.xml,.docx,.xlsx,.xlsm,.pdf,.doc,.xls,.sqlite,.sqlite3,.db">
+<label class="checkbox-label"><input id="pdf-ocr" type="checkbox"> Read scanned PDF pages with local OCR</label><p>OCR runs only on pages without text. Machine-read words and numbers need review against the original page.</p>
 <p>Original bytes stay unchanged. Limits: 5 MB per file; 20 MB and 50,000 records per workspace. Text and decompression have additional safety limits. Macros and formulas never run.</p>
 <button id="cancel-operation" class="secondary" hidden>Cancel operation</button><progress id="progress" value="0" max="1" hidden aria-label="Import progress"></progress>
 <p id="checkpoint-status"></p><button id="resume-import" class="secondary" hidden>Keep checked sources</button><button id="discard-import" class="secondary" hidden>Discard import checkpoint</button>

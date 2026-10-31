@@ -29,4 +29,88 @@ test('MOCK opt-in plain answers bind exact supporting sentences and reject novel
  assert.equal((await answerQuestion({question,chunks,provider:plain(structured)})).status,'abstained','plain mode cannot repair malformed structured answers');
 });
 
-test('MOCK plain grounding rejects altered condition payloads and numeric relationship swaps',async()=>{for(const [source,answer] of [['Normal retirement age is 65 if disability is certified.','Normal retirement age is 65 if age is certified.'],['Alice receives 65 dollars while Bob receives 55 dollars.','Bob receives 65 dollars.']]){const chunks=[chunk('a',source)],provider={id:'MOCK-plain-condition',answerFormat:'plain-grounded-v1',generate:async()=>answer};const result=await answerQuestion({question:'What is the retirement age and amount?',chunks,retrieval:{results:chunks.map(c=>({...c,score:1})),diagnostics:{weak:false}},provider});assert.equal(result.status,'abstained');assert.equal(result.citations.length,0);}});
+test('MOCK plain grounding rejects altered condition payloads and numeric relationship swaps',async()=>{for(const [source,answer] of [['Normal retirement age is 65 if disability is certified.','Normal retirement age is 65 if age is certified.'],['Alice receives 65 dollars while Bob receives 55 dollars.','Bob receives 65 dollars.']]){const chunks=[chunk('a',source)],provider={id:'MOCK-plain-condition',answerFormat:'plain-grounded-v1',generate:async()=>answer};const result=await answerQuestion({question:'What statement is documented?',chunks,retrieval:{results:chunks.map(c=>({...c,score:1})),diagnostics:{weak:false}},provider});assert.equal(result.status,'abstained');assert.equal(result.citations.length,0);}});
+
+test('MOCK full retrieved evidence detects same-chunk and clipped-context conflicts before generation',async()=>{
+ let calls=0;const local={id:'MOCK-must-not-resolve-conflicts',generate:async()=>{calls++;return '{}';}};
+ const same=[chunk('a','Normal retirement age is 65. Normal retirement age is 67.')];
+ const result=await answerQuestion({question,chunks:same,provider:local});assert.equal(result.status,'conflict');assert.deepEqual(result.diagnostics.conflicts[0].chunkIds,['a']);assert.equal(calls,0);
+ const late=[chunk('a','Normal retirement age is 65. '+('Documentary source background. ').repeat(85)+'Normal retirement age is 67.')];
+ const clipped=await answerQuestion({question,chunks:late,retrieval:late,provider:local,options:{contextCharacters:256,maxChunks:1}});assert.equal(clipped.status,'conflict');assert.equal(clipped.diagnostics.contextTruncated,true);assert.equal(calls,0,'a later statement outside prompt context still blocks arbitrary selection');
+ const beyondContext=[chunk('a','Normal retirement age is 65.'),chunk('b','Normal retirement age is 67.')];
+ const omitted=await answerQuestion({question,chunks:beyondContext,retrieval:beyondContext,provider:local,options:{maxChunks:1}});assert.equal(omitted.status,'conflict');assert.equal(calls,0,'a retrieved source outside the prompt chunk count still participates in conflict checks');
+});
+
+test('MOCK synthesis preserves relational direction and independently grounds every JSON reference',async()=>{
+ const cases=[['Alice pays Bob 65 dollars.','Bob pays Alice 65 dollars.'],['Payment of 65 dollars goes from Alice to Bob.','Payment of 65 dollars goes from Bob to Alice.'],['Alice receives 65 dollars from Bob.','Alice receives 65 dollars for Bob.']];
+ for(const [text,claim] of cases){const chunks=[chunk('a',text)],retrieval=chunks;
+  for(const local of [{id:'MOCK-plain-roles',answerFormat:'plain-grounded-v1',generate:async()=>claim},provider(claim,text)]){
+   const result=await answerQuestion({question:'What payment is documented?',chunks,retrieval,provider:local});assert.equal(result.status,'abstained',claim);assert.equal(result.diagnostics.modelOutputAccepted,false);
+  }
+ }
+ const chunks=[chunk('a','Normal retirement age is 65.'),chunk('b','Monthly benefit is 100 dollars.')];
+ const extraCitation={id:'MOCK-source-inflation',generate:async()=>JSON.stringify({status:'answered',claims:[{text:chunks[0].text,citations:[{label:'C1',quote:chunks[0].text},{label:'C2',quote:chunks[1].text}]}]})};
+ assert.equal((await answerQuestion({question,chunks,retrieval:chunks,provider:extraCitation})).status,'abstained','an exact but unrelated second quotation cannot inflate supporting citations');
+ const joined={id:'MOCK-unsupported-join',generate:async()=>JSON.stringify({status:'answered',claims:[{text:'Normal retirement age is 65 and monthly benefit is 100 dollars.',citations:[{label:'C1',quote:chunks[0].text},{label:'C2',quote:chunks[1].text}]}]})};
+ assert.equal((await answerQuestion({question,chunks,retrieval:chunks,provider:joined})).status,'abstained','multi-source claims require separate independently supported statements');
+ const separate={id:'MOCK-separate-supported-claims',generate:async()=>JSON.stringify({status:'answered',claims:chunks.map((value,index)=>({text:value.text,citations:[{label:'C'+(index+1),quote:value.text}]}))})};
+ const valid=await answerQuestion({question:'What retirement age and monthly benefit are documented?',chunks,retrieval:chunks,provider:separate});assert.equal(valid.status,'answered');assert.equal(valid.citations.length,2);
+});
+
+test('MOCK unverified date/group priority abstains while exact documentary group statements remain available',async()=>{
+ const plain=text=>({id:'MOCK-explicit-scope',answerFormat:'plain-grounded-v1',generate:async()=>text});
+ const source=[chunk('a','Normal retirement age is 65.')];
+ for(const scope of [{asOf:'2026-01-01'},{group:'Hourly'}]){let called=false;const result=await answerQuestion({question,chunks:source,scope,provider:{id:'MOCK-no-applicability',generate:async()=>{called=true;return '{}';}}});assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'unverified-source-applicability');assert.equal(called,false);}
+ const groups=[chunk('a','Hourly employees retire at age 65. Salaried employees retire at age 67.')];
+ assert.equal((await answerQuestion({question:'What retirement age is documented?',chunks:groups,retrieval:groups,provider:plain('Hourly employees retire at age 65.')})).status,'abstained');
+ const exact=await answerQuestion({question:'What does the Hourly statement say?',chunks:groups,retrieval:groups,provider:plain('Hourly employees retire at age 65.')});assert.equal(exact.status,'answered');assert.equal(exact.citations[0].excerpt,'Hourly employees retire at age 65.');
+ const wrong=await answerQuestion({question:'What does the Salaried statement say?',chunks:groups,retrieval:groups,provider:plain('Hourly employees retire at age 65.')});assert.equal(wrong.status,'abstained');assert.equal(wrong.diagnostics.reason,'question-subject-binding-rejected');
+ const parties=[chunk('a','Alice receives 65 dollars. Bob receives 55 dollars.')];
+ assert.equal((await answerQuestion({question:'What amount does Bob receive?',chunks:parties,retrieval:parties,provider:plain('Alice receives 65 dollars.')})).status,'abstained');
+});
+
+test('MOCK incomplete bounded evidence analysis never releases an answer',async()=>{
+ const chunks=Array.from({length:65},(_,index)=>({...chunk('s'+index,'Normal retirement age is 65.'),sourceHash:'a'.repeat(64)}));let called=false;
+ const result=await answerQuestion({question,chunks,retrieval:chunks,provider:{id:'MOCK-analysis-limit',generate:async()=>{called=true;return '{}';}}});assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'evidence-analysis-budget');assert.equal(result.diagnostics.evidenceAnalysis.complete,false);assert.equal(called,false);
+});
+
+test('MOCK single-statement local profile cannot silently return half a multi-property answer',async()=>{
+ const chunks=[chunk('a','Normal retirement age is 65.'),chunk('b','Case files are retained for seven years.')];let called=false;
+ const result=await answerQuestion({question:'What are the normal retirement age and the case file retention period?',chunks,retrieval:chunks,provider:{id:'MOCK-partial-plain',answerFormat:'plain-grounded-v1',generate:async()=>{called=true;return chunks[0].text;}}});
+ assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'plain-multi-part-question-unsupported');assert.equal(called,false);assert.equal(result.citations.length,0);assert.equal(result.retrieved.length,2);
+ const parties=[chunk('a','Alice pays Bob 65 dollars.')];
+ const relational=await answerQuestion({question:'What payment is documented between Alice and Bob?',chunks:parties,retrieval:parties,provider:{id:'MOCK-one-relation-not-two-properties',answerFormat:'plain-grounded-v1',generate:async()=>parties[0].text}});assert.equal(relational.status,'answered','and connecting relation endpoints is not itself a two-property request');
+});
+
+test('MOCK unrelated retrieved archive counters do not become pension provision conflicts',async()=>{
+ const prose='The archive team stores scanned office correspondence in cabinets. Staff organize paper forms by department and maintain the catalog. A librarian checks catalog descriptions and verifies shelf labels.';
+ const chunks=[chunk('a','Normal retirement age is 65.'),chunk('b','A surviving spouse receives monthly income after the participant dies.'),chunk('c',`Archive note 0-0: ${prose}\nArchive note 0-1: ${prose}`),chunk('d',`Record 24: ${prose}\nRecord 25: ${prose}`)];
+ const local={id:'MOCK-retirement-with-archive-distractors',answerFormat:'plain-grounded-v1',generate:async()=>chunks[0].text};
+ const result=await answerQuestion({question,chunks,retrieval:chunks,provider:local,options:{contextCharacters:1000,maxChunks:2}});assert.equal(result.status,'answered');assert.equal(result.citations[0].excerpt,chunks[0].text);
+ const unrelated=[chunk('a','Normal retirement age is 65.'),chunk('b','Storage cabinet capacity is 100 boxes. Storage cabinet capacity is 200 boxes.')];
+ assert.equal((await answerQuestion({question,chunks:unrelated,retrieval:unrelated,provider:local})).status,'answered','an unrelated storage conflict cannot decide a retirement-age question');
+ const relevant=[chunk('a','Normal retirement age is 65.'),chunk('b','Record 24: Normal retirement age is 67.')];
+ assert.equal((await answerQuestion({question,chunks:relevant,retrieval:relevant,provider:local,options:{maxChunks:1}})).status,'conflict','label stripping must retain the actual conflicting age');
+ for(const pair of [['Normal retirement age is sixty five.','Normal retirement age is sixty seven.'],['Benefit payment is 100 dollars monthly.','Benefit payment is 100 dollars annually.']]){
+  const conflicting=[chunk('a',pair.join(' '))];const result=await answerQuestion({question:pair[0].includes('age')?question:'What benefit payment is documented?',chunks:conflicting,retrieval:conflicting,provider:local});assert.equal(result.status,'conflict',pair.join(' | '));
+ }
+});
+
+test('MOCK source-valid answers must also bind question topics, modifiers and relationship roles',async()=>{
+ const age=[chunk('a','Normal retirement age is 65.')];let calls=0;
+ for(const question of ['Which mortality table applies?','What mortality table is documented?','What is the early retirement age?','What tax withholding rate is documented?']){
+  const result=await answerQuestion({question,chunks:age,retrieval:age,provider:{id:'MOCK-valid-but-irrelevant',answerFormat:'plain-grounded-v1',generate:async()=>{calls++;return age[0].text;}}});assert.equal(result.status,'abstained',question);
+ }
+ assert.equal(calls,0,'a confidence floor and a valid quote cannot substitute for source-question relevance');
+ const both=[age[0],chunk('b','The mortality table is Example M.')];
+ const irrelevant=await answerQuestion({question:'What mortality table is documented?',chunks:both,retrieval:both,provider:provider(age[0].text,age[0].text)});assert.equal(irrelevant.status,'abstained');assert.equal(irrelevant.diagnostics.reason,'question-subject-binding-rejected','post-generation topic binding uses accepted quotes, not unrelated context');
+ const payment=[chunk('a','Alice pays Bob 65 dollars.')],plain={id:'MOCK-question-role',answerFormat:'plain-grounded-v1',generate:async()=>payment[0].text};
+ const wrong=await answerQuestion({question:'Who pays Alice 65 dollars?',chunks:payment,retrieval:payment,provider:plain});assert.equal(wrong.status,'abstained');
+ const right=await answerQuestion({question:'Who pays Bob 65 dollars?',chunks:payment,retrieval:payment,provider:plain});assert.equal(right.status,'answered');
+ const survivor=[chunk('a','A surviving spouse receives monthly income after the participant dies.')];
+ const paraphrase=await answerQuestion({question:'What money is available to a widow?',chunks:survivor,retrieval:survivor,provider:{id:'MOCK-ordinary-question-paraphrase',answerFormat:'plain-grounded-v1',generate:async()=>survivor[0].text}});assert.equal(paraphrase.status,'answered','bounded ordinary-language synonym anchors remain supported');
+});
+
+test('MOCK plain prompt omits unrelated excerpts after full retrieved conflict checks',async()=>{const chunks=[chunk('age','Normal retirement age is 65.'),chunk('widow','A surviving spouse receives monthly income after the participant dies.')];let prompt;const provider={id:'MOCK-focused-prompt',answerFormat:'plain-grounded-v1',generate:async request=>{prompt=request.prompt;return 'The normal retirement age is 65.';}};const result=await answerQuestion({question:'What is the normal retirement age?',chunks,retrieval:{results:chunks.map(c=>({...c,score:.9})),diagnostics:{weak:false}},provider});assert.equal(result.status,'answered');assert.match(prompt,/Normal retirement age is 65/);assert.doesNotMatch(prompt,/surviving spouse/);assert.equal(result.diagnostics.evidenceAnalysis.chunks,2);assert.equal(result.diagnostics.promptContextChunks,1);const conflict=chunk('other-age','Normal retirement age is 67.');let called=false;const blocked=await answerQuestion({question:'What is the normal retirement age?',chunks:[...chunks,conflict],retrieval:{results:[...chunks,conflict].map(c=>({...c,score:.9})),diagnostics:{weak:false}},provider:{...provider,generate:async()=>{called=true;return '65';}},options:{maxChunks:1}});assert.equal(blocked.status,'conflict');assert.equal(called,false);});
+
+test('MOCK documentary listing permits explicit active/passive equivalence but not role swaps or dropped conditions',async()=>{for(const [source,answer,expected] of [['The bank account number is listed on the direct deposit form.','The direct deposit form lists the bank account number.','answered'],['The bank account number is listed on the direct deposit form.','The bank account number lists the direct deposit form.','abstained'],['The bank account number is listed on the direct deposit form only if authorized.','The direct deposit form lists the bank account number.','abstained']]){const chunks=[chunk('listing',source)],result=await answerQuestion({question:'Which document lists the bank account number?',chunks,retrieval:{results:chunks.map(c=>({...c,score:.9})),diagnostics:{weak:false}},provider:{id:'MOCK-listed-on',answerFormat:'plain-grounded-v1',generate:async()=>answer}});assert.equal(result.status,expected);if(expected==='answered')assert.equal(result.citations[0].quotes[0],source);}});

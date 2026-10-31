@@ -8,7 +8,7 @@ async function extractPdfBytes(bytes){
  if(!(bytes instanceof Uint8Array)||bytes.length>PDF_LIMITS.bytes)throw Error('PDF exceeds the 5 MB byte limit or has invalid bytes.');
  if(new TextDecoder('ascii').decode(bytes.subarray(0,5))!=='%PDF-')throw Error('Invalid PDF header.');
  if(!root.pdfjsLib?.getDocument||!root.pdfjsWorker?.WorkerMessageHandler)throw Error('Local PDF parser assets are unavailable.');
- const warnings=['PDF text extraction only. Scanned image pages need OCR, which is unavailable. Text item order is the parser order, not a guaranteed reading order.','Text transforms and widths are source-derived PDF.js metrics. Advance boxes are approximate text regions, not exact glyph outlines.'];
+ const warnings=['PDF text extraction only. Scanned image pages need a separate OCR step. Text item order is the parser order, not a guaranteed reading order.','Text transforms and widths are source-derived PDF.js metrics. Advance boxes are approximate text regions, not exact glyph outlines.'];
  const missingAssets=new Set();
  class NoExternalData {async fetch(request){missingAssets.add(String(request.kind)+': '+String(request.filename));throw Error('External PDF font, CMap and WASM assets are disabled.');}}
  const task=root.pdfjsLib.getDocument({data:bytes.slice(),isEvalSupported:false,useWorkerFetch:false,useWasm:false,useSystemFonts:false,disableFontFace:true,enableXfa:false,isOffscreenCanvasSupported:false,isImageDecoderSupported:false,disableAutoFetch:true,disableStream:true,disableRange:true,stopAtErrors:true,maxImageSize:0,canvasMaxAreaInBytes:0,BinaryDataFactory:NoExternalData,verbosity:0});

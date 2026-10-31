@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       PBGC_REQUIRE_MODEL: '1'
     steps:
@@ -46,6 +46,15 @@ jobs:
       - name: Verify actual file browser workflow
         if: ${{ !cancelled() }}
         run: node tools/verify-browser.js --file
+      - name: Verify independent real-model question relevance and answer quality offline
+        env:
+          PBGC_CHALLENGE_QWEN: '1'
+        run: node tests/rag-challenges.test.js
+      - name: Measure whole-process resource budget on actual offline file profile
+        run: node tools/measure-resources.js --file --out test-results/resources-file.json
+      - name: Record bounded synthetic model verification summary
+        if: ${{ !cancelled() }}
+        run: node tools/ci-model-summary.js
       - name: Annotate failed synthetic checks
         if: ${{ failure() }}
         run: node tools/ci-summary.js
@@ -60,6 +69,8 @@ jobs:
           path: |
             test-results/verification-*.log
             test-results/verification-*.json
+            test-results/rag-challenge-*.json
+            test-results/resources-*.json
             dist/PBGC-RAG-ci.zip
           if-no-files-found: warn
           retention-days: 7

@@ -1,6 +1,6 @@
 # Open the complete office package
 
-The complete `PBGC-RAG-0.4-office.zip` contains the application, sentence encoder, generation runtime and Qwen generation model. Keep all extracted folders together.
+The complete `PBGC-RAG-0.5-office.zip` contains the application, sentence encoder, generation runtime and Qwen generation model. Keep all extracted folders together.
 
 1. Extract the ZIP to a local folder.
 2. Double-click `index.html`.
@@ -17,3 +17,7 @@ An organization may block local browser scripts, workers or WebAssembly. The app
 ## Preparation outside the office
 
 Preparation and automated tests are the developer's responsibility. The core developer ZIP and GitHub source archive omit the large generation weights and are not the complete office delivery. Do not run preparation commands at the office.
+
+## Scanned PDFs
+
+Enable **Read scanned PDF pages with local OCR** before adding an image-only PDF. The English OCR engine and model are already included. Check machine-read words and numbers against the original page. There is no extra download or setup. Pages that already contain native text are not OCR-processed.

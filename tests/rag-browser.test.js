@@ -41,6 +41,7 @@ test(`${profile} REAL learned retrieval UI: readable source evidence, case isola
     assert.match(await page.locator('#source-view').innerText(),/surviving spouse|monthly income/i);
     await page.getByRole('button',{name:'Close evidence',exact:true}).click();
     await page.locator('#case-name').fill('Synthetic empty separate case');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    assert.equal(await page.locator('#rag-question').inputValue(),'','Private question drafts clear when changing cases');
     assert.doesNotMatch(await page.locator('#rag-answer').innerText(),/surviving spouse|monthly income/i);
     await ask(page,'What money is available to a widow?');
     assert.doesNotMatch(await page.locator('#rag-citations').innerText(),/surviving spouse|synthetic-rag-plan.txt/i);
