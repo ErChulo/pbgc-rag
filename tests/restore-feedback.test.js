@@ -9,7 +9,7 @@ const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
 
-test('extracted 0.2.2 package makes same-file restore visible and preserves cases after failed or cancelled restores',async t=>{
+test('extracted current package makes same-file restore visible and preserves cases after failed or cancelled restores',async t=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'pbgc-restore-feedback-'));
   const zip=path.join(directory,'workplace.zip'),extracted=path.join(directory,'extracted');
   let server,browser,context;
@@ -17,7 +17,7 @@ test('extracted 0.2.2 package makes same-file restore visible and preserves case
     execFileSync('python',[path.join(root,'tools/package.py'),'--out',zip],{encoding:'utf8'});
     execFileSync('python',['-c','import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z: z.extractall(sys.argv[2])',zip,extracted]);
     const manifest=JSON.parse(await fs.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
-    assert.equal(manifest.version,'0.2.2');
+    assert.equal(manifest.version,'0.3');
     server=http.createServer(async(request,response)=>{
       try{
         const pathname=decodeURIComponent(new URL(request.url,'http://localhost').pathname);

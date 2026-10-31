@@ -1,5 +1,15 @@
 # Acceptance evidence
 
+## Build 0.3 source-bound review increment
+
+**Coordinator full suite: 181 PASS, zero FAIL, zero skipped across 29 files.**
+
+Implemented and independently exercised: exact dictionary field maps/review binding; proposed/reviewed source-bound observations with edit invalidation and conservative conflict abstention; exact-int64 read-only source-table queries; protected/authorized DOCX/XLSX mapped test outputs with structural and exact numeric checks; isolated template workers; persisted version 2 review state and legacy v1 compatibility. Bulk review validation indexes sources once. Human review remains an unauthenticated claim; no official authority, type, legal priority or actuarial output is inferred.
+
+Playwright verifies real synthetic XLSM/SQLite/Office bytes, review/dictionary reload and v2 export/restore, tampered source/map/stale-review rejection without case mutation, unsaved-review guardrails, private-draft clearing, exact typed query provenance and case isolation. The full suite is automated by `node tools/verify-browser.js`, with per-run results under test-results and durable release evidence under docs/evidence. GitHub Actions also runs the distinct actual-file profile. Local HTTP evidence does not substitute for workplace file-policy/Windows acceptance.
+
+Official-template, BSRS, approved actuarial reference and full enterprise acceptance gates below remain blocked. The new generic capabilities remove engineering gaps; they do not waive missing authoritative inputs. Exact final 0.3 counts/commands are in docs/evidence/review-0.3.json and .log.
+
 ## Build 0.2.2 automated restore check
 
 Coordinator full suite: **124 tests PASS, zero FAIL across 21 files**, including Playwright, on the documented supplementary HTTP development profile. The extracted-package restore test covers repeated identical filenames, distinct copy labels/active identities, local visible filename/document/excerpt feedback, the search shortcut, byte-preserving exports, tamper rejection and cancellation without mutating the current case. The automation replaces the repeated manual walkthrough for those flows. Source/export schemas and immutable case names are unchanged.

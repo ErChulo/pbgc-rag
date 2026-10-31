@@ -14,6 +14,7 @@
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
+  let caseReviewUI;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   const workspace = () => catalog.activeId === LIBRARY ? catalog.library : catalog.cases.find(c => c.id === catalog.activeId);
@@ -51,13 +52,13 @@
   async function operation(fn, cancelable = false) {
     if (busy) return;
     busy = true; abortRequested = false; operationAbort = new AbortController();
-    document.querySelectorAll('button,input,select').forEach(node => { node.disabled = true; });
+    document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = true; });
     $('cancel-operation').hidden = !cancelable; $('cancel-operation').disabled = false;
     $('progress').hidden = !cancelable;
     try { await fn(); } catch (error) { status(error.message || 'Operation failed.'); }
     finally {
       busy = false; operationAbort = null;
-      document.querySelectorAll('button,input,select').forEach(node => { node.disabled = false; });
+      document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = false; });
       $('cancel-operation').hidden = true; $('progress').hidden = true;
       updateViewerButtons(); renderCheckpoint();
     }
@@ -86,8 +87,22 @@
   async function commit(candidate,rememberView=true) {
     checkCatalog(candidate);
     if(rememberView&&catalog.activeId)viewStates.set(catalog.activeId,{layout:currentLayout(),assertions:graphAssertions.slice()});
+    const priorCase=catalog.activeId,priorEvidence=selectedEvidence,priorRecordId=selectedGraphRecordId;
     catalog=candidate;await save();render();
+    if(priorCase===catalog.activeId&&priorEvidence){
+      const canonical=value=>JSON.stringify(value,function(key,item){return item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(k=>[k,item[k]])):item;});
+      const source=workspace()?.sources.find(s=>s.hash===priorEvidence.sourceHash);
+      if(source?.records.some(r=>canonical(r.locator)===canonical(priorEvidence.locator))){selectedEvidence=priorEvidence;selectedGraphRecordId=priorRecordId;}
+    }
   }
+  async function updateWorkbench(patch) {
+    const active=requireCase();
+    const state=API.validateWorkbench({...API.emptyWorkbench(),...(active.workbench||{}),...patch},active);
+    const updated={...active,schemaVersion:2,workbench:state};
+    if(new Blob([JSON.stringify(updated)]).size>MAX_PACKAGE)throw Error('Case and review state exceed the 40 MB portable budget.');
+    await commit(active.id===LIBRARY?{...catalog,library:updated}:{...catalog,cases:catalog.cases.map(c=>c.id===active.id?updated:c)});
+  }
+  async function saveCurrentReviewView(){await updateWorkbench({reportLayout:currentLayout(),graphAssertions});}
   async function sourceFromBytes(name, bytes, id, knownHash) {
     if (typeof name !== 'string' || !name.trim() || name.length > 255) throw Error('Invalid source name.');
     if (!(bytes instanceof Uint8Array) || bytes.length > MAX_FILE) throw Error('Source exceeds the 5 MB limit.');
@@ -96,7 +111,7 @@
   }
   const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) && value !== LIBRARY;
   async function validatePackage(data) {
-    if (!data || data.schemaVersion !== 1 || typeof data.name !== 'string' || !data.name.trim() || data.name.length > 100 || !Array.isArray(data.sources) || data.sources.length > 200) throw Error('Invalid case package schema.');
+    if (!data || ![1,2].includes(data.schemaVersion) || typeof data.name !== 'string' || !data.name.trim() || data.name.length > 100 || !Array.isArray(data.sources) || data.sources.length > 200) throw Error('Invalid case package schema.');
     const clean = newCase(data.name, validId(data.id) ? data.id : undefined);
     const seenHashes = new Set(), seenIds = new Set(); let total = 0;
     for (let index = 0; index < data.sources.length; index++) {
@@ -113,10 +128,13 @@
       $('progress').max = Math.max(1, data.sources.length); $('progress').value = index + 1;
       await yieldUI();
     }
-    checkSources(clean.sources); return clean;
+    checkSources(clean.sources);
+    if(data.schemaVersion===2){clean.schemaVersion=2;clean.workbench=API.validateWorkbench(data.workbench,clean);}
+    if(new Blob([JSON.stringify(clean)]).size>MAX_PACKAGE)throw Error('Case package exceeds the 40 MB limit.');
+    return clean;
   }
   async function validateCatalog(data) {
-    if (data?.schemaVersion === 1) { const migrated = await validatePackage(data); return {schemaVersion:2,activeId:migrated.id,cases:[migrated],library:null}; }
+    if ([1,2].includes(data?.schemaVersion)&&Array.isArray(data?.sources)) { const migrated = await validatePackage(data); return {schemaVersion:2,activeId:migrated.id,cases:[migrated],library:null}; }
     if (!data || data.schemaVersion !== 2 || !Array.isArray(data.cases) || data.cases.length > 8) throw Error('Invalid recovery catalog.');
     checkCatalog(data);
     const clean = {schemaVersion:2,activeId:null,cases:[],library:null};
@@ -191,7 +209,7 @@
       $('graph-target').append(new Option(source.name, `document:${encodeURIComponent(source.id)}`));
     }
     lastResults = []; review = null; selectedEvidence = null; selectedGraphRecordId=null;
-    const savedView=viewStates.get(catalog.activeId);
+    const savedView=viewStates.get(catalog.activeId)|| (active?.workbench?{layout:active.workbench.reportLayout,assertions:active.workbench.graphAssertions}:null);
     graphAssertions=savedView?.assertions||[];
     $('graph-link-count').textContent=graphAssertions.length?`${graphAssertions.length} proposed links. None approved.`:'No proposed links';
     reportLayout=savedView?.layout||{schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
@@ -200,7 +218,7 @@
     if(!$('report-sections').value){const option=new Option(reportLayout.sections.join(', '),reportLayout.sections.join(','));$('report-sections').append(option);$('report-sections').value=option.value;}
     $('timeline-list').replaceChildren(...(reportLayout.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); $('report-preview').replaceChildren();
     $('results').replaceChildren(); $('review-results').replaceChildren(); $('graph-results').replaceChildren();
-    renderCheckpoint();
+    renderCheckpoint();caseReviewUI?.refresh();
     if ($('source-view').open) $('source-view').close(); sourceView = null;
   }
   function openSource(source, index) {
@@ -330,23 +348,23 @@
     const node=graph.nodes.find(n=>n.type==='record'&&n.id===selectedGraphRecordId&&n.sourceHash===selectedEvidence.sourceHash);
     if(!node)throw Error('Selected evidence is not in the active workspace.');
     const edge=API.createGraphAssertion(graph,{id:crypto.randomUUID(),from:node.id,to:$('graph-target').value,evidenceRecordId:node.id,label:$('graph-label').value.trim(),author:$('graph-author').value.trim(),recordedOn:$('graph-recorded').value,validity:{from:$('graph-from').value||null,to:$('graph-to').value||null}});
-    graphAssertions.push(edge); $('graph-link-count').textContent=`${graphAssertions.length} proposed links. None approved.`;
+    graphAssertions.push(edge);await saveCurrentReviewView(); $('graph-link-count').textContent=`${graphAssertions.length} proposed links. None approved.`;
     status('Proposed link added. Dates and interpretation remain unverified. Export the graph to keep it.');
   }));
   $('export-graph').addEventListener('click', () => operation(async () => { download('proposed-evidence-graph-v1.json',JSON.stringify(currentGraph()),'application/json'); status('Source-bound documentary graph and proposed links exported.'); }));
   $('import-graph').addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;event.target.value='';operation(async()=>{
     if(file.size>MAX_PACKAGE)throw Error('Graph exceeds the 40 MB import limit.');const graph=JSON.parse(await file.text());API.validateGraph(graph,requireCase().sources);
-    graphAssertions=graph.edges.filter(edge=>edge.type==='user-link');$('graph-link-count').textContent=`${graphAssertions.length} proposed links. None approved.`;$('import-graph').value='';status('Graph restored and checked against active source records. No link was approved.');
+    graphAssertions=graph.edges.filter(edge=>edge.type==='user-link');await saveCurrentReviewView();$('graph-link-count').textContent=`${graphAssertions.length} proposed links. None approved.`;$('import-graph').value='';status('Graph restored and checked against active source records. No link was approved.');
   });});
   function buildReview() {
-    review = API.buildReview(requireCase());
+    review = API.buildReview(API.caseForReview(requireCase()));
     $('review-results').replaceChildren(el('h3','Provisional review — official release blocked'), el('p',`${review.totalRecords} source records. ${review.blockers.length} release blockers.`), el('pre',review.r1Draft));
     return review;
   }
   $('build-review').addEventListener('click', () => operation(async () => { buildReview(); status('Draft built from source records. Review all evidence and unresolved items.'); }));
   $('export-review-package').addEventListener('click',()=>operation(async()=>{
     const verified=await validatePackage(requireCase());checkCancelled();
-    const draft=API.buildReview(verified),report=API.buildReport(verified,currentLayout()),graph=currentGraph();API.validateGraph(graph,verified.sources);
+    const draft=API.buildReview(API.caseForReview(verified)),report=API.buildReport(API.caseForReview(verified),currentLayout()),graph=currentGraph();API.validateGraph(graph,verified.sources);
     const contents=[
       {name:'provisional-r1-draft.txt',type:'text/plain;charset=utf-8',text:draft.r1Draft},
       {name:'provisional-bsrs-internal.json',type:'application/json',text:JSON.stringify(draft.bsrs,null,2)},
@@ -371,7 +389,7 @@
     }
     if(!files.has('report-layout-v1.json')||!files.has('proposed-evidence-graph-v1.json'))throw Error('Reviewer package lacks its layout or graph.');
     const layout=JSON.parse(files.get('report-layout-v1.json').text),graph=JSON.parse(files.get('proposed-evidence-graph-v1.json').text);
-    API.validateGraph(graph,restored.sources);const draft=API.buildReview(restored),report=API.buildReport(restored,layout);
+    API.validateGraph(graph,restored.sources);const draft=API.buildReview(API.caseForReview(restored)),report=API.buildReport(API.caseForReview(restored),layout);
     const expected=new Map([['provisional-r1-draft.txt',draft.r1Draft],['provisional-bsrs-internal.json',JSON.stringify(draft.bsrs,null,2)],['provisional-case-report.html',API.renderReportHTML(report)]]);
     for(const [name,text]of expected)if(files.get(name)?.text!==text)throw Error('Reviewer artifact does not match rebuilt source evidence.');
     const sourceHashes=restored.sources.map(s=>({name:s.name,sha256:s.hash}));
@@ -379,7 +397,8 @@
     if(JSON.stringify(data.manifest?.sourceHashes)!==JSON.stringify(sourceHashes)||JSON.stringify(data.manifest?.artifactHashes)!==JSON.stringify(artifactHashes)||data.manifest?.validation?.officialRelease!=='BLOCKED'||data.manifest?.validation?.actuarialNumericalValidation!=='NOT_PERFORMED')throw Error('Reviewer manifest validation failed.');
     if(catalog.cases.some(c=>c.id===restored.id))restored.id=crypto.randomUUID();
     viewStates.set(restored.id,{layout,assertions:graph.edges.filter(e=>e.type==='user-link')});
-    await commit({...catalog,activeId:restored.id,cases:[...catalog.cases,restored]});$('import-review-package').value='';status('Reviewer package restored. Original bytes, artifact hashes and rebuilt evidence verified. Official release stays blocked.');
+    if(restored.workbench)viewStates.set(restored.id,{layout:restored.workbench.reportLayout,assertions:restored.workbench.graphAssertions});
+        await commit({...catalog,activeId:restored.id,cases:[...catalog.cases,restored]});$('import-review-package').value='';status('Reviewer package restored. Original bytes, artifact hashes and rebuilt evidence verified. Official release stays blocked.');
   },true);});
   $('export-r1').addEventListener('click', () => operation(async () => { const data = buildReview(); download('provisional-r1-draft.txt',data.r1Draft,'text/plain;charset=utf-8'); status('Provisional R1 drafting aid exported. Not an official memo.'); }));
   $('export-bsrs').addEventListener('click', () => operation(async () => { const data = buildReview(); download('provisional-bsrs-internal.json',JSON.stringify(data.bsrs,null,2),'application/json'); status('Nonexecutable internal BSRS representation exported. Official syntax is unavailable.'); }));
@@ -388,7 +407,7 @@
   }
   function makeReport() {
     reportLayout = currentLayout();
-    const report = API.buildReport(requireCase(),reportLayout);
+    const report = API.buildReport(API.caseForReview(requireCase()),reportLayout);
     $('report-preview').replaceChildren(el('h3',report.title),el('p',`${report.inventory.length} sources; ${report.evidence.length} excerpts; ${report.timeline.length} explicit date annotations. Nonofficial report.`));
     if (report.inventory.length) {
       const table = document.createElement('table'), caption = el('caption','Source coverage'); table.append(caption);
@@ -403,8 +422,8 @@
   $('add-timeline').addEventListener('click', () => operation(async () => {
     requireCase(); if (!selectedEvidence?.locator) throw Error('Select View evidence on a source record first.');
     const next = {...currentLayout(),timeline:[...reportLayout.timeline,{date:$('timeline-date').value,label:$('timeline-label').value.trim(),...selectedEvidence}]};
-    API.buildReport(requireCase(),next); reportLayout=next;
-    const item=el('li',`${next.timeline.at(-1).date}: ${next.timeline.at(-1).label} · Unverified annotation`); $('timeline-list').append(item); makeReport();
+    API.buildReport(API.caseForReview(requireCase()),next); reportLayout=next;
+    const item=el('li',`${next.timeline.at(-1).date}: ${next.timeline.at(-1).label} · Unverified annotation`); $('timeline-list').append(item); makeReport();await saveCurrentReviewView();
     status('Date annotation linked to the selected source record. Export the layout to keep it.');
   }));
   $('export-report').addEventListener('click', () => operation(async () => { download('provisional-case-report.html',API.renderReportHTML(makeReport()),'text/html;charset=utf-8'); status('Nonofficial source-linked report exported.'); }));
@@ -412,10 +431,10 @@
   $('export-layout').addEventListener('click', () => operation(async () => { const report=makeReport(); download('report-layout-v1.json',JSON.stringify(report.layout,null,2),'application/json'); status('Report layout and source-linked annotations exported.'); }));
   $('import-layout').addEventListener('change', event => { const file=event.target.files[0]; if(!file)return; operation(async () => {
     if(file.size>1024*1024)throw Error('Report layout exceeds 1 MB.');
-    const next=JSON.parse(await file.text()); API.buildReport(requireCase(),next); reportLayout=next;
+    const next=JSON.parse(await file.text()); API.buildReport(API.caseForReview(requireCase()),next); reportLayout=next;
     $('report-title').value=next.title; $('report-sections').value=next.sections.join(',');
     if(!$('report-sections').value) { const option=new Option(next.sections.join(', '),next.sections.join(',')); $('report-sections').append(option); $('report-sections').value=option.value; }
-    $('timeline-list').replaceChildren(...(next.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); makeReport(); $('import-layout').value=''; status('Report layout restored; annotations resolve to current source records.');
+    $('timeline-list').replaceChildren(...(next.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); makeReport();await saveCurrentReviewView(); $('import-layout').value=''; status('Report layout restored; annotations resolve to current source records.');
   }); });
   $('export-case').addEventListener('click', () => operation(async () => {
     const verified = await validatePackage(requireCase()); checkCancelled();
@@ -431,6 +450,7 @@
         const restored = await validatePackage(JSON.parse(await file.text())); checkCancelled();
         // Preserve the original case and make the restored copy independently selectable.
         if (catalog.cases.some(c => c.id === restored.id)) restored.id = crypto.randomUUID();
+        if(restored.workbench)viewStates.set(restored.id,{layout:restored.workbench.reportLayout,assertions:restored.workbench.graphAssertions});
         await commit({...catalog,activeId:restored.id,cases:[...catalog.cases,restored]});
         showRestoreFeedback('success','Case restored — ready to search',file.name,restored);
         status('Case restored. Documents checked and ready to search.');
@@ -464,9 +484,11 @@
     const light = document.body.classList.toggle('light'); $('theme-toggle').textContent = light ? 'Use dark theme' : 'Use light theme';
   });
   function route() {
-    const help = location.hash === '#help'; $('help').hidden = !help; $('workspace').hidden = help;
-    document.querySelectorAll('nav a').forEach(a => { if (a.hash === (help ? '#help' : '#workspace')) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+    const page=['#help','#case-review'].includes(location.hash)?location.hash:'#workspace';
+    for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
+    document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
+  caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();
   for (const text of [
     `SHA-256: ${globalThis.crypto?.subtle ? 'available' : 'unavailable — imports blocked'}`,

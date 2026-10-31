@@ -58,3 +58,11 @@ Recovery keeps revisioned current/prior snapshots, validates source hashes/repar
 Reviewer package restoration verifies original bytes/artifact hashes and regenerates R1/BSRS/report text before accepting. Tests prove rehashed forged drafts fail without mutating active work. Source hashes alone do not authenticate a package. All data/export formats remain plaintext.
 
 Supplementary HTTP tests observe no external requests for the covered synthetic workflows. Actual file:// remains administrator-blocked. Basic automated contrast, labels, keyboard/dialog, mobile, boundaries and workload checks are evidence for tested controls only; they are not full Section 508, enterprise or actuarial acceptance. See ACCEPTANCE.md.
+
+## Build 0.3 review controls
+
+Casev2 metadata is accepted only after original-byte reconstruction and exact source binding. Versioned review claims reject stale content/source/version; the UI also rejects unsaved source/scope/mapping edits before review. Case switching clears private drafts. Bulk validation shares one bounded source index. Unauthenticated human-review claims never activate actuarial rules or official release.
+
+Template generation runs in a hard-terminated dedicated worker, blocks active/external content and protected/formula targets, requires permitted parts/expected anchors and exact numeric checks, and preserves untouched ZIP local records. Any validation failure withholds bytes. Current tests are synthetic; arbitrary official template fidelity is not claimed.
+
+CI uses read-only repository permissions and uploads only scoped synthetic verification/build artifacts. The source scanner redacts findings and never reads credential directories or environment values. Git pushes use the user's explicit repository authorization after source-only audit; no force push or environment publication is used.

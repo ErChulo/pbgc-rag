@@ -1,0 +1,53 @@
+name: Verify synthetic offline build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned development browser tooling
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-verification" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-verification/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-verification/node_modules" >> "$GITHUB_ENV"
+          CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Verify source and supplementary HTTP browser workflow
+        run: node tools/verify-browser.js
+      - name: Verify actual file browser workflow
+        if: ${{ !cancelled() }}
+        run: node tools/verify-browser.js --file
+      - name: Package synthetic source build
+        if: ${{ success() }}
+        run: python tools/package.py --out dist/PBGC-RAG-ci.zip
+      - name: Upload scoped development evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-verification-evidence
+          path: |
+            test-results/verification-*.log
+            test-results/verification-*.json
+            dist/PBGC-RAG-ci.zip
+          if-no-files-found: warn
+          retention-days: 7

@@ -7,3 +7,5 @@ Increment 0.2 adds case/reference-library isolation; versioned catalog recovery 
 Original-byte SHA-256 identifies source versions. Equal bytes dedupe. Changed source bytes coexist as another source; no amendment authority or legal applicability is inferred. Parsed text has versioned locators; raw originals remain authoritative. Case records and reference records never combine in a search implicitly.
 
 Official source fields must come from the approved versioned data_dictionary_complete.xlsm when supplied. Current metadata is internal; synthetic arithmetic is not a PBGC actuarial engine. Proposed links/date annotations are not activated interpretations. No official artifact release is allowed.
+
+Increment 0.3 adds source-bound review state to case package v2, exact dictionary maps, human-review claims tied to version/content, conservative comparison, typed table queries and mapped test-template rendering. All restore paths revalidate against original bytes. No official release is enabled by an imported review flag, filename or template mapping.

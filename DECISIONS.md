@@ -20,3 +20,11 @@
 - Regenerate reviewer artifact text after source verification when importing a reviewer package. Matching attacker-recomputed hashes alone are insufficient evidence of a generated draft.
 - Use exact BigInt rational arithmetic only for explicitly synthetic module tests; keep calculations off the UI until a real approval/source workflow exists. No material actuarial rule has been proposed or activated.
 - Keep final file://, enterprise performance and official artifact acceptance blocked where evidence/authoritative inputs are absent. Do not treat successful Linux HTTP browser tests as workplace approval.
+
+## Source review and GitHub integration
+
+- The user explicitly authorized commit, push and merge to the repository. Verify origin and source-only payload, use non-force fast-forward integration, and preserve remote changes. GitHub main was advanced to the passing 0.2.2 commit 64d18a8. Environment publication remains out of scope.
+- Retain source-only case v1 compatibility and use case v2 for persisted source-bound review state. Reparse originals before trusting maps/annotations; reviewed metadata is a local human claim, never authenticated official approval.
+- Exact source/mapping/content/version must match the visible saved review target. Unsaved edits cannot receive review of an older hidden scope. Edits reset review; unknown authority/dates/group or conflicts cause abstention.
+- Preserve original field names/int64 values; no schema/type/legal inference. Generic template outputs remain nonofficial and require authorized-part/anchor/hash/numeric checks in an isolated worker.
+- Own development server/child lifecycles in one Playwright supervisor; run actual-file checks separately and never change managed browser policy. CI artifacts are limited to synthetic evidence and source builds.

@@ -1,5 +1,19 @@
 # Progress
 
+## Case-review increment — build 0.3
+
+Continued autonomously with source-bound field dictionary mapping, evidence observations and exact-content human review claims, conservative conflict/abstention checks, typed read-only source-table queries, isolated mapped DOCX/XLSX test generation, and version 2 case persistence. Source-only v1 imports remain compatible. Reports/graph links, dictionary bindings, explicit headers and annotations revalidate against original source bytes on reload/import. Unknown schemas or forged review/source fields reject before case mutation. Official release remains disabled.
+
+Added a lifecycle-owned Playwright supervisor and GitHub Actions verification. The supervisor scans source, owns its loopback server, runs all tests, propagates failure and cleans up without manual checks. CI also tests real file URLs on its own browser. The managed local Chromium restriction remains; no browser policy was bypassed. Test/CI evidence is browser-specific, not Windows enterprise approval.
+
+Coordinator final full verification: 181 PASS, zero FAIL, zero skipped across 29 files. Durable evidence: docs/evidence/review-0.3.json and .log.
+
+Independent review found and fixed empty-startup recovery blocking, unsaved scope/mapping review mismatches, private cross-case drafts and selected-evidence loss on autosave. Bulk annotation validation now builds the source index once, avoiding repeated indexing for each fact. Generic template rendering has hard worker timeout/cancellation and never falls back to the UI thread.
+
+GitHub: the audited passing 0.2.2 commits were pushed to codex/offline-casework-0.2.2 and fast-forwarded main to 64d18a8 under the user's explicit push/merge authorization. The passing 0.3 source increment uses codex/source-review-0.3 for integration. The initial automatic push review was cleared after source/destination audit; no confidential files or actual official templates/dictionaries are committed. GitHub API calls are restricted here; Git transport works. No environment publication is authorized or performed.
+
+Remaining official acceptance still requires authorized dictionaries/definitions, original official templates/maps, BSRS grammar/validator, actuarial reference data and reviewed legal interpretations. Generic mappings, unauthenticated reviewer claims and synthetic arithmetic do not establish those official inputs or results. Continue independent engineering/automation; do not ask the user to perform checks available to Playwright.
+
 ## Automated restore verification — build 0.2.2
 
 The user asked to stop the manual walkthrough and use Playwright. Playwright reproduced the UX problem: a successful same-file restore left an empty picker and two identical case labels, with feedback only in the distant global status. Restoration itself preserved the source data.

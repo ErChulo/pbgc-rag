@@ -14,6 +14,6 @@ Pinned RAG-Anything source, MIT license, declared dependencies and architecture 
 
 ## Remaining engineering — not external blockers
 
-Official dictionary mapping and approval UX; approved PBGC ontology and evidence authority/contradiction workflows; actuarial rule engine and independent authoritative numerical comparisons; template-preserving official generation; broader Office/PDF structure/SQL support; optional semantic/OCR adapters; larger malformed-document corpus, migrations and enterprise usability/accessibility/resource testing.
+Official dictionary authorization/type rules and final approval UX; approved legal/actuarial definitions and precedence adjudication; actuarial rule engine and independent authoritative numerical comparisons; supplied-template official generation; broader Office/PDF structure/SQL support; optional semantic/OCR adapters; larger malformed-document corpus and final enterprise usability/accessibility/resource testing. Generic dictionary maps, exact-content review records, possible-conflict abstention, typed table queries, v2 review persistence and mapped nonofficial DOCX/XLSX generation are now implemented and tested.
 
 Current supported format/query subsets are documented and reject unsupported variants. The application is a substantial validated development build, not final acceptance or an official pension determination system. No official artifact release is enabled. Never place restricted records or confidential fixtures in this public repository or remote development environment.

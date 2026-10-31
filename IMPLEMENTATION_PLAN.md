@@ -16,6 +16,8 @@ Remaining external gates:
 - Authorized official dictionary, templates, BSRS grammar/validator, reference specifications/factors and human-approved interpretations.
 - Approved local semantic/OCR model assets and deployment constraints before model-based capability can be claimed.
 
-Remaining engineering after/alongside those gates: official dictionary mapping/validation UX; approved PBGC ontology and authority/contradiction workflows; full actuarial rules/calculations and independent reference comparisons; template-preserving official generation; broader native-format/SQL/graph support; optional semantic/OCR integration; full resource/corpus/accessibility coverage. Current support is deliberately bounded and documented, not arbitrary feature parity.
+Remaining engineering after/alongside those gates: official dictionary authorization/type/approval completion; approved PBGC ontology and authority/contradiction workflows; full actuarial rules/calculations and independent reference comparisons; template-preserving official generation; broader native-format/SQL/graph support; optional semantic/OCR integration; full resource/corpus/accessibility coverage. Current support is deliberately bounded and documented, not arbitrary feature parity.
 
 Do not request routine engineering approvals. Do not bypass browser policy, invent authoritative inputs or classify unfinished engineering as an external blocker. Resume from PROGRESS.md and run appropriate checks before committing.
+
+Build 0.3 implements generic exact dictionary mapping, source-bound proposed/reviewed facts with edit invalidation, conservative conflict abstention, typed source-table SQL, isolated mapped Office test outputs and v2 review persistence. A lifecycle-owned browser supervisor and CI replace manual checks. These do not establish official authority or final template fidelity.

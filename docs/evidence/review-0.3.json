@@ -1,0 +1,16 @@
+{
+  "tests": 181,
+  "pass": 181,
+  "fail": 0,
+  "skipped": 0,
+  "version": "0.3",
+  "files": 29,
+  "command": "node tools/verify-browser.js --timeout-ms 240000",
+  "exitCode": 0,
+  "profile": "supplementary Linux Chromium HTTP with lifecycle-owned servers and isolated workers",
+  "actualManagedFileProfile": "BLOCKED by existing administrator policy; not substituted by HTTP",
+  "officialReleaseAllowed": false,
+  "repository": "https://github.com/ErChulo/pbgc-rag",
+  "integrationBranch": "codex/source-review-0.3",
+  "baselineMain": "64d18a8"
+}

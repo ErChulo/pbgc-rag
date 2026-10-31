@@ -13,17 +13,22 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'vendor' / 'ingest-worker-source.js'
 REQUIRED = ('assets/core.js', 'assets/formats.js')
-OPTIONAL = ('assets/legacy.js', 'assets/sqlite.js')
+OPTIONAL = ('assets/legacy.js', 'assets/sqlite.js', 'assets/templates.js')
 BOOTSTRAP = r"""
 'use strict';
 self.onmessage = async function (event) {
   const data = event.data;
-  if (!data || data.type !== 'parse' || typeof data.requestId !== 'string') return;
+  if (!data || !['parse','render-template'].includes(data.type) || typeof data.requestId !== 'string') return;
   const requestId = data.requestId;
   try {
-    if (typeof data.name !== 'string' || !(data.bytes instanceof ArrayBuffer)) throw Error('Invalid isolated parser request.');
+    if (data.type==='parse' && typeof data.name !== 'string' || !(data.bytes instanceof ArrayBuffer)) throw Error('Invalid isolated parser request.');
     const bytes = new Uint8Array(data.bytes);
     if (bytes.length > 5 * 1024 * 1024) throw Error('Source exceeds the 5 MB limit.');
+    if(data.type==='render-template'){
+      if(typeof PBGCRag.renderTemplate!=='function')throw Error('Template renderer is unavailable in this worker build.');
+      const result=await PBGCRag.renderTemplate(bytes,data.manifest,data.values);
+      self.postMessage({type:'template-result',requestId,result},[result.bytes.buffer]);return;
+    }
     const ext = data.name.toLowerCase().split('.').pop();
     let result;
     if (ext === 'doc' || ext === 'xls') {
