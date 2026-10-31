@@ -28,3 +28,5 @@ test('MOCK opt-in plain answers bind exact supporting sentences and reject novel
  const structured=JSON.stringify({status:'answered',answer:'Normal retirement age is 65.'});
  assert.equal((await answerQuestion({question,chunks,provider:plain(structured)})).status,'abstained','plain mode cannot repair malformed structured answers');
 });
+
+test('MOCK plain grounding rejects altered condition payloads and numeric relationship swaps',async()=>{for(const [source,answer] of [['Normal retirement age is 65 if disability is certified.','Normal retirement age is 65 if age is certified.'],['Alice receives 65 dollars while Bob receives 55 dollars.','Bob receives 65 dollars.']]){const chunks=[chunk('a',source)],provider={id:'MOCK-plain-condition',answerFormat:'plain-grounded-v1',generate:async()=>answer};const result=await answerQuestion({question:'What is the retirement age and amount?',chunks,retrieval:{results:chunks.map(c=>({...c,score:1})),diagnostics:{weak:false}},provider});assert.equal(result.status,'abstained');assert.equal(result.citations.length,0);}});

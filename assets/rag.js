@@ -30,6 +30,8 @@ function validatePlainAnswer(raw,context,groundingMode){
  const claimWords=tokens(claim);for(const item of context){const sentences=item.excerpt.split(/(?<=[.!?])\s+|\n+/u);for(const value of sentences.slice(0,60)){const quote=value.trim();if(!quote||quote.length>1000||!item.excerpt.includes(quote))continue;
   try{validateSynthesisClaim(claim,quote);const sourceWords=new Set(tokens(quote));if(claimWords.some(word=>!sourceWords.has(word)))continue;
    if(groundingMode==='quotation'&&claim!==quote)continue;
+   const exactContent=new Set(claimWords);if(/\b(?:if|unless|only|except|before|after)\b/i.test(quote)&&[...sourceWords].some(word=>!exactContent.has(word)))continue;
+   const sourceNumbers=new Set(quote.match(/[-+]?\d+(?:[.,]\d+)*/g)||[]);if(sourceNumbers.size>1&&claim.toLowerCase()!==quote.toLowerCase())continue;
    let qualified=false;for(const word of ['may','might','can','could','would','should','must','shall','will','only','unless','if','except','before','after','not','never','no','cannot']){const term=new RegExp('\\b'+word+'\\b','i');if(term.test(quote)&&!term.test(claim)){qualified=true;break;}}if(qualified)continue;
    return{status:'answered',answer:claim+' ['+item.label+']',citations:[{...citation(item),excerpt:quote,quotes:[quote]}]};
   }catch(_){/* Try another exact source sentence; no unsupported output is repaired. */}
