@@ -15,9 +15,9 @@ root.PBGCRag.mountFlow=function(host){
   $('guide-case-context').hidden=!guided||!active||!['documents','ask'].includes(selected);$('guide-case-context').textContent=active?`Case: ${active.name}`:'';const count=active?.sources.length||0;$('flow-context').textContent=active?`${active.name} · ${count} ${count===1?'document':'documents'}`:'Start a case to keep your documents together.';
   $('close-case').hidden=!active;$('documents-empty').hidden=!!count;$('ask-empty').hidden=!!count;
   $('documents-ready').textContent=count?`${count} ${count===1?'document is':'documents are'} ready. Next, ask a question.`:'Add at least one document to continue.';
-  $('suggested-question').hidden=!sample;$('first-answer-next').hidden=!guided||!$('rag-answer').textContent;
+  const needsAssistant=guided&&selected==='ask'&&!ready&&$('rag-answer-mode').value==='generated';$('guide-qwen-recovery').hidden=!needsAssistant;$('suggested-question').hidden=!sample;$('first-answer-next').hidden=!guided||!$('rag-answer').textContent;
   $('qwen-success').hidden=!ready;$('qwen-next').hidden=!ready;$('start-qwen').hidden=ready;$('qwen-skip').hidden=ready;
-  if(!busy){$('qwen-next').disabled=!ready;$('continue-ask').disabled=!count;$('files').disabled=!active;$('pdf-ocr').disabled=!active;$('ask-question').disabled=!count;$('export-case').disabled=!active;}
+  if(!busy){$('qwen-next').disabled=!ready;$('continue-ask').disabled=!count;$('files').disabled=!active;$('pdf-ocr').disabled=!active;$('ask-question').disabled=!count||needsAssistant;$('export-case').disabled=!active;if(needsAssistant)requestAnimationFrame(()=>{if(!$('guide-qwen-recovery').hidden&&!$('guide-restart-qwen').disabled)$('guide-restart-qwen').focus();});}
  }
  function focus(){const panel=selected==='welcome'?$('welcome'):$('panel-'+selected);panel?.querySelector('h2')?.focus({preventScroll:true});panel?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
  function go(name,moveFocus=true){if(!names.includes(name)&&!['welcome','qwen'].includes(name))return;if(['welcome','qwen'].includes(name))guided=true;selected=name;pendingFocus=false;if(location.hash&&location.hash!=='#workspace')location.hash='workspace';paint();if(moveFocus&&!expanded)focus();}
@@ -30,6 +30,7 @@ root.PBGCRag.mountFlow=function(host){
  $('guide-back').addEventListener('click',()=>go(selected==='ask'?'documents':selected==='documents'?'qwen':'welcome'));
  $('qwen-next').addEventListener('click',documents);$('qwen-skip').addEventListener('click',documents);
  $('qwen-cancel').addEventListener('click',()=>host.cancel());
+ $('guide-read-passages').addEventListener('click',()=>{$('rag-answer-mode').value='extractive';paint();$('rag-question').focus();});
  $('finish-guide').addEventListener('click',()=>{guided=false;go('ask');});
  $('suggested-question').addEventListener('click',()=>{$('rag-question').value='What is the normal retirement age?';$('rag-question').focus();});
  addEventListener('pbgc-model-state',event=>{const state=event.detail;ready=state.state==='ready';$('assistant-state').textContent=ready?'Qwen · Ready':state.state==='loading'?'Qwen · Starting…':'Qwen · Not started';$('qwen-cancel').hidden=state.state!=='loading';$('qwen-cancel').disabled=false;$('qwen-progress').hidden=state.state!=='loading';if(state.total){$('qwen-progress').max=state.total;$('qwen-progress').value=state.completed;}else $('qwen-progress').removeAttribute('value');if(state.message)$('qwen-progress-label').textContent=state.message;$('qwen-error').hidden=state.state!=='error';if(state.state==='error')$('qwen-error').textContent=state.message;paint();if(ready&&guided&&selected==='qwen')requestAnimationFrame(()=>{if(!$('qwen-next').disabled)$('qwen-next').focus();});});

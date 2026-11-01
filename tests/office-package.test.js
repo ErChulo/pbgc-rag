@@ -105,6 +105,14 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     assert.match(await page.locator('#rag-answer').innerText(),/\b65\b/);
     const citations=await page.locator('#rag-citations').innerText();assert.match(citations,/office-offline-synthetic\.txt/);assert.match(citations,/Normal retirement age is 65\./);assert.doesNotMatch(citations,/\b[a-f0-9]{64}\b|"offset"|UTF-16/);
     await page.locator('#rag-citations').getByRole('button',{name:'View evidence',exact:true}).click();assert.match(await page.locator('#source-view').innerText(),/Normal retirement age is 65\./);await page.getByRole('button',{name:'Close evidence',exact:true}).click();
+    await page.locator('#rag-question').fill('What is the normal retirement age?');await page.locator('#ask-question').click();
+    await page.waitForFunction(()=>document.querySelector('#rag-status').textContent.includes('Drafting'),null,{timeout:30000});await page.locator('#rag-cancel').click();
+    await page.waitForFunction(()=>!document.querySelector('#create-case').disabled,null,{timeout:30000});
+    await page.waitForFunction(()=>document.activeElement.id==='guide-restart-qwen');
+    assert.equal(await page.locator('#guide-qwen-recovery').isVisible(),true,'A cancelled written answer offers direct assistant recovery');
+    assert.equal(await page.locator('#ask-question').isDisabled(),true,'The guide does not retry a stopped assistant');
+    await page.locator('#guide-read-passages').click();await page.locator('#ask-question').click();await page.waitForFunction(()=>!document.querySelector('#ask-question').disabled,null,{timeout:180000});
+    assert.match(await page.locator('#rag-citations').innerText(),/Normal retirement age is 65\./,'Source passages work after cancelling generation');
     await page.locator('#finish-guide').click();await page.locator('#flow-documents').click();const scanned=await syntheticImagePdf(page);await page.locator('#pdf-ocr').check();await page.locator('#files').setInputFiles({name:'office-synthetic-scanned.pdf',mimeType:'application/pdf',buffer:scanned});await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});
     assert.match(await page.locator('#sources').innerText(),/office-synthetic-scanned\.pdf/);assert.match(await page.locator('#sources').innerText(),/machine-read text/i);
     await page.locator('#flow-search').click();await page.locator('#query').fill('retirement');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);assert.match(await page.locator('#results').innerText(),/Machine-read line/);
