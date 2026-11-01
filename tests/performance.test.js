@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -14,7 +15,7 @@ test('18,000-record worker import, retrieval, bounded graph, far-record viewer a
   context.on('request',request=>{if(/^https?:|^wss?:/.test(request.url())&&!request.url().startsWith(process.env.PBGC_TEST_URL||'file:'))external.push(request.url());});
   await context.route(/^https?:\/\//,route=>route.request().url().startsWith(process.env.PBGC_TEST_URL||'file:')?route.continue():route.abort());
   try{
-    await page.goto(targetURL);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     await page.locator('#case-name').fill('Synthetic workload');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     const recordCount=18000,farIndex=17912;
     const text=Array.from({length:recordCount},(_,i)=>(`Record ${String(i).padStart(5,'0')} synthetic retirement evidence; source review only. ${i===farIndex?'FarRecord17912':''}`).padEnd(104,' ')).join('\n');
@@ -97,7 +98,7 @@ function workbookFixture({encrypt=false,badSst=false,sstContinue=false,formulaSt
 test('legacy DOC and XLS import through the generated isolated worker dispatch',async()=>{
   const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});const context=await browser.newContext({acceptDownloads:true});const page=await context.newPage();
   try{
-    await page.goto(targetURL);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);await page.locator('#case-name').fill('Synthetic legacy smoke');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);await page.locator('#case-name').fill('Synthetic legacy smoke');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     await page.locator('#files').setInputFiles([{name:'synthetic.doc',mimeType:'application/msword',buffer:Buffer.from(wordFixture('LegacyPerformanceEvidence\r',{split:9}))},{name:'synthetic.xls',mimeType:'application/vnd.ms-excel',buffer:Buffer.from(workbookFixture())}]);
     await page.waitForFunction(()=>!document.querySelector('#files').disabled);assert.equal(await page.locator('#sources li').count(),2,await page.locator('#status').innerText());
     for(const [query,label,locator]of [['LegacyPerformanceEvidence','Paragraph 1','word-binary-paragraph'],['Pension','Cell A2','excel-cell']]){await page.locator('#query').fill(query);await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);const result=await page.locator('#results').innerText();assert.match(result,new RegExp(query));assert.match(result,new RegExp(label));assert.doesNotMatch(result,new RegExp(locator));await page.locator('#results article details > summary').first().click();assert.match(await page.locator('#results').innerText(),new RegExp(locator));}

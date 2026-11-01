@@ -14,7 +14,7 @@
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
-  let caseReviewUI, ragUI;
+  let caseReviewUI, ragUI, flowUI;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   const workspace = () => catalog.activeId === LIBRARY ? catalog.library : catalog.cases.find(c => c.id === catalog.activeId);
@@ -60,7 +60,7 @@
       busy = false; operationAbort = null;
       document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = false; });
       $('cancel-operation').hidden = true; $('progress').hidden = true;
-      updateViewerButtons(); renderCheckpoint();
+      updateViewerButtons(); renderCheckpoint();flowUI?.refresh(workspace(),busy);
     }
   }
   $('cancel-operation').addEventListener('click', () => { abortRequested = true; operationAbort?.abort(); status('Cancellation requested. Waiting for the current file check to finish.'); });
@@ -181,7 +181,7 @@
     return `${caseData.name} (${matches.findIndex(c=>c.id===caseData.id)+1})`;
   }
   function showRestoreFeedback(state,message,fileName,caseData) {
-    const panel=$('restore-feedback');panel.hidden=false;panel.dataset.state=state;
+    flowUI?.go('save',false);const panel=$('restore-feedback');panel.hidden=false;panel.dataset.state=state;
     panel.replaceChildren(el('h3',message));
     if(fileName)panel.append(el('p',`File: ${fileName}`));
     if(caseData){
@@ -189,7 +189,7 @@
       panel.append(el('p',`Active case: ${workspaceLabel(caseData)}`),el('p',`${caseData.sources.length} ${caseData.sources.length===1?'document':'documents'} · ${count} ${count===1?'excerpt':'excerpts'}`));
       const search=el('button','Search restored case');search.type='button';
       search.addEventListener('click',()=>{
-        $('query').scrollIntoView({block:'center'});$('query').focus();
+        flowUI?.go('search',false);$('query').scrollIntoView({block:'center'});$('query').focus();
       });
       panel.append(search);
     }
@@ -208,7 +208,7 @@
     $('restore-feedback').hidden=true;$('restore-feedback').replaceChildren();
     $('sources').replaceChildren(); $('graph-start').replaceChildren(); $('graph-target').replaceChildren();
     for (const source of active?.sources || []) {
-      const item = el('li', `${source.name} · ${source.records.length} records`);
+      const item = el('li', `${source.name} · ${source.records.length} passages`);
       if(source.records.some(record=>record.locator?.type==='pdf-ocr-line'))item.append(el('p','Contains machine-read text (OCR). Check the original scanned pages, especially numbers.'));
       const details=sourceDetails(source.hash,null,source.parserVersion);
       for(const warning of source.warnings||[])details.append(el('p',String(warning)));
@@ -217,7 +217,19 @@
       const view = el('button', 'View source'); view.type = 'button'; view.addEventListener('click', () => openSource(source, 0));
       const original = el('button', 'Save original'); original.type = 'button';
       original.addEventListener('click', () => download(source.name, decode(source.bytesBase64), 'application/octet-stream'));
-      item.append(el('div','')); item.lastChild.append(view, original); $('sources').append(item);
+      item.append(el('div','')); item.lastChild.append(view, original);
+      if(source.name.toLowerCase().endsWith('.pdf')&&!source.processing&&!source.records.length){
+        item.append(el('p','No readable text was found. This may be a scanned PDF.'));
+        const scan=el('button','Read scanned pages');scan.type='button';scan.className='secondary';
+        scan.addEventListener('click',()=>operation(async()=>{
+          const current=requireCase();if(!current.sources.some(s=>s.id===source.id&&s.hash===source.hash))throw Error('This document is no longer in the active case.');
+          const rebuilt=await sourceFromBytes(source.name,decode(source.bytesBase64),source.id,source.hash,{schemaVersion:1,pdfOcr:'missing-text',engineId:API.OCR_ENGINE.id});
+          checkCancelled();const sources=current.sources.map(s=>s.id===source.id?rebuilt:s);checkSources(sources);const updated={...current,schemaVersion:3,sources};
+          await commit(current.id===LIBRARY?{...catalog,library:updated}:{...catalog,cases:catalog.cases.map(c=>c.id===current.id?updated:c)});
+          status(rebuilt.records.length?'Scanned pages read. Check machine-read words and numbers against the original.':'No readable text was found in the scanned pages. The original file is unchanged.');
+        },true));item.append(scan);
+      }
+      $('sources').append(item);
       $('graph-start').append(new Option(source.name, `document:${encodeURIComponent(source.id)}`));
       $('graph-target').append(new Option(source.name, `document:${encodeURIComponent(source.id)}`));
     }
@@ -231,7 +243,7 @@
     if(!$('report-sections').value){const option=new Option(reportLayout.sections.join(', '),reportLayout.sections.join(','));$('report-sections').append(option);$('report-sections').value=option.value;}
     $('timeline-list').replaceChildren(...(reportLayout.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); $('report-preview').replaceChildren();
     $('results').replaceChildren(); $('review-results').replaceChildren(); $('graph-results').replaceChildren();
-    renderCheckpoint();caseReviewUI?.refresh();ragUI?.refresh();
+    renderCheckpoint();caseReviewUI?.refresh();ragUI?.refresh();flowUI?.refresh(active,busy);
     if ($('source-view').open) $('source-view').close(); sourceView = null;
   }
   function openSource(source, index) {
@@ -504,6 +516,7 @@
     for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
     document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
+  flowUI=API.mountFlow();
   ragUI=API.mountRag({getWorkspace:workspace,operation,getSignal:()=>operationAbort.signal,cancel:()=>{abortRequested=true;operationAbort?.abort();},openSource});
   caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();

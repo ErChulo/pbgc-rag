@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs/promises');const path=require('node:path');const {pathToFileURL}=require('node:url');const {createHash}=require('node:crypto');const {chromium}=require('playwright');const {syntheticImagePdf}=require('./helpers/ocr-fixture.js');
 const root=path.resolve(__dirname,'..'),target=process.env.PBGC_TEST_URL||pathToFileURL(path.join(root,'index.html')).href;
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -7,10 +8,10 @@ test(`${target.startsWith('file:')?'actual file://':'supplementary HTTP only'} O
  try{const context=await browser.newContext();if(target.startsWith('file:'))await context.setOffline(true);const page=await context.newPage(),external=[];
  context.on('request',request=>{if(/^https?:|^wss?:/.test(request.url())&&!request.url().startsWith(process.env.PBGC_TEST_URL||'file:'))external.push(request.url());});
  await context.route(/^https?:\/\//,route=>process.env.PBGC_TEST_URL&&route.request().url().startsWith(process.env.PBGC_TEST_URL)?route.continue():route.abort());
- await page.goto(target);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+ await page.goto(target);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
  const original=await syntheticImagePdf(page);await page.locator('#case-name').fill('Synthetic scanned case');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#files').disabled);
- await page.locator('#pdf-ocr').check();await page.locator('#files').setInputFiles({name:'synthetic-scanned.pdf',mimeType:'application/pdf',buffer:original});await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});
- assert.match(await page.locator('#sources').innerText(),/machine-read text/i);await page.locator('#query').fill('retirement');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);
+ await page.locator('#files').setInputFiles({name:'synthetic-scanned.pdf',mimeType:'application/pdf',buffer:original});await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});
+ assert.match(await page.locator('#sources').innerText(),/No readable text/);await page.locator('#sources').getByRole('button',{name:'Read scanned pages',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});assert.match(await page.locator('#sources').innerText(),/machine-read text/i);await page.locator('#query').fill('retirement');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);
  assert.match(await page.locator('#results').innerText(),/65/);assert.match(await page.locator('#results').innerText(),/Machine-read line/);
  await page.locator('#results').getByRole('button',{name:'View evidence',exact:true}).first().click();assert.match(await page.locator('#source-meta').innerText(),/OCR/);await page.getByRole('button',{name:'Close evidence',exact:true}).click();
  const [sourceDownload]=await Promise.all([page.waitForEvent('download'),page.locator('#sources').getByRole('button',{name:'Save original',exact:true}).click()]);assert.equal(hash(await fs.readFile(await sourceDownload.path())),hash(original));

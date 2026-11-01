@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools, openModelSetup}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -13,7 +14,7 @@ async function launch(){
   const context=await browser.newContext();const page=await context.newPage();const external=[],errors=[];
   context.on('request',r=>{if(/^https?:|^wss?:/.test(r.url())&&!r.url().startsWith(process.env.PBGC_TEST_URL||'file:'))external.push(r.url());});
   await context.route(/^https?:\/\//,route=>route.request().url().startsWith(process.env.PBGC_TEST_URL||'file:')?route.continue():route.abort());
-  page.on('pageerror',e=>errors.push(e.message));await page.goto(target);
+  page.on('pageerror',e=>errors.push(e.message));await page.goto(target);await showAllTools(page);
   await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
   return{browser,page,external,errors};
 }
@@ -43,7 +44,7 @@ test(`${profile} REAL learned retrieval UI: readable source evidence, case isola
     await page.locator('#case-name').fill('Synthetic empty separate case');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     assert.equal(await page.locator('#rag-question').inputValue(),'','Private question drafts clear when changing cases');
     assert.doesNotMatch(await page.locator('#rag-answer').innerText(),/surviving spouse|monthly income/i);
-    await ask(page,'What money is available to a widow?');
+    assert.equal(await page.locator('#ask-question').isDisabled(),true,'A new empty case clearly requires source documents before asking');
     assert.doesNotMatch(await page.locator('#rag-citations').innerText(),/surviving spouse|synthetic-rag-plan.txt/i);
     await page.locator('#files').setInputFiles([
       {name:'synthetic-old.txt',mimeType:'text/plain',buffer:Buffer.from('The retirement age is 65.')},
@@ -55,19 +56,19 @@ test(`${profile} REAL learned retrieval UI: readable source evidence, case isola
     assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
   }finally{await browser.close();}
 });
-test(`${profile} REAL Qwen grounded generation UI, cancellation and model unload`,{timeout:480000,skip:!fs.existsSync(model)&&process.env.PBGC_REQUIRE_MODEL!=='1'&&'Local Qwen GGUF absent; real generation is not established by this run.'},async t=>{
+test(`${profile} REAL Qwen grounded generation UI, cancellation and model memory cleanup`,{timeout:480000,skip:!fs.existsSync(model)&&process.env.PBGC_REQUIRE_MODEL!=='1'&&'Local Qwen GGUF absent; real generation is not established by this run.'},async t=>{
   assert.ok(fs.existsSync(model),'Required real Qwen model is absent; prepare the pinned local model pack.');
   const{browser,page,external,errors}=await launch();
   try{
     await addCase(page,'Synthetic RAG generation','Normal retirement age is 65.');
     await page.evaluate(()=>{const create=PBGCRag.createLocalLlmProvider;PBGCRag.createLocalLlmProvider=async options=>{const provider=await create(options);const generate=provider.generate.bind(provider);provider.generate=async request=>{try{globalThis.__realQwenPartial='';const output=await generate({...request,onToken:token=>{globalThis.__realQwenPartial+=token;request.onToken?.(token);}});globalThis.__realQwenOutput=output;return output;}catch(error){globalThis.__realQwenOutput=error.message+'; partial: '+globalThis.__realQwenPartial;throw error;}};return provider;};});
-    await page.getByText('Local model settings',{exact:true}).click();
-    await page.getByText('Use another compatible model',{exact:true}).click();
+    await openModelSetup(page);
+    await page.getByText('Advanced model options',{exact:true}).click();
     await page.locator('#rag-model-files').setInputFiles(model);
     await page.locator('#rag-model-manifest').setInputFiles(path.resolve(__dirname,'../vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'));
     const started=performance.now();await page.locator('#load-rag-model').click();
     await page.waitForFunction(()=>!document.querySelector('#load-rag-model').disabled,null,{timeout:180000});
-    assert.match(await page.locator('#rag-model-status').innerText(),/Qwen.*loaded/i);
+    assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
     await page.locator('#rag-answer-mode').selectOption('generated');
     await ask(page,'What is the normal retirement age?');
     assert.match(await page.locator('#rag-answer').innerText(),/65/,(await page.locator('#rag-status').innerText())+'; real model output: '+await page.evaluate(()=>globalThis.__realQwenOutput));
@@ -81,8 +82,9 @@ test(`${profile} REAL Qwen grounded generation UI, cancellation and model unload
     await page.locator('#rag-cancel').click();await page.waitForFunction(()=>!document.querySelector('#ask-question').disabled,null,{timeout:30000});
     assert.match(await page.locator('#rag-status').innerText(),/cancelled|no grounded answer/i);
     assert.doesNotMatch(await page.locator('#rag-answer').innerText(),/65/,'cancelled generation releases no partial answer');
-    await page.locator('#unload-rag-model').click();await page.waitForFunction(()=>!document.querySelector('#unload-rag-model').disabled);
-    assert.match(await page.locator('#rag-model-status').innerText(),/unloaded|not loaded|no (?:generation )?model/i);
+    assert.equal(await page.locator('#offline-ready').isVisible(),false,'Cancellation disposes the generation model');
+    assert.equal(await page.locator('#unload-rag-model').isVisible(),false,'A disposed model has no misleading memory action');
+    assert.match(await page.locator('#rag-model-status').textContent(),/no model loaded/i);
     assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
   }finally{await browser.close();}
 });

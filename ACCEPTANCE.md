@@ -105,3 +105,7 @@ PBGC_TEST_URL=http://127.0.0.1:8765/ node tools/check.js --browser
 ```
 
 The final command exited zero with 121 PASS. Detailed evidence: docs/evidence/verification-0.2.json and .log. The separate blocked actual entry result is docs/evidence/file-profile-0.2.log. The bounded registry advisory snapshot reported zero known advisories for its checked nonoptional installation; that is not a comprehensive security audit.
+
+## Guided UX acceptance — build 0.6
+
+Local supplementary HTTP: guided first case/import/question/source/backup/restore, both themes, desktop/mobile layouts, labeled controls, keyboard skip, contrast and scan-recovery original-byte/v3 rebuild checks PASS. The complete-package gate now follows the guided interface with the actual included Qwen model, verifies readiness/setup collapse/question focus, generates a cited synthetic answer and recognizes a scanned PDF. Broad regressions use the visible All tools view; guided acceptance does not. Windows/Ubuntu actual offline file acceptance and release publication are required CI gates for this new head; local HTTP does not substitute. See docs/ux/REDESIGN-0.6.md and the release's exact-commit CI evidence. Official interpretation/content validation remains deferred.

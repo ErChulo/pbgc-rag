@@ -45,10 +45,12 @@ jobs:
           echo "CHROMIUM_PATH=$(NODE_PATH="$RUNNER_TEMP/pbgc-office-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
       - name: Check static UI accessibility before model preparation
         run: node tools/check-accessibility.js --both
+      - name: Test guided first-answer flow with actual offline file URL
+        run: node tests/ux-flow.test.js
       - name: Prepare model before office delivery
         run: python tools/prepare-models.py
       - name: Build complete office ZIP
-        run: python tools/package.py --office --out dist/PBGC-RAG-0.5-office.zip
+        run: python tools/package.py --office --out dist/PBGC-RAG-0.6-office.zip
       - name: Test extracted ZIP offline with actual file URL and real Qwen
         run: node tests/office-package.test.js
       - name: Write delivery checksum
@@ -61,7 +63,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: >-
           gh release create "$RELEASE_TAG"
-          dist/PBGC-RAG-0.5-office.zip dist/SHA256SUMS.txt
+          dist/PBGC-RAG-0.6-office.zip dist/SHA256SUMS.txt
           --draft --verify-tag --title "PBGC-RAG complete offline office package"
           --notes-file docs/OFFICE-RELEASE.md
       - name: Retain synthetic office verification evidence
@@ -69,7 +71,9 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: office-verification-${{ matrix.os }}
-          path: test-results/office-*
+          path: |
+            test-results/office-*
+            test-results/ux-flow-*.png
           if-no-files-found: warn
           retention-days: 14
 
@@ -86,7 +90,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.5-office.zip --pattern SHA256SUMS.txt
+        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.6-office.zip --pattern SHA256SUMS.txt
       - name: Verify downloaded release bytes match tested ZIP
         run: python tools/office-checksum.py --verify
       - name: Make complete tested download available

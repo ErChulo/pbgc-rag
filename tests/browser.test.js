@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -22,7 +23,7 @@ test(`${targetURL.startsWith('file:') ? 'actual file://' : 'supplementary HTTP o
   await context.route(/^https?:\/\//, route => route.request().url().startsWith(process.env.PBGC_TEST_URL || 'file:') ? route.continue() : route.abort());
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'pbgc-browser-'));
   try {
-    await page.goto(targetURL);
+    await page.goto(targetURL);await showAllTools(page);
     assert.equal(new URL(page.url()).protocol, new URL(targetURL).protocol);
     await page.locator('#case-name').fill('Synthetic browser verification');
     await page.locator('#create-case').click();
@@ -115,7 +116,7 @@ test(`${targetURL.startsWith('file:') ? 'actual file://' : 'supplementary HTTP o
     await page.waitForFunction(() => !document.querySelector('#search').disabled);
     assert.match(await page.locator('#results').innerText(), /UniqueEvidence914/);
     await page.screenshot({ path: '/tmp/pbgc-rag-workspace.png', fullPage: true });
-    await page.getByRole('link', {name:'Search guide',exact:true}).click();
+    await page.getByRole('link', {name:'Help',exact:true}).click();
     assert.match(page.url(), /#help$/);
     assert.equal(network.length, 0, `Unexpected network: ${network.join(', ')}`);
     assert.deepEqual(errors, []);
@@ -135,7 +136,7 @@ test('unavailable local storage keeps import, search and portable export usable'
   });
   const page = await context.newPage();
   try {
-    await page.goto(targetURL);
+    await page.goto(targetURL);await showAllTools(page);
     await page.waitForFunction(() => /Memory only/i.test(document.querySelector('#storage').textContent));
     await page.locator('#demo').click();
     await page.waitForFunction(() => document.body.textContent.includes('synthetic-plan.txt'));
@@ -157,7 +158,7 @@ test('advanced queries, evidence viewer, graph, provisional reports and IndexedD
   const page = await context.newPage();
   const directory = await fs.mkdtemp(path.join(os.tmpdir(),'pbgc-advanced-'));
   try {
-    await page.goto(targetURL);
+    await page.goto(targetURL);await showAllTools(page);
     await page.waitForFunction(() => !document.querySelector('#demo').disabled);
     await page.locator('#demo').click();
     await page.waitForFunction(() => document.querySelector('#sources').textContent.includes('synthetic-plan.txt'));
@@ -253,7 +254,7 @@ test('advanced queries, evidence viewer, graph, provisional reports and IndexedD
     await page.locator('#import-review-package').setInputFiles(forgedReviewerPath);await page.waitForFunction(()=>!document.querySelector('#import-review-package').disabled);
     assert.match(await page.locator('#status').innerText(),/does not match rebuilt source evidence/);assert.equal(await page.locator('#workspace-select option').count(),beforeRestore+1);assert.equal(await page.locator('#workspace-select').inputValue(),activeBefore);
 
-    await page.reload();
+    await page.reload();await showAllTools(page);
     await page.waitForFunction(() => !document.querySelector('#demo').disabled);
     assert.match(await page.locator('#sources').innerText(), /synthetic-plan.txt/);
     assert.match(await page.locator('#storage').innerText(), /IndexedDB/i);
@@ -279,7 +280,7 @@ test('local PDF extraction and inert HTML/XML imports preserve locators without 
   context.on('request', request => {if (/^https?:/.test(request.url()) && !request.url().startsWith(process.env.PBGC_TEST_URL || 'file:')) external.push(request.url());});
   await context.route(/^https?:\/\//, route => route.request().url().startsWith(process.env.PBGC_TEST_URL || 'file:') ? route.continue() : route.abort());
   try {
-    await page.goto(targetURL);await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
     await page.locator('#case-name').fill('Synthetic format verification');await page.locator('#create-case').click();
     await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
     await page.locator('#files').setInputFiles([
@@ -310,7 +311,7 @@ test('cancelled batch checkpoint survives reload, resumes without duplicates and
   const first={name:'checked.txt',mimeType:'text/plain',buffer:Buffer.from('CaseOnlyEvidence982')};
   const second={name:'slow.txt',mimeType:'text/plain',buffer:Buffer.from('SecondEvidence982')};
   try {
-    await page.goto(targetURL);await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
     await page.locator('#case-name').fill('Checkpoint case');await page.locator('#create-case').click();await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
     const caseId=await page.locator('#workspace-select').inputValue();
     await page.locator('#files').setInputFiles([first,second]);
@@ -320,7 +321,7 @@ test('cancelled batch checkpoint survives reload, resumes without duplicates and
     assert.match(await page.locator('#status').innerText(),/cancel/i);
     assert.equal(await page.locator('#sources li').count(),0,'uncommitted batch must not become active');
     assert.match(await page.locator('#checkpoint-status').innerText(),/1 checked sources/);
-    await page.reload();await page.waitForFunction(() => !document.querySelector('#files').disabled);
+    await page.reload();await showAllTools(page);await page.waitForFunction(() => !document.querySelector('#files').disabled);
     assert.match(await page.locator('#checkpoint-status').innerText(),/1 checked sources/);
     await page.locator('#files').setInputFiles([first,second]);await page.waitForFunction(() => !document.querySelector('#files').disabled);
     assert.equal(await page.locator('#sources li').count(),2,'resuming skips already checked bytes');
@@ -349,7 +350,7 @@ test('DOCX, compressed XLSX and SQLite worker imports retain document/table loca
     require('node:child_process').execFileSync('python',['-c',"import sqlite3,sys\nc=sqlite3.connect(sys.argv[1])\nc.execute('CREATE TABLE evidence (id INTEGER PRIMARY KEY, excerpt TEXT)')\nc.execute('INSERT INTO evidence VALUES (?,?)',(7,'DatabaseEvidence736'))\nc.commit()\nc.close()",dbPath]);
     const docx={'[Content_Types].xml':'<Types/>','word/document.xml':'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>OfficeEvidence736</w:t></w:r></w:p></w:body></w:document>'};
     const workbook={'[Content_Types].xml':'<Types/>','xl/workbook.xml':'<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Synthetic" sheetId="1" r:id="rId1"/></sheets></workbook>','xl/_rels/workbook.xml.rels':'<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>','xl/worksheets/sheet1.xml':'<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>WorkbookEvidence736</t></is></c><c r="B1"><f>1+2</f><v>3</v></c></row></sheetData></worksheet>'};
-    await page.goto(targetURL);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     await page.locator('#case-name').fill('Synthetic Office and database');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
     await page.locator('#files').setInputFiles([
       {name:'synthetic.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from(zip(docx))},
@@ -371,7 +372,7 @@ test('DOCX, compressed XLSX and SQLite worker imports retain document/table loca
 test('all-workspace backup confirmation, restore and source-verified previous snapshots reject corrupt recovery',async()=>{
   const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});const context=await browser.newContext({acceptDownloads:true});const page=await context.newPage();const directory=await fs.mkdtemp(path.join(os.tmpdir(),'pbgc-catalog-browser-'));
   try{
-    await page.goto(targetURL);await page.waitForFunction(()=>!document.querySelector('#demo').disabled);await page.locator('#demo').click();await page.waitForFunction(()=>!document.querySelector('#demo').disabled);
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#demo').disabled);await page.locator('#demo').click();await page.waitForFunction(()=>!document.querySelector('#demo').disabled);
     await page.locator('#workspace-select').selectOption('reference-library');await page.waitForFunction(()=>!document.querySelector('#workspace-select').disabled);
     await page.locator('#files').setInputFiles({name:'reference.txt',mimeType:'text/plain',buffer:Buffer.from('CatalogReferenceEvidence438')});await page.waitForFunction(()=>!document.querySelector('#files').disabled);
     await page.getByText('Recovery backups and privacy',{exact:true}).click();
@@ -391,7 +392,7 @@ test('all-workspace backup confirmation, restore and source-verified previous sn
         await new Promise((resolve,reject)=>{const tx=db.transaction('recovery','readwrite');tx.objectStore('recovery').put(JSON.stringify(envelope),'pbgc-rag.recovery.v1');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
       }finally{db.close();}
     });
-    await page.reload();await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.equal(await page.locator('#workspace-select').inputValue(),disposableId);
+    await page.reload();await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.equal(await page.locator('#workspace-select').inputValue(),disposableId);
     await page.locator('#recover-previous').click();await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.match(await page.locator('#status').innerText(),/Integrity check failed/);assert.equal(await page.locator('#workspace-select').inputValue(),disposableId);assert.match(await page.locator('#sources').innerText(),/disposable.txt/);
   }finally{await context.close();await browser.close();await fs.rm(directory,{recursive:true,force:true});}
 });
@@ -404,7 +405,7 @@ test('readable evidence presentation keeps technical provenance collapsed and or
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'pbgc-readable-'));
   const source = 'Synthetic heading\nReadableEvidence529 annual amount 1250\nNearby context\n';
   try {
-    await page.goto(targetURL);
+    await page.goto(targetURL);await showAllTools(page);
     await page.waitForFunction(() => !document.querySelector('#create-case').disabled);
     await page.locator('#case-name').fill('Readable evidence verification');
     await page.locator('#create-case').click();

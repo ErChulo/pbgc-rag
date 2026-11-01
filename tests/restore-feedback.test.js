@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
@@ -17,7 +18,7 @@ test('extracted current package makes same-file restore visible and preserves ca
     execFileSync('python',[path.join(root,'tools/package.py'),'--out',zip],{encoding:'utf8'});
     execFileSync('python',['-c','import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z: z.extractall(sys.argv[2])',zip,extracted]);
     const manifest=JSON.parse(await fs.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
-    assert.equal(manifest.version,'0.5');
+    assert.equal(manifest.version,'0.6');
     server=http.createServer(async(request,response)=>{
       try{
         const pathname=decodeURIComponent(new URL(request.url,'http://localhost').pathname);
@@ -39,7 +40,7 @@ test('extracted current package makes same-file restore visible and preserves ca
       const pending=page.waitForEvent('download');await page.locator('#export-case').click();const download=await pending;
       const file=path.join(directory,`export-${Date.now()}.json`);await download.saveAs(file);return JSON.parse(await fs.readFile(file,'utf8'));
     };
-    await page.goto(url);await idle();await page.locator('#demo').click();await idle();
+    await page.goto(url);await showAllTools(page);await idle();await page.locator('#demo').click();await idle();
     const initialId=await page.locator('#workspace-select').inputValue();
     const original=await exportData();const packagePath=path.join(directory,'same-synthetic-example.json');await fs.writeFile(packagePath,JSON.stringify(original));
     let lastId=initialId;

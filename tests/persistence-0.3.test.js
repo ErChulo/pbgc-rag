@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
@@ -23,7 +24,7 @@ with zipfile.ZipFile(sys.argv[1],'w',compression=zipfile.ZIP_DEFLATED) as archiv
     let exportNumber=0;
     const exportCase=async()=>{const pending=page.waitForEvent('download');await page.locator('#export-case').click();const download=await pending;const file=path.join(directory,`case-${++exportNumber}.json`);await download.saveAs(file);await idle();return JSON.parse(await fs.readFile(file,'utf8'));};
     const importCase=async(data,name)=>{const file=path.join(directory,name);await fs.writeFile(file,JSON.stringify(data));await page.locator('#import-case').setInputFiles(file);await idle();};
-    await page.goto(server.url);await idle();await page.locator('#demo').click();await idle();await page.locator('#files').setInputFiles(workbook);await idle();
+    await page.goto(server.url);await showAllTools(page);await idle();await page.locator('#demo').click();await idle();await page.locator('#files').setInputFiles(workbook);await idle();
     assert.equal(await page.locator('#sources li').count(),2,await page.locator('#status').innerText());
     await page.locator('a[href="#case-review"]').click();await page.locator('#annotation-source').selectOption({label:'synthetic-plan.txt'});await page.locator('#annotation-record').fill('2');
     for(const [id,value]of Object.entries({'annotation-subject':'Synthetic plan','annotation-predicate':'retirement age','annotation-value':'65','annotation-authority':'Synthetic fixture only','annotation-group':'*'}))await page.locator('#'+id).fill(value);
@@ -36,7 +37,7 @@ with zipfile.ZipFile(sys.argv[1],'w',compression=zipfile.ZIP_DEFLATED) as archiv
     await page.locator('#dictionary-values').fill('{"SYNTHETIC_AMOUNT":1250,"INVENTED_FIELD":1}');await page.locator('#validate-fields').click();await idle();assert.match(await page.locator('#field-results').innerText(),/INVENTED_FIELD/);assert.match(await page.locator('#field-results').innerText(),/Unknown field names found/);
     await page.getByRole('link',{name:'Workspace',exact:true}).click();const reviewed=await exportCase();assert.equal(reviewed.schemaVersion,2);assert.equal(reviewed.workbench.annotations.length,1);assert.equal(reviewed.workbench.annotations[0].status,'reviewed');assert.equal(reviewed.workbench.dictionary.officialValidated,false);assert.equal(reviewed.workbench.dictionary.releaseBlocked,true);assert.equal(reviewed.workbench.dictionary.review.status,'reviewed');assert.deepEqual(reviewed.workbench.dictionary.fieldNames,['SYNTHETIC_AMOUNT','SYNTHETIC_SERVICE']);
     const actualWorkbook=reviewed.sources.find(source=>source.name==='data_dictionary_complete.xlsm');assert.equal(actualWorkbook.bytesBase64,(await fs.readFile(workbook)).toString('base64'));assert.equal(reviewed.workbench.dictionary.source.hash,actualWorkbook.hash);
-    await page.reload();await idle();assert.equal(await page.locator('#sources li').count(),2,await page.locator('#storage').innerText()+'; '+await page.locator('#status').innerText());const reloaded=await exportCase();assert.deepEqual(reloaded.workbench,reviewed.workbench,'review state revalidates and survives recovery reload');
+    await page.reload();await showAllTools(page);await idle();assert.equal(await page.locator('#sources li').count(),2,await page.locator('#storage').innerText()+'; '+await page.locator('#status').innerText());const reloaded=await exportCase();assert.deepEqual(reloaded.workbench,reviewed.workbench,'review state revalidates and survives recovery reload');
     await importCase(reviewed,'reviewed-case-v2.json');assert.match(await page.locator('#restore-feedback').innerText(),/Case restored/);const restored=await exportCase();assert.deepEqual(restored.workbench,reviewed.workbench);
     const beforeId=await page.locator('#workspace-select').inputValue(),beforeCount=await page.locator('#workspace-select option').count();
     for(const [label,alter]of [

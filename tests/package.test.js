@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
@@ -40,12 +41,12 @@ test('extracted portable package serves all runtime assets, supports isolated im
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});context=await browser.newContext();const page=await context.newPage(),external=[],errors=[];
     context.on('request',request=>{if(/^https?:|^wss?:/.test(request.url())&&!request.url().startsWith(url))external.push(request.url());});page.on('pageerror',error=>errors.push(error.message));
     await context.route(/^https?:\/\//,route=>route.request().url().startsWith(url)?route.continue():route.abort());
-    await page.goto(url);await page.waitForFunction(()=>!document.querySelector('#demo').disabled);await page.locator('#demo').click();await page.waitForFunction(()=>!document.querySelector('#demo').disabled);
+    await page.goto(url);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#demo').disabled);await page.locator('#demo').click();await page.waitForFunction(()=>!document.querySelector('#demo').disabled);
     await page.locator('#files').setInputFiles({name:'packaged-worker.txt',mimeType:'text/plain',buffer:Buffer.from('PackagedWorkerEvidence814\n'+'synthetic retained text '.repeat(7000))});await page.waitForFunction(()=>!document.querySelector('#files').disabled);
     await page.locator('#query').fill('PackagedWorkerEvidence814');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);assert.match(await page.locator('#results').innerText(),/PackagedWorkerEvidence814/);
     assert.ok(references.every(ref=>served.includes('/'+ref)),'all entry assets were served from extracted package');assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
     await page.getByText('Recovery backups and privacy',{exact:true}).click();page.once('dialog',dialog=>dialog.accept());await page.locator('#erase-recovery').click();await page.waitForFunction(()=>!document.querySelector('#erase-recovery').disabled);assert.equal(await page.locator('#sources li').count(),0);
-    await page.reload();await page.waitForFunction(()=>!document.querySelector('#demo').disabled);assert.equal(await page.locator('#sources li').count(),0);assert.equal(await page.locator('#workspace-select option').count(),2);
+    await page.reload();await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#demo').disabled);assert.equal(await page.locator('#sources li').count(),0);assert.equal(await page.locator('#workspace-select option').count(),2);
     await page.locator('#recover-previous').click();await page.waitForFunction(()=>!document.querySelector('#recover-previous').disabled);assert.match(await page.locator('#status').innerText(),/No previous recovery snapshot/);
     t.diagnostic(JSON.stringify({packageBytes:metadata.bytes,manifestFiles:manifest.files.length,runtimeEntryAssets:references.length,delivery:'supplementary loopback HTTP from extracted ZIP; file profile remains blocked'}));
   }finally{if(context)await context.close();if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));await fs.rm(directory,{recursive:true,force:true});}

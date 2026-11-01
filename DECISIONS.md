@@ -37,3 +37,7 @@ Authoritative PBGC content remains deferred by user direction. Implement local l
 ## Complete office delivery boundary — 0.4.1
 
 A core source ZIP plus an outside download/preparation command is not an office deliverable. The public release must contain one complete ZIP with the exact verified GGUF and all local assets. Native model-file selection inside the app is permitted; a browser cannot silently open adjacent arbitrary files under the file profile. Do not require users to assemble model parts or run developer tools. Publish the ordinary downloadable release only after extracted-package real offline-file inference passes on Ubuntu and Windows. Test the actual delivered bytes before reporting completion.
+
+### 0.6: task-focused workspace
+
+Use one visible workspace task by default. Keep Search and Save/reopen reachable; retain a deliberate All tools view for expert workflows and broad regression tests. Keep included-model setup explicit and visible on Ask, because file:// security requires a user-selected model. Verify the guided path separately through actual source passages and complete-package Qwen tests. Keep case/source schemas unchanged; package version advances to 0.6.

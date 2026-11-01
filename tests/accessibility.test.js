@@ -1,4 +1,5 @@
 'use strict';
+const {showAllTools}=require('./helpers/ui.js');
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -20,6 +21,7 @@ test('visible text contrast, labeled controls and keyboard skip navigation in bo
     assert.equal(await page.evaluate(() => document.activeElement.className), 'skip');
     await page.keyboard.press('Enter');
     assert.match(page.url(), /#main$/);
+    await showAllTools(page);
     const problems = await page.evaluate(() => [...document.querySelectorAll('input,select,textarea')].filter(node => !node.labels?.length && !node.getAttribute('aria-label') && !node.getAttribute('aria-labelledby')).map(node => node.id));
     assert.deepEqual(problems, [], 'every input has a visible or accessible label');
     assert.equal(await page.locator('h1').count(), 1);
