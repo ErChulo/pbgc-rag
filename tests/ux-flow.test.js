@@ -33,7 +33,7 @@ test(`${profile} guided first answer, model discovery, case backup and responsiv
   assert.equal(await page.locator('#continue-ask').isDisabled(),true,'A case without documents cannot continue to asking');
   await capture('01-start');
   await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.className),'skip');
-  await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>document.activeElement.id),'main');
+  await page.keyboard.press('Enter');await page.waitForURL(/#main$/);await page.waitForFunction(()=>document.activeElement.id==='main');assert.equal(await page.evaluate(()=>document.activeElement.id),'main');
   await page.locator('#case-name').fill('Synthetic guided acceptance');await page.locator('#create-case').click();await idle();await onlyPanel('documents');
   await page.locator('#files').setInputFiles({name:'guided-synthetic-plan.txt',mimeType:'text/plain',buffer:Buffer.from('Normal retirement age is 65.\nSynthetic test information only.')});await idle();
   assert.match(await page.locator('#sources').innerText(),/guided-synthetic-plan\.txt/);

@@ -20,6 +20,7 @@ test('visible text contrast, labeled controls and keyboard skip navigation in bo
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement.className), 'skip');
     await page.keyboard.press('Enter');
+    await page.waitForURL(/#main$/);
     assert.match(page.url(), /#main$/);
     await showAllTools(page);
     const problems = await page.evaluate(() => [...document.querySelectorAll('input,select,textarea')].filter(node => !node.labels?.length && !node.getAttribute('aria-label') && !node.getAttribute('aria-labelledby')).map(node => node.id));
