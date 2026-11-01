@@ -106,6 +106,7 @@ test(`${profile} developer core reports a missing Qwen pack and keeps a working 
  try{
   await page.goto(target);await idle(page);await page.locator('#guide-start').click();await guide(page,'qwen');
   await page.locator('#start-qwen').click();await page.waitForFunction(()=>!document.querySelector('#qwen-error').hidden,null,{timeout:30000});await idle(page);
+  await page.waitForFunction(()=>document.activeElement.id==='start-qwen',null,{timeout:10000});
   assert.match(await page.locator('#qwen-error').innerText(),/complete.*office|office.*package|included.*package/i,'The error points to the complete office delivery instead of asking the user to assemble a model');
   assert.equal(await page.locator('#qwen-next').isDisabled(),true,'Failed model startup never claims readiness');
   assert.equal(await page.locator('#qwen-skip').isEnabled(),true);
@@ -138,7 +139,9 @@ test('supplementary HTTP only Qwen setup cancels a pending local part, rejects a
   await idle(page);releasePart();
   assert.equal(await page.locator('#qwen-next').isDisabled(),true);assert.doesNotMatch(await page.locator('#assistant-state').innerText(),/Qwen.*Ready/i);
   assert.match(await page.locator('#qwen-error').innerText(),/cancel/i,'Cancellation is acknowledged without a false ready state');
+  await page.waitForFunction(()=>document.activeElement.id==='start-qwen',null,{timeout:10000});
   await page.locator('#start-qwen').click();await page.waitForFunction(()=>!document.querySelector('#qwen-error').hidden);await idle(page);
+  await page.waitForFunction(()=>document.activeElement.id==='start-qwen',null,{timeout:10000});
   assert.equal(parts,2,'Retry opens the local pack again instead of remaining stuck in loading');
   assert.match(await page.locator('#qwen-error').innerText(),/incomplete|integrity|extract/i);
   assert.doesNotMatch(await page.locator('#qwen-error').innerText(),/already running/i);
