@@ -24,7 +24,7 @@ test('18,000-record worker import, retrieval, bounded graph, far-record viewer a
     await page.locator('#files').setInputFiles({name:'synthetic-workload.txt',mimeType:'text/plain',buffer:Buffer.from(text)});
     await page.waitForFunction(()=>!document.querySelector('#files').disabled,{},{timeout:25000});
     metrics.importMs=Math.round(performance.now()-since);assert.ok(metrics.importMs<15000,'worker import completes within the development guard');
-    assert.match(await page.locator('#sources').innerText(),/18000 records/);
+    assert.match(await page.locator('#sources').innerText(),/18000 passages/);
     since=performance.now();await page.locator('#query').fill('FarRecord17912');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);
     metrics.keywordMs=Math.round(performance.now()-since);assert.match(await page.locator('#results').innerText(),/FarRecord17912/);
     await page.locator('#results').getByRole('button',{name:'View evidence'}).click();await page.waitForFunction(()=>document.querySelector('#source-view').open);
