@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create and validate portable ZIPs. Preparation runs outside the office only."""
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -23,7 +24,7 @@ parser.add_argument('--office', action='store_true',
                     help='Include the verified generation model. No preparation is needed at the office.')
 args = parser.parse_args()
 if args.out is None:
-    args.out = root / 'dist' / ('PBGC-RAG-0.6-office.zip' if args.office else 'PBGC-RAG-0.6.zip')
+    args.out = root / 'dist' / ('PBGC-RAG-0.7-office.zip' if args.office else 'PBGC-RAG-0.7.zip')
 paths = [root / 'index.html', root / 'README.md', root / 'ACCEPTANCE.md', root / 'BLOCKERS.md']
 paths += sorted((root / 'assets').glob('*.js')) + sorted((root / 'assets').glob('*.css'))
 paths += sorted(p for p in (root / 'docs').rglob('*') if p.is_file() and p.suffix in {'.md','.json','.log'})
@@ -45,7 +46,36 @@ if args.office:
             or sha256_file(model_path) != spec['sha256']):
         raise SystemExit('Office model is missing or failed its pinned size/SHA-256 check. '
                          'Prepare the model outside the office before packaging.')
-    entries['models/' + spec['name']] = model_path
+    # Classic local scripts work under file:// without asking the user to locate
+    # a separate model file. The original GGUF is developer input only: shipping
+    # it as well would duplicate the large model in the office download.
+    pack_dir = root / 'dist' / 'office-model'
+    pack_dir.mkdir(parents=True, exist_ok=True)
+    chunks = []
+    whole = hashlib.sha256()
+    total = 0
+    with model_path.open('rb') as source:
+        for index, chunk in enumerate(iter(lambda: source.read(8 * 1024 * 1024), b'')):
+            name = f'qwen-part-{index:03d}.js'
+            metadata = {'path': 'models/' + name, 'bytes': len(chunk),
+                        'sha256': hashlib.sha256(chunk).hexdigest()}
+            content = 'globalThis.PBGCQwenPart=' + json.dumps(
+                {'index': index, 'data': base64.b64encode(chunk).decode('ascii')},
+                separators=(',', ':')) + ';\n'
+            part_path = pack_dir / name
+            part_path.write_text(content, encoding='ascii', newline='\n')
+            entries[metadata['path']] = part_path
+            chunks.append(metadata)
+            whole.update(chunk)
+            total += len(chunk)
+    if total != spec['bytes'] or whole.hexdigest() != spec['sha256']:
+        raise SystemExit('Office model changed while preparing its local script pack.')
+    pack = {'schemaVersion': 1, 'model': model_manifest,
+            'chunks': chunks, 'totalBytes': total}
+    pack_path = pack_dir / 'qwen-pack.js'
+    pack_path.write_text('globalThis.PBGCQwenPack=' + json.dumps(
+        pack, separators=(',', ':')) + ';\n', encoding='ascii', newline='\n')
+    entries['models/qwen-pack.js'] = pack_path
     entries['models/' + manifest_path.name] = manifest_path
     entries['models/LICENSE.Qwen2.5'] = root / 'vendor' / 'local-llm' / 'LICENSE.Qwen2.5'
     entries['OFFICE-START.md'] = root / 'docs' / 'OFFICE-START.md'
@@ -56,18 +86,18 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
     ref = match[1]
     if '://' in ref or not (root / ref).is_file():
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
-manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.6',
+manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.7',
             'distribution': 'complete-offline-office' if args.office else 'core-without-generation-weights',
             'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
             'files': [{'path': name, 'bytes': path.stat().st_size,
                        'sha256': sha256_file(path)} for name, path in sorted(entries.items())]}
 if model_manifest:
     manifest['includedGenerationModel'] = model_manifest
+    manifest['generationModelEncoding'] = 'classic-base64-chunks-v1'
 args.out.parent.mkdir(parents=True, exist_ok=True)
 with zipfile.ZipFile(args.out, 'w', compression=zipfile.ZIP_DEFLATED) as package:
     for name, path in sorted(entries.items()):
-        # The quantized model is already dense; storing it avoids slow preparation/extraction.
-        package.write(path, name, compress_type=zipfile.ZIP_STORED if path.suffix.lower() == '.gguf' else zipfile.ZIP_DEFLATED)
+        package.write(path, name)
     package.writestr('build-manifest.json', json.dumps(manifest, indent=2))
 with zipfile.ZipFile(args.out) as package:
     if package.testzip():
@@ -79,6 +109,33 @@ with zipfile.ZipFile(args.out) as package:
                 digest.update(block)
         if digest.hexdigest() != item['sha256']:
             raise SystemExit(f"Hash mismatch: {item['path']}")
+    if model_manifest:
+        # Verify the delivered scripts reconstruct the exact pinned original.
+        # Parse JSON only; packaging verification never executes model scripts.
+        pack_text = package.read('models/qwen-pack.js').decode('ascii')
+        prefix = 'globalThis.PBGCQwenPack='
+        if not pack_text.startswith(prefix) or not pack_text.endswith(';\n'):
+            raise SystemExit('Invalid delivered model pack wrapper')
+        delivered = json.loads(pack_text[len(prefix):-2])
+        if delivered != pack:
+            raise SystemExit('Delivered model pack manifest differs from preparation')
+        decoded_hash = hashlib.sha256()
+        decoded_bytes = 0
+        for index, part in enumerate(delivered['chunks']):
+            text = package.read(part['path']).decode('ascii')
+            prefix = 'globalThis.PBGCQwenPart='
+            if not text.startswith(prefix) or not text.endswith(';\n'):
+                raise SystemExit('Invalid delivered model chunk wrapper')
+            value = json.loads(text[len(prefix):-2])
+            if value.get('index') != index or set(value) != {'index', 'data'}:
+                raise SystemExit('Invalid delivered model chunk order')
+            chunk = base64.b64decode(value['data'], validate=True)
+            if len(chunk) != part['bytes'] or hashlib.sha256(chunk).hexdigest() != part['sha256']:
+                raise SystemExit('Delivered model chunk integrity failed')
+            decoded_hash.update(chunk)
+            decoded_bytes += len(chunk)
+        if decoded_bytes != spec['bytes'] or decoded_hash.hexdigest() != spec['sha256']:
+            raise SystemExit('Delivered model scripts do not reconstruct the pinned model')
 print(json.dumps({'path': str(args.out), 'distribution': manifest['distribution'],
                   'files': len(entries), 'bytes': args.out.stat().st_size,
                   'sha256': sha256_file(args.out)}))

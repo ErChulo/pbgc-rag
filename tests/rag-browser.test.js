@@ -1,5 +1,5 @@
 'use strict';
-const {showAllTools, openModelSetup}=require('./helpers/ui.js');
+const {showAllTools, openManualModel}=require('./helpers/ui.js');
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
@@ -62,8 +62,7 @@ test(`${profile} REAL Qwen grounded generation UI, cancellation and model memory
   try{
     await addCase(page,'Synthetic RAG generation','Normal retirement age is 65.');
     await page.evaluate(()=>{const create=PBGCRag.createLocalLlmProvider;PBGCRag.createLocalLlmProvider=async options=>{const provider=await create(options);const generate=provider.generate.bind(provider);provider.generate=async request=>{try{globalThis.__realQwenPartial='';const output=await generate({...request,onToken:token=>{globalThis.__realQwenPartial+=token;request.onToken?.(token);}});globalThis.__realQwenOutput=output;return output;}catch(error){globalThis.__realQwenOutput=error.message+'; partial: '+globalThis.__realQwenPartial;throw error;}};return provider;};});
-    await openModelSetup(page);
-    await page.getByText('Advanced model options',{exact:true}).click();
+    await openManualModel(page);
     await page.locator('#rag-model-files').setInputFiles(model);
     await page.locator('#rag-model-manifest').setInputFiles(path.resolve(__dirname,'../vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'));
     const started=performance.now();await page.locator('#load-rag-model').click();

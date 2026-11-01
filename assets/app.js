@@ -52,7 +52,7 @@
   async function operation(fn, cancelable = false) {
     if (busy) return;
     busy = true; abortRequested = false; operationAbort = new AbortController();
-    document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = true; });
+    document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = true; });flowUI?.refresh(workspace(),busy);
     $('cancel-operation').hidden = !cancelable; $('cancel-operation').disabled = false;
     $('progress').hidden = !cancelable;
     try { await fn(); } catch (error) { status(error.message || 'Operation failed.'); }
@@ -512,11 +512,14 @@
     const light = document.body.classList.toggle('light'); $('theme-toggle').textContent = light ? 'Use dark theme' : 'Use light theme';
   });
   function route() {
-    const page=['#help','#case-review'].includes(location.hash)?location.hash:'#workspace';
+    const page=['#help','#case-review'].includes(location.hash)?location.hash:'#workspace';if(page!=='#workspace')flowUI?.exit();
     for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
     document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
-  flowUI=API.mountFlow();
+  flowUI=API.mountFlow({cancel:()=>{abortRequested=true;operationAbort?.abort();},start:async sample=>{
+    if(workspace()&&!sample)return;
+    await operation(async()=>{const c=newCase(sample?'Guided example':'My first case');if(sample)c.sources.push(await sourceFromBytes('synthetic-plan.txt',new TextEncoder().encode('SYNTHETIC PLAN — test data only\nNormal retirement age is 65.\nThis example is not an official plan provision.\n')));await commit({...catalog,activeId:c.id,cases:[...catalog.cases,c]});status(sample?'Example documents are ready.':'Your first case is ready. Add a document to continue.');});
+  }});
   ragUI=API.mountRag({getWorkspace:workspace,operation,getSignal:()=>operationAbort.signal,cancel:()=>{abortRequested=true;operationAbort?.abort();},openSource});
   caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();

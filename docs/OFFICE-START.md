@@ -1,27 +1,27 @@
-# Open the complete office package
+# Start PBGC-RAG
 
-The complete `PBGC-RAG-0.6-office.zip` contains the application, sentence encoder, generation runtime and Qwen generation model. Keep all extracted folders together.
+1. Download the complete **PBGC-RAG-0.7-office.zip** and extract it to a local folder.
+2. Double-click **index.html**.
+3. Follow the on-screen welcome guide. It explains the included **Qwen** assistant, helps you start it, then takes you through adding documents and asking your first question.
 
-1. Extract the ZIP to a local folder.
-2. Double-click `index.html`.
-3. Create a case in **1. Case**. Add files in **2. Documents**, then click **Continue to questions**.
-4. For written answers, use the visible **Enable offline answers** card in **3. Ask**. Select the included `models/qwen2.5-0.5b-instruct-q4_k_m.gguf` and click **Enable offline answers**. The supplied model manifest is already the default.
-5. Ask a question and use **View evidence** to read its source.
+**Qwen is already included.** Starting offline answers reads the files supplied inside this package. You do not need to find a model file, choose a model type, download weights, or install anything. Keep the extracted **assets**, **vendor** and **models** folders with **index.html**. The app may take time to prepare Qwen on the local CPU; progress and cancellation are shown.
 
-These are browser and file-picker actions. No terminal, Python, Node, installation, local server or internet connection is needed at the office. The model is already supplied; the application does not download it. Load the model again after closing/reopening the browser or cancelling generation. Model loading and answers use the local CPU and can take time.
+No terminal, Python, Node, installation, local server or internet connection is required at the office. Preparation and testing are the developer's responsibility.
 
-The `models` files are application assets. Do not import them as case documents. Use **Add your documents** only for the documents you want to review.
+## Your first question
 
-An organization may block local browser scripts, workers or WebAssembly. The application reports unsupported capabilities; do not change or bypass workplace policy. Answers and citations are review aids, not official actuarial approval. Use synthetic documents in this development build.
+The guide helps you start a case, add documents and ask a question. A case keeps a set of documents together. Try the supplied synthetic example if you want to learn before adding a file. Read the source passages linked to each answer; generated answers remain review aids.
 
-## Preparation outside the office
-
-Preparation and automated tests are the developer's responsibility. The core developer ZIP and GitHub source archive omit the large generation weights and are not the complete office delivery. Do not run preparation commands at the office.
+You can also read source passages without starting Qwen. Search finds a specific passage. Save & reopen downloads a case file or opens a file you saved earlier. Save a case file before closing the app; browser recovery is best effort.
 
 ## Scanned PDFs
 
-Enable **Read text from scanned PDF pages** before adding an image-only PDF. The English OCR engine and model are already included. Check machine-read words and numbers against the original page. There is no extra download or setup. Pages that already contain native text are not OCR-processed.
+Enable scanned-page reading before adding an image-only PDF. If an imported PDF has no readable text, its document entry offers **Read scanned pages**. English recognition assets are included. Check machine-read words and numbers against the original page. Pages that already contain native text are not OCR-processed.
 
-## Finding your way
+## Keeping the package complete
 
-**1. Case → 2. Documents → 3. Ask** is the main path. **Search** finds a specific passage. **Save & reopen** downloads a case file or opens a saved one. Read source passages without model setup, or enable written offline answers. Advanced report, query, model and recovery options are available when needed; **Show all tools** opens the full workspace.
+The **models** folder contains local application files. Do not import these files as case documents, rename individual parts, or move them away from the app. The source-code ZIP and small core developer ZIP do not contain the Qwen files and are not the complete office delivery.
+
+Closing the browser or cancelling an active generation can release Qwen from memory. Start offline answers again when prompted; the included files remain on disk and no new download is needed.
+
+An organization may block local scripts, workers or WebAssembly. The app reports unsupported capabilities; do not change or bypass workplace policy. Use synthetic documents in this development build. Answers and citations are not official actuarial approval.

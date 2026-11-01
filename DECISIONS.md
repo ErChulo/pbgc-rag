@@ -41,3 +41,7 @@ A core source ZIP plus an outside download/preparation command is not an office 
 ### 0.6: task-focused workspace
 
 Use one visible workspace task by default. Keep Search and Save/reopen reachable; retain a deliberate All tools view for expert workflows and broad regression tests. Keep included-model setup explicit and visible on Ask, because file:// security requires a user-selected model. Verify the guided path separately through actual source passages and complete-package Qwen tests. Keep case/source schemas unchanged; package version advances to 0.6.
+
+### 0.7: remove the model-picker prerequisite
+
+Ship the complete office model as bounded local classic-script chunks. Browser file:// security allows shipped scripts to load without granting arbitrary filesystem access; no network, server, user model selection or automatic download is introduced. Keep original model pinning and full decoded SHA verification. Do not include a duplicate raw GGUF in the office archive. Measure this new reconstruction path's whole-process peak separately. Use an inline first-run wizard with automatic first case, automatic scanned-page processing, a complete example, honest progress and reduced-motion support. Preserve advanced/manual workflows behind an explicit workspace route.

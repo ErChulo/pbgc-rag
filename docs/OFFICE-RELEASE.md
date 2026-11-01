@@ -1,9 +1,9 @@
-Download **PBGC-RAG-0.6-office.zip** below. It includes the application, local sentence encoder, Qwen generation model, runtimes, English OCR assets and licenses.
+Download **PBGC-RAG-0.7-office.zip** below, extract it, and open **index.html**.
 
-Extract the ZIP before opening **index.html**. All processing stays on the computer. No terminal, Python, installation, server or network is needed at the office.
+The welcome guide walks through starting **Qwen**, adding documents and asking a first question. Qwen is already included and starts from the package's local files: **no model picker, model download or technical setup is needed**. English scanned-PDF recognition assets, sentence encoder, runtimes and licenses are included too.
 
-For generated answers, expand **Enable offline answers**, select the included GGUF file in **models**, then click **Enable offline answers**. This is a normal browser file selection; no model download or assembly is required.
+Keep all extracted folders together. No terminal, Python, installation, local server or internet connection is needed at the office. All processing stays on the computer. Save a case file before closing the app.
 
-The extracted package is tested with actual file URLs and browser network access disabled, using real Qwen inference on synthetic documents, on Ubuntu and Windows before release. Source quotations remain available with each accepted answer. Authoritative PBGC interpretation and locked-down workplace browser approval remain separate acceptance gates.
+The complete package must pass real Qwen inference and scanned-PDF tests with actual file URLs and browser networking disabled on Windows and Ubuntu before this release is published. Its uploaded/downloaded ZIP bytes are checked against the tested artifact. Read the source passages supplied with answers and check machine-read scan text against the original page.
 
-Scanned PDFs: enable **Read text from scanned PDF pages** before import. Machine-read text is marked and needs review against the original image. No additional assets are downloaded.
+The independent development build is not an approved PBGC product. Authoritative PBGC interpretation and actual workplace browser approval remain separate acceptance gates.

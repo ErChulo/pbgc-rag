@@ -243,7 +243,7 @@ async function runBenchmark(options = {}) {
     page=await context.newPage();const external=[];
     context.on('request',request=>{const url=request.url();if(/^https?:|^wss?:/.test(url)&&(profile!=='http'||!url.startsWith(new URL(target).origin+'/')))external.push('external request');});
     await context.route(/^https?:\/\//,route=>profile==='http'&&route.request().url().startsWith(new URL(target).origin+'/')?route.continue():route.abort());
-    await page.goto(target);await page.locator('#all-tools').click();await page.waitForFunction(()=>!!globalThis.PBGCRag?.answerQuestion);report.stagesMs.browserLaunchAndEntry=Date.now()-at;
+    await page.goto(target);await page.locator('#guide-skip').click();await page.locator('#all-tools').click();await page.waitForFunction(()=>!!globalThis.PBGCRag?.answerQuestion);report.stagesMs.browserLaunchAndEntry=Date.now()-at;
     await page.addScriptTag({url:new URL('vendor/local-llm/wllama-classic.js',target).href});
     await page.evaluate(()=>{const input=document.createElement('input');input.type='file';input.id='resource-model-file';document.body.append(input);globalThis.__resourceAbort=new AbortController();});
     await page.locator('#resource-model-file').setInputFiles(modelPath);

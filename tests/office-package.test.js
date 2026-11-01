@@ -1,5 +1,4 @@
 'use strict';
-const {openModelSetup}=require('./helpers/ui.js');
 // Development acceptance test. The extracted office app needs none of these tools.
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
@@ -12,9 +11,10 @@ const crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process');
 const {pathToFileURL}=require('node:url');
 const {chromium}=require('playwright');
+const {monitorResources,DEFAULT_BUDGET}=require('../tools/measure-resources.js');
 const {syntheticImagePdf}=require('./helpers/ocr-fixture.js');
 const ROOT=path.resolve(__dirname,'..');
-const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.6-office.zip');
+const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.7-office.zip');
 const FILE=process.env.PBGC_OFFICE_FILE==='1';
 const MODEL='qwen2.5-0.5b-instruct-q4_k_m.gguf';
 const MODEL_BYTES=491400032;
@@ -43,7 +43,7 @@ test(`${FILE?'actual offline file://':'supplementary HTTP only'} complete extrac
 },async t=>{
   assert.ok(fs.existsSync(ZIP),'Required complete office ZIP is absent. Build it before running the office gate.');
   const temporary=await fsp.mkdtemp(path.join(os.tmpdir(),'pbgc office package ')),extracted=path.join(temporary,'Extracted office app with spaces');
-  let server,browser,context;
+  let server,browser,context,monitor,resourceError;
   try{
     // Python is development tooling only; the delivered ZIP contains the ready model.
     execFileSync('python',['-c',`import pathlib,stat,sys,zipfile
@@ -56,8 +56,10 @@ with zipfile.ZipFile(sys.argv[1]) as z:
  z.extractall(sys.argv[2])`,ZIP,extracted],{maxBuffer:1024*1024});
     const manifest=JSON.parse(await fsp.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
     assert.equal(manifest.kind,'pbgc-rag-workplace-build');assert.equal(manifest.official,false);
-    const modelEntry=manifest.files.find(entry=>entry.path==='models/'+MODEL);assert.ok(modelEntry,'Model is inside this ZIP, not an external prerequisite');
-    assert.equal(modelEntry.bytes,MODEL_BYTES);assert.equal(modelEntry.sha256,MODEL_SHA);
+    assert.ok(manifest.includedGenerationModel,'The complete delivery identifies its bundled Qwen model');
+    assert.equal(manifest.includedGenerationModel.files[0].bytes,MODEL_BYTES);
+    assert.equal(manifest.includedGenerationModel.files[0].sha256,MODEL_SHA);
+    assert.ok(manifest.files.some(entry=>entry.path.startsWith('models/')&&entry.path.endsWith('.js')),'Qwen is inside classic offline script assets, not a user-selected prerequisite');
     assert.ok(manifest.files.some(entry=>entry.path==='models/LICENSE.Qwen2.5'),'Model license is delivered');
     assert.ok(manifest.files.some(entry=>entry.path==='OFFICE-START.md'),'Office-only instructions are delivered');
     for(const entry of manifest.files){
@@ -66,12 +68,13 @@ with zipfile.ZipFile(sys.argv[1]) as z:
       assert.equal((await fsp.stat(file)).size,entry.bytes,entry.path+' byte length');
       assert.equal(await hashFile(file),entry.sha256,entry.path+' exact bytes');
     }
-    const modelPath=path.join(extracted,'models',MODEL),modelManifest=JSON.parse(await fsp.readFile(path.join(extracted,'models/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
+    const modelManifest=JSON.parse(await fsp.readFile(path.join(extracted,'models/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
     assert.equal(modelManifest.files[0].sha256,MODEL_SHA);
     const html=await fsp.readFile(path.join(extracted,'index.html'),'utf8');assert.match(html,/connect-src 'none'/);
     const prefix=pathToFileURL(extracted+path.sep).href;
     let target=pathToFileURL(path.join(extracted,'index.html')).href;
     if(!FILE){server=await serve(extracted);target=server.url;}
+    monitor=await monitorResources({onLimit:error=>{resourceError=error;browser?.close().catch(()=>{});}});
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
     context=await browser.newContext();if(FILE)await context.setOffline(true);
     const page=await context.newPage(),external=[],outsidePackage=[],errors=[];
@@ -81,30 +84,35 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     });
     await context.route(/^https?:\/\//,route=>server&&route.request().url().startsWith(server.url)?route.continue():route.abort());
     page.on('pageerror',error=>errors.push(error.message));
-    await page.goto(target);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
-    await page.locator('#case-name').fill('Synthetic offline office package');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#files').disabled);
-    await page.locator('#files').setInputFiles({name:'office-offline-synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Normal retirement age is 65.')});await page.waitForFunction(()=>!document.querySelector('#files').disabled);
-    await page.locator('#continue-ask').click();await openModelSetup(page);await page.locator('#rag-model-files').setInputFiles(modelPath);
-    assert.equal(await page.locator('#rag-model-files').evaluate(input=>input.files[0].name),MODEL);
-    const started=performance.now();await page.locator('#load-rag-model').click();await page.waitForFunction(()=>!document.querySelector('#load-rag-model').disabled,null,{timeout:180000});
+    let fileChoosers=0;page.on('filechooser',()=>fileChoosers++);
+    await page.goto(target);await page.waitForFunction(()=>!document.querySelector('#guide-start').disabled);
+    assert.equal(await page.locator('#welcome').isVisible(),true);
+    await page.locator('#guide-start').click();await page.waitForFunction(()=>document.querySelector('#guide').dataset.step==='qwen');
+    assert.match(await page.locator('#panel-qwen').innerText(),/Qwen/i);
+    const started=performance.now();await page.locator('#start-qwen').click();
+    await page.waitForFunction(()=>!document.querySelector('#qwen-next').disabled,null,{timeout:180000});
+    assert.equal(fileChoosers,0,'The complete office package starts Qwen without asking the user to find any model file');
+    assert.match(await page.locator('#assistant-state').innerText(),/Qwen.*ready|ready.*Qwen/i);
     assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
-    assert.equal(await page.locator('#model-setup').evaluate(node=>node.open),false,'Setup collapses when the included model is ready');
-    assert.equal(await page.locator('#offline-ready').isVisible(),true,'The user sees that offline answers are ready');
-    assert.equal(await page.locator('#all-tools').getAttribute('aria-pressed'),'false','Real office acceptance uses the guided flow');
-    await page.waitForFunction(()=>document.activeElement.id==='rag-question',null,{timeout:10000});
-    await page.locator('#rag-answer-mode').selectOption('generated');await page.locator('#rag-question').fill('What is the normal retirement age?');await page.locator('#ask-question').click();
+    await page.locator('#qwen-next').click();await page.waitForFunction(()=>!document.querySelector('#files').disabled);
+    await page.locator('#files').setInputFiles({name:'office-offline-synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Normal retirement age is 65.')});await page.waitForFunction(()=>!document.querySelector('#files').disabled);
+    await page.locator('#continue-ask').click();await page.waitForFunction(()=>document.querySelector('#guide').dataset.step==='ask');
+    assert.equal(await page.locator('#all-tools').getAttribute('aria-pressed'),'false','Real office acceptance uses the first-run wizard');
+    assert.equal(await page.locator('#rag-answer-mode').inputValue(),'generated','Starting Qwen selects written answers without a second setting');
+    await page.locator('#rag-question').fill('What is the normal retirement age?');await page.locator('#ask-question').click();
     await page.waitForFunction(()=>!document.querySelector('#ask-question').disabled,null,{timeout:180000});
     assert.match(await page.locator('#rag-status').innerText(),/^Generated answer\./);
     assert.match(await page.locator('#rag-answer').innerText(),/\b65\b/);
     const citations=await page.locator('#rag-citations').innerText();assert.match(citations,/office-offline-synthetic\.txt/);assert.match(citations,/Normal retirement age is 65\./);assert.doesNotMatch(citations,/\b[a-f0-9]{64}\b|"offset"|UTF-16/);
     await page.locator('#rag-citations').getByRole('button',{name:'View evidence',exact:true}).click();assert.match(await page.locator('#source-view').innerText(),/Normal retirement age is 65\./);await page.getByRole('button',{name:'Close evidence',exact:true}).click();
-    await page.locator('#flow-documents').click();const scanned=await syntheticImagePdf(page);await page.locator('#pdf-ocr').check();await page.locator('#files').setInputFiles({name:'office-synthetic-scanned.pdf',mimeType:'application/pdf',buffer:scanned});await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});
+    await page.locator('#finish-guide').click();await page.locator('#flow-documents').click();const scanned=await syntheticImagePdf(page);await page.locator('#pdf-ocr').check();await page.locator('#files').setInputFiles({name:'office-synthetic-scanned.pdf',mimeType:'application/pdf',buffer:scanned});await page.waitForFunction(()=>!document.querySelector('#files').disabled,null,{timeout:180000});
     assert.match(await page.locator('#sources').innerText(),/office-synthetic-scanned\.pdf/);assert.match(await page.locator('#sources').innerText(),/machine-read text/i);
     await page.locator('#flow-search').click();await page.locator('#query').fill('retirement');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);assert.match(await page.locator('#results').innerText(),/Machine-read line/);
     await fsp.mkdir(path.join(ROOT,'test-results'),{recursive:true});await page.screenshot({path:path.join(ROOT,'test-results',`office-package-${FILE?'file':'http'}.png`),fullPage:true});
     assert.deepEqual(external,[],'No external connection attempts');assert.deepEqual(outsidePackage,[],'Every loaded file came from the extracted delivery');assert.deepEqual(errors,[]);
-    t.diagnostic(JSON.stringify({profile:FILE?'actual file:// with browser network offline':'supplementary HTTP only',packageBytes:(await fsp.stat(ZIP)).size,manifestFiles:manifest.files.length,modelBytes:MODEL_BYTES,loadAndAnswerMs:Math.round(performance.now()-started),externalRequests:external.length,workplaceNeeds:'Extract ZIP; open index.html; choose included model using the app. No terminal, installation, server or network.'}));
+    const resources=await monitor.stop();monitor=null;assert.equal(resourceError,undefined,resourceError?.message);assert.deepEqual(resources.errors,[]);assert.ok(resources.samples>=2);assert.equal(resources.exceeded,false);assert.ok(resources.peak.budgetMetricBytes<=DEFAULT_BUDGET);await fsp.mkdir(path.join(ROOT,'test-results'),{recursive:true});await fsp.writeFile(path.join(ROOT,'test-results',`office-resources-${FILE?'file':'http'}.json`),JSON.stringify({status:'PASS',scope:'Harness Node and full Chromium descendant tree: bundled Qwen script reconstruction, verified model load, one generated answer and scanned PDF OCR',budgetBytes:DEFAULT_BUDGET,...resources},null,2)+'\n');t.diagnostic(JSON.stringify({bundledStartupPeakWorkloadBytes:resources.peak.budgetMetricBytes,samples:resources.samples,budgetBytes:DEFAULT_BUDGET}));
+    t.diagnostic(JSON.stringify({profile:FILE?'actual file:// with browser network offline':'supplementary HTTP only',packageBytes:(await fsp.stat(ZIP)).size,manifestFiles:manifest.files.length,modelBytes:MODEL_BYTES,loadAndAnswerMs:Math.round(performance.now()-started),externalRequests:external.length,workplaceNeeds:'Extract ZIP; open index.html; click Start and Start Qwen. No model picker, terminal, installation, server or network.'}));
   }finally{
-    if(context)await context.close();if(browser)await browser.close();if(server)await server.close();await fsp.rm(temporary,{recursive:true,force:true,maxRetries:5,retryDelay:200});
+    if(monitor)await monitor.stop();if(context)await context.close();if(browser)await browser.close();if(server)await server.close();await fsp.rm(temporary,{recursive:true,force:true,maxRetries:5,retryDelay:200});
   }
 });

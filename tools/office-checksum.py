@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 p = argparse.ArgumentParser()
 p.add_argument('--verify', action='store_true')
 args = p.parse_args()
-archive = root / 'dist/PBGC-RAG-0.6-office.zip'
+archive = root / 'dist/PBGC-RAG-0.7-office.zip'
 checksum = root / 'dist/SHA256SUMS.txt'
 h = hashlib.sha256()
 with archive.open('rb') as stream:

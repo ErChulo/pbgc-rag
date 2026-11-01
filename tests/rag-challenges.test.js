@@ -1,5 +1,5 @@
 'use strict';
-const {showAllTools, openModelSetup}=require('./helpers/ui.js');
+const {showAllTools, openManualModel}=require('./helpers/ui.js');
 // Independent synthetic release-guard corpus. MOCK generation is deliberately
 // separate from the real learned retrieval test below; neither proves Qwen quality.
 const {test}=require('node:test');
@@ -67,7 +67,7 @@ if(process.env.PBGC_CHALLENGE_QWEN==='1')test('REAL Qwen: fixed four-question fa
   // Capture the actual provider instance returned to the UI, never replace weights,
   // output, runtime or generation behavior with an artificial implementation.
   await page.evaluate(()=>{const create=PBGCRag.createLocalLlmProvider;PBGCRag.createLocalLlmProvider=async options=>{const provider=await create(options);globalThis.__challengeRealProvider=provider;return provider;};});
-  await openModelSetup(page);await page.locator('#rag-model-files').setInputFiles(modelPath);await page.locator('#load-rag-model').click();
+  await openManualModel(page);await page.locator('#rag-model-files').setInputFiles(modelPath);await page.locator('#load-rag-model').click();
   await page.waitForFunction(()=>!document.querySelector('#load-rag-model').disabled,null,{timeout:180000});
   assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
   const positiveSources=sourcesFrom(fixture.generation.positiveSources);
