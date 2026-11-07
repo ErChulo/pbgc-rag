@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "qwen2.5-1.5b-instruct-q3-k-s",
+  "name": "Qwen2.5 1.5B Instruct Q3_K_S",
+  "license": "Apache-2.0",
+  "source": "https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-weights-v1",
+  "chatTemplate": "chatml",
+  "files": [
+    {
+      "name": "qwen2.5-1.5b-instruct-q3_k_s.gguf",
+      "bytes": 760944640,
+      "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d"
+    }
+  ]
+}

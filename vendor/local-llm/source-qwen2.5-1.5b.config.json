@@ -1,0 +1,1 @@
+{"config":{"format":"gguf","quantization":"F16","parameters":"1.54 B","architecture":"qwen2","size":"2.88 GiB"},"descriptor":{"created":"2025-04-08T15:22:24.255083+02:00"},"rootfs":{"type":"rootfs","diff_ids":["sha256:b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee","sha256:609e2cb599f84aaa41d8ef29d8fdb04d164fab22e8d9292ca34a599d0f56a338"]}}

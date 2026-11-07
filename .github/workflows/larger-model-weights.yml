@@ -1,0 +1,57 @@
+name: Prepare pinned experimental larger-model weights
+
+on:
+  push:
+    branches: ['codex/office-delivery-larger-model-0.8']
+    paths:
+      - 'tools/bootstrap-larger-model.py'
+      - 'tools/prepare-larger-model-source.py'
+      - '.github/workflows/larger-model-weights.yml'
+      - 'vendor/local-llm/bundled.manifest.json'
+      - 'vendor/local-llm/larger-model.provenance.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: larger-model-weights-v1
+  cancel-in-progress: false
+
+jobs:
+  weights:
+    if: ${{ github.ref == 'refs/heads/codex/office-delivery-larger-model-0.8' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Build or verify immutable experimental model asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: larger-model-weights-v1
+        run: |
+          set -euo pipefail
+          MODEL_NAME="$(python -c "import importlib.util; s=importlib.util.spec_from_file_location('bootstrap','tools/bootstrap-larger-model.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); import json; print(m.model_spec(json.loads(m.MANIFEST.read_text()))['name'])")"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            EXISTING="$RUNNER_TEMP/existing-larger-model"
+            mkdir -p "$EXISTING"
+            gh release download "$RELEASE_TAG" --dir "$EXISTING" --pattern "$MODEL_NAME" --pattern bundled.manifest.json
+            python tools/bootstrap-larger-model.py --verify-existing "$EXISTING/$MODEL_NAME" --existing-manifest "$EXISTING/bundled.manifest.json"
+          else
+            python tools/bootstrap-larger-model.py
+            cat > "$RUNNER_TEMP/larger-model-weights-notes.md" <<'NOTES'
+          Experimental larger-model GGUF weights for the separate PBGC-RAG larger-model branch.
+
+          This asset is not the office application. The original 0.8 office release and main branch remain separate.
+          The GGUF must match the exact size and SHA-256 in bundled.manifest.json. Office application tests have their own acceptance gates.
+          NOTES
+            gh release create "$RELEASE_TAG" "dist/models/$MODEL_NAME" vendor/local-llm/bundled.manifest.json vendor/local-llm/larger-model.provenance.json \
+              --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Experimental larger-model weights" --notes-file "$RUNNER_TEMP/larger-model-weights-notes.md"
+          fi

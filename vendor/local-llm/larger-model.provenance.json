@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "sourceRegistry": "docker.io/ai/qwen2.5:1.5B-F16",
+  "sourceManifestSha256": "b83c287163f67ba50ebebd583ae0f02fa3f9a8ebe5d4596c6d367460a75d88e6",
+  "sourceModelBytes": 3093669376,
+  "sourceModelSha256": "b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee",
+  "sourceLicenseSha256": "609e2cb599f84aaa41d8ef29d8fdb04d164fab22e8d9292ca34a599d0f56a338",
+  "sourceArchiveUrl": "https://github.com/ggml-org/llama.cpp/archive/4abef75f2cf2eee75eb5083b30a94cf981587394.tar.gz",
+  "sourceArchiveSha256": "8f41d16c7d89699b0bfb0db58f0a50764dd96467333b47435c96f799de735ca2",
+  "llamaCommit": "4abef75f2cf2eee75eb5083b30a94cf981587394",
+  "quantization": "Q3_K_S",
+  "modelParameters": "1.54B",
+  "license": "Apache-2.0",
+  "stableMainCommit": "c429b8fa0ecaa41cd40e92fe162e251bea0ccf61",
+  "stableRelease": "office-v0.8.0",
+  "candidateSizes": {
+    "Q3_K_S": 760944640,
+    "Q3_K_M": 824178688
+  },
+  "maximumModelBytes": 805306368,
+  "selectedModelSha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d"
+}
