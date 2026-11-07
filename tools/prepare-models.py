@@ -99,13 +99,36 @@ def download_recovery(output, spec):
     finally:
         temporary.unlink(missing_ok=True)
 
+def download_larger_model(output, spec):
+    """Fetch the separate experimental pack during development, never at office runtime."""
+    if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*\.gguf', spec['name'])
+            or not 491400032 < spec['bytes'] <= 768 * 1024 * 1024):
+        raise ValueError('Experimental model must be larger than stable and within 768 MiB')
+    url = 'https://github.com/ErChulo/pbgc-rag/releases/download/larger-model-weights-v1/' + spec['name']
+    temporary = output.with_suffix('.download')
+    try:
+        total = 0
+        actual = hashlib.sha256()
+        with urllib.request.urlopen(url, timeout=120) as response, temporary.open('wb') as target:
+            while block := response.read(1024 * 1024):
+                total += len(block)
+                if total > spec['bytes']:
+                    raise ValueError('Experimental download exceeds pinned model byte count')
+                actual.update(block)
+                target.write(block)
+        if total != spec['bytes'] or actual.hexdigest() != spec['sha256']:
+            raise ValueError('Experimental model integrity check failed')
+        temporary.replace(output)
+    finally:
+        temporary.unlink(missing_ok=True)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, default=ROOT / 'dist' / 'models')
     parser.add_argument('--parts-dir', type=Path, help='Use already downloaded parts; no network.')
     parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
-    manifest_path = ROOT / 'vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'
+    manifest_path = ROOT / 'vendor/local-llm/bundled.manifest.json'
     manifest = json.loads(manifest_path.read_text())
     spec = manifest['files'][0]
     args.out.mkdir(parents=True, exist_ok=True)
@@ -113,6 +136,14 @@ def main():
     if not (output.is_file() and output.stat().st_size == spec['bytes'] and digest(output) == spec['sha256']):
         if args.verify_only:
             raise SystemExit('FAIL: prepared model missing or integrity check failed')
+        if manifest['id'] != 'qwen2.5-0.5b-instruct-q4-k-m':
+            if args.parts_dir:
+                raise SystemExit('The larger model uses a separate complete GGUF, not the stable six-part pack.')
+            download_larger_model(output, spec)
+            shutil.copyfile(manifest_path, args.out / manifest_path.name)
+            shutil.copyfile(ROOT / 'vendor/local-llm/LICENSE.Qwen2.5', args.out / 'LICENSE.Qwen2.5')
+            print(json.dumps({'status':'PASS','path':str(output),'bytes':spec['bytes'],'sha256':spec['sha256']}))
+            return
         try:
             parts_dir = args.parts_dir or args.out / '.parts'
             parts_dir.mkdir(parents=True, exist_ok=True)

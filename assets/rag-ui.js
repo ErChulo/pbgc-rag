@@ -1,6 +1,6 @@
 /* Offline question flow. Model files are never imported as case documents. */
 (function(root){'use strict';const API=root.PBGCRag;
-const DEFAULT_MODEL={schemaVersion:1,id:'qwen2.5-0.5b-instruct-q4-k-m',name:'Qwen2.5 0.5B Instruct Q4_K_M',license:'Apache-2.0',source:'https://github.com/rtynbirf/singulyar-llm/releases/tag/weights-v1',chatTemplate:'chatml',files:[{name:'qwen2.5-0.5b-instruct-q4_k_m.gguf',bytes:491400032,sha256:'74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db'}]};
+const DEFAULT_MODEL=API.BUNDLED_MODEL;
 let runtimePromise;
 function loadRuntime(){if(root.PBGCRagWllama)return Promise.resolve();if(!runtimePromise)runtimePromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='vendor/local-llm/wllama-classic.js';script.onload=resolve;script.onerror=()=>{runtimePromise=null;script.remove();reject(Error('The bundled local generation runtime could not load.'));};document.head.append(script);});return runtimePromise;}
 API.mountRag=function(host){const $=id=>document.getElementById(id),el=(tag,text)=>{const node=document.createElement(tag);node.textContent=text;return node;};let model=null,embedding=null,index=null,chunks=[],key='',scopeId;

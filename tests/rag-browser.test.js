@@ -7,7 +7,9 @@ const fs=require('node:fs');
 const {pathToFileURL}=require('node:url');
 const {chromium}=require('playwright');
 const target=process.env.PBGC_TEST_URL||pathToFileURL(path.resolve(__dirname,'../index.html')).href;
-const model=process.env.PBGC_LLM_MODEL||path.resolve(__dirname,'../dist/models/qwen2.5-0.5b-instruct-q4_k_m.gguf');
+const MODEL_MANIFEST=require('../vendor/local-llm/bundled.manifest.json');
+const MODEL_SPEC=MODEL_MANIFEST.files[0];
+const model=process.env.PBGC_LLM_MODEL||process.env.PBGC_MODEL_PATH||path.resolve(__dirname,'../dist/models',MODEL_SPEC.name);
 const profile=target.startsWith('file:')?'actual file://':'supplementary HTTP only';
 async function launch(){
   const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -64,10 +66,10 @@ test(`${profile} REAL Qwen grounded generation UI, cancellation and model memory
     await page.evaluate(()=>{const create=PBGCRag.createLocalLlmProvider;PBGCRag.createLocalLlmProvider=async options=>{const provider=await create(options);const generate=provider.generate.bind(provider);provider.generate=async request=>{try{globalThis.__realQwenPartial='';const output=await generate({...request,onToken:token=>{globalThis.__realQwenPartial+=token;request.onToken?.(token);}});globalThis.__realQwenOutput=output;return output;}catch(error){globalThis.__realQwenOutput=error.message+'; partial: '+globalThis.__realQwenPartial;throw error;}};return provider;};});
     await openManualModel(page);
     await page.locator('#rag-model-files').setInputFiles(model);
-    await page.locator('#rag-model-manifest').setInputFiles(path.resolve(__dirname,'../vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'));
+    await page.locator('#rag-model-manifest').setInputFiles(path.resolve(__dirname,'../vendor/local-llm/bundled.manifest.json'));
     const started=performance.now();await page.locator('#load-rag-model').click();
     await page.waitForFunction(()=>!document.querySelector('#load-rag-model').disabled,null,{timeout:180000});
-    assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
+    const modelStatus=await page.locator('#rag-model-status').textContent();assert.ok(modelStatus.includes(MODEL_MANIFEST.name));assert.match(modelStatus,/loaded/i);
     await page.locator('#rag-answer-mode').selectOption('generated');
     await ask(page,'What is the normal retirement age?');
     assert.match(await page.locator('#rag-answer').innerText(),/65/,(await page.locator('#rag-status').innerText())+'; real model output: '+await page.evaluate(()=>globalThis.__realQwenOutput));
@@ -75,7 +77,7 @@ test(`${profile} REAL Qwen grounded generation UI, cancellation and model memory
     assert.match(await page.locator('#rag-status').innerText(),/^Generated answer\./);
     const raw=await page.evaluate(()=>globalThis.__realQwenOutput);assert.equal(typeof raw,'string');assert.match(raw,/65/);assert.doesNotMatch(raw,/^[{\[]|```/,'local model emits a plain answer; code selects its exact supporting source sentence');
     fs.mkdirSync(path.resolve(__dirname,'../test-results'),{recursive:true});await page.screenshot({path:path.resolve(__dirname,'../test-results/rag-ui.png'),fullPage:true});
-    t.diagnostic(JSON.stringify({model:'Qwen2.5-0.5B-Instruct-Q4_K_M',loadAndAnswerMs:Math.round(performance.now()-started),profile,scope:'One synthetic factual answer; not production actuarial quality.'}));
+    t.diagnostic(JSON.stringify({model:MODEL_MANIFEST.id,loadAndAnswerMs:Math.round(performance.now()-started),profile,scope:'One synthetic factual answer; not production actuarial quality.'}));
     await page.locator('#rag-question').fill('What is the normal retirement age?');await page.locator('#ask-question').click();
     await page.waitForFunction(()=>document.querySelector('#rag-status').textContent.includes('Drafting'),null,{timeout:30000});
     await page.locator('#rag-cancel').click();await page.waitForFunction(()=>!document.querySelector('#ask-question').disabled,null,{timeout:30000});

@@ -6,12 +6,14 @@ const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
-const modelPath=process.env.PBGC_MODEL_PATH||path.join(root,'dist/models/qwen2.5-0.5b-instruct-q4_k_m.gguf');
+const MODEL_MANIFEST=require('../vendor/local-llm/bundled.manifest.json');
+const MODEL_SPEC=MODEL_MANIFEST.files[0];
+const modelPath=process.env.PBGC_MODEL_PATH||process.env.PBGC_LLM_MODEL||path.join(root,'dist/models',MODEL_SPEC.name);
 const required=process.env.PBGC_REQUIRE_MODEL==='1';
 const targetURL=process.env.PBGC_TEST_URL||pathToFileURL(path.join(root,'index.html')).href;
 test('local model manifest rejects altered, unbounded and unsupported metadata',()=>{
   const api=require('../assets/local-llm.js');
-  const manifest=JSON.parse(fs.readFileSync(path.join(root,'vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
+  const manifest=structuredClone(MODEL_MANIFEST);
   assert.deepEqual(api.validateLocalModelManifest(manifest),manifest);
   for(const edit of [m=>m.schemaVersion=2,m=>m.files[0].sha256='wrong',m=>m.files[0].bytes=769*1024*1024,m=>m.files[0].name='../model.gguf',m=>m.chatTemplate='unknown',m=>m.files.push({...m.files[0]}),m=>m.license='']){
     const invalid=structuredClone(manifest);edit(invalid);assert.throws(()=>api.validateLocalModelManifest(invalid),{code:'INVALID_MANIFEST'});
@@ -19,7 +21,7 @@ test('local model manifest rejects altered, unbounded and unsupported metadata',
 });
 test(`${targetURL.startsWith('file:')?'actual file://':'supplementary HTTP only'} real local GGUF inference, cancellation and network isolation`,{timeout:240000,skip:!required&&!fs.existsSync(modelPath)?'Local model pack absent; set PBGC_MODEL_PATH and PBGC_REQUIRE_MODEL=1 for mandatory inference gate':false},async()=>{
   assert.ok(fs.existsSync(modelPath),'Required GGUF model is absent');
-  const manifest=JSON.parse(fs.readFileSync(path.join(root,'vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
+  const manifest=structuredClone(MODEL_MANIFEST);
   const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
   try{
     const context=await browser.newContext(),page=await context.newPage(),external=[];
@@ -42,7 +44,7 @@ test(`${targetURL.startsWith('file:')?'actual file://':'supplementary HTTP only'
       await provider.dispose();return{output,loadedMs,generatedMs,info,cancellation,afterCancel,reloadRequired};
     },manifest);
     assert.match(result.output,/\b65\b/);assert.match(result.output,/retirement/i);
-    assert.equal(result.info.cpuOnly,true);assert.equal(result.info.threads,1);assert.equal(result.info.modelBytes,491400032);
+    assert.equal(result.info.cpuOnly,true);assert.equal(result.info.threads,1);assert.equal(result.info.modelBytes,MODEL_SPEC.bytes);assert.equal(result.info.sha256,MODEL_SPEC.sha256);assert.equal(result.info.model,MODEL_MANIFEST.name);
     assert.equal(result.cancellation,'AbortError');assert.equal(result.afterCancel.disposed,true);assert.equal(result.afterCancel.loaded,false);assert.equal(result.reloadRequired,'DISPOSED');
     assert.deepEqual(external,[]);
     console.log(JSON.stringify({model:manifest.id,loadMs:Math.round(result.loadedMs),generationMs:Math.round(result.generatedMs),cpuThreads:1,externalRequests:external.length}));

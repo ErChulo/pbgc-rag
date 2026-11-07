@@ -24,7 +24,7 @@ parser.add_argument('--office', action='store_true',
                     help='Include the verified generation model. No preparation is needed at the office.')
 args = parser.parse_args()
 if args.out is None:
-    args.out = root / 'dist' / ('PBGC-RAG-0.8-office.zip' if args.office else 'PBGC-RAG-0.8.zip')
+    args.out = root / 'dist' / ('PBGC-RAG-0.8-larger-model-office.zip' if args.office else 'PBGC-RAG-0.8-larger-model.zip')
 paths = [root / 'index.html', root / 'README.md', root / 'ACCEPTANCE.md', root / 'BLOCKERS.md']
 paths += sorted((root / 'assets').glob('*.js')) + sorted((root / 'assets').glob('*.css'))
 paths += sorted(p for p in (root / 'docs').rglob('*') if p.is_file() and p.suffix in {'.md','.json','.log'})
@@ -34,7 +34,7 @@ paths = sorted({p for p in paths if p.is_file() and p.suffix.lower() != '.gguf'}
 entries = {path.relative_to(root).as_posix(): path for path in paths}
 model_manifest = None
 if args.office:
-    manifest_path = root / 'vendor' / 'local-llm' / 'qwen2.5-0.5b-instruct.manifest.json'
+    manifest_path = root / 'vendor' / 'local-llm' / 'bundled.manifest.json'
     model_manifest = json.loads(manifest_path.read_text())
     if model_manifest.get('schemaVersion') != 1 or len(model_manifest.get('files', [])) != 1:
         raise SystemExit('Office model manifest must identify exactly one supported model.')
@@ -88,7 +88,7 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
 manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '0.8',
             'distribution': 'complete-offline-office' if args.office else 'core-without-generation-weights',
-            'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
+            'modelVariant': 'larger-model-experimental', 'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
             'files': [{'path': name, 'bytes': path.stat().st_size,
                        'sha256': sha256_file(path)} for name, path in sorted(entries.items())]}
 if model_manifest:

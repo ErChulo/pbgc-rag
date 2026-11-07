@@ -1,4 +1,8 @@
-Download **PBGC-RAG-0.8-office.zip** below, extract it, and open **index.html**.
+# Experimental larger-model package
+
+This prerelease contains Qwen2.5 1.5B Instruct Q3_K_S. It is separate from the stable 0.8 office package. Main and the stable release remain unchanged. Keep the extracted builds in different folders.
+
+Download **PBGC-RAG-0.8-larger-model-office.zip** below, extract it, and open **index.html**.
 
 The welcome guide walks through starting **Qwen**, adding documents and asking a first question. Qwen is already included and starts from the package's local files: **no model picker, model download or technical setup is needed**. English scanned-PDF recognition assets, sentence encoder, runtimes and licenses are included too.
 

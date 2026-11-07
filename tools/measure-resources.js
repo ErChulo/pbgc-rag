@@ -9,6 +9,8 @@ const crypto = require('node:crypto');
 const {spawn, spawnSync} = require('node:child_process');
 const {pathToFileURL} = require('node:url');
 const ROOT = path.resolve(__dirname, '..');
+const MODEL_MANIFEST = require('../vendor/local-llm/bundled.manifest.json');
+const MODEL_SPEC = MODEL_MANIFEST.files[0];
 const DEFAULT_BUDGET = 12_000_000_000; // Leaves 4 GB of a 16 GB machine for the OS/other work.
 const DEFAULT_TIMEOUT = 300000;
 // A cold Windows CIM provider can take more than 20 s on a hosted runner.
@@ -220,7 +222,7 @@ async function runBenchmark(options = {}) {
   const profile = options.profile || (process.env.PBGC_TEST_URL ? 'http' : 'file');
   const budgetBytes = options.budgetBytes ?? DEFAULT_BUDGET, timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT;
   if (!['http','file'].includes(profile) || !Number.isSafeInteger(budgetBytes) || budgetBytes < 16*1024*1024 || budgetBytes > DEFAULT_BUDGET || !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000) throw Error('Invalid resource benchmark profile or budgets');
-  const modelPath = options.modelPath || process.env.PBGC_MODEL_PATH || path.join(ROOT,'dist/models/qwen2.5-0.5b-instruct-q4_k_m.gguf');
+  const modelPath = options.modelPath || process.env.PBGC_MODEL_PATH || process.env.PBGC_LLM_MODEL || path.join(ROOT,'dist/models',MODEL_SPEC.name);
   const stage=name=>{if(typeof options.onStage==='function')options.onStage(name);};
   const report = {schemaVersion:1, kind:'pbgc-rag-whole-process-resource-benchmark', status:'FAIL', profile:profile==='file'?'actual offline file://':'supplementary HTTP only',
     hardware:{platform:process.platform, osRelease:os.release(), logicalCpus:os.cpus().length, cpuModel:os.cpus()[0]?.model || 'unknown', hostTotalMemoryBytes:os.totalmem(),...hardwareLimits()},
@@ -250,8 +252,8 @@ async function runBenchmark(options = {}) {
     await page.addScriptTag({url:new URL('vendor/local-llm/wllama-classic.js',target).href});
     await page.evaluate(()=>{const input=document.createElement('input');input.type='file';input.id='resource-model-file';document.body.append(input);globalThis.__resourceAbort=new AbortController();});
     await page.locator('#resource-model-file').setInputFiles(modelPath);
-    const manifest=JSON.parse(fs.readFileSync(path.join(ROOT,'vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
-    stage('model-hash-and-load');at=Date.now();report.model=await page.evaluate(async manifest=>{globalThis.__resourceModel=await PBGCRag.createLocalLlmProvider({files:document.getElementById('resource-model-file').files,manifest,signal:__resourceAbort.signal,contextSize:2048,timeoutMs:120000});return __resourceModel.info();},manifest);report.stagesMs.modelHashAndLoad=Date.now()-at;if(report.model.cpuOnly!==true||report.model.threads!==1)throw Error('Benchmark requires single-thread CPU generation');
+    const manifest=MODEL_MANIFEST;
+    stage('model-hash-and-load');at=Date.now();report.model=await page.evaluate(async manifest=>{globalThis.__resourceModel=await PBGCRag.createLocalLlmProvider({files:document.getElementById('resource-model-file').files,manifest,signal:__resourceAbort.signal,contextSize:2048,timeoutMs:120000});return __resourceModel.info();},manifest);report.stagesMs.modelHashAndLoad=Date.now()-at;if(report.model.cpuOnly!==true||report.model.threads!==1)throw Error('Benchmark requires single-thread CPU generation');if(report.model.sha256!==MODEL_SPEC.sha256||report.model.modelBytes!==MODEL_SPEC.bytes||report.model.model!==MODEL_MANIFEST.name)throw Error('Benchmark did not load the pinned branch model');
     const corpus=syntheticCorpus(options.corpusBytes || 1024*1024);report.workload={sourceBytes:corpus.bytes,sourceCount:corpus.sources.length,records:corpus.records,parserMeasured:false};
     stage('learned-index');at=Date.now();const indexed=await page.evaluate(async sources=>{const before=performance.now();const result=PBGCRag.chunkSources(sources);const chunkMs=performance.now()-before;const embedding=await PBGCRag.createEmbeddingProvider({signal:__resourceAbort.signal});globalThis.__resourceChunks=result.chunks;globalThis.__resourceEmbedding=embedding;globalThis.__resourceIndex=await PBGCRag.buildSemanticIndex(result.chunks,embedding,{signal:__resourceAbort.signal});return{chunkMs,chunks:result.chunks.length,provider:embedding.id};},corpus.sources);report.stagesMs.chunkAndIndex=Date.now()-at;report.stagesMs.chunking=indexed.chunkMs;report.workload.chunks=indexed.chunks;report.embeddingProvider=indexed.provider;
     stage('retrieval');at=Date.now();const retrieved=await page.evaluate(async()=>{const queries=[['What is the normal retirement age?','retirement'],['What money is available to a widow?','widow'],["Does illness need a doctor's verification?",'medical'],['How should I report a residential relocation?','address']];const results=[];for(const[question,target]of queries){const result=await PBGCRag.retrieveHybrid(__resourceIndex,question,__resourceEmbedding,{signal:__resourceAbort.signal,topK:4});results.push({question,target,rank:result.results.findIndex(chunk=>chunk.sourceId===target)+1,weak:result.diagnostics.weak,score:result.diagnostics.topScore});if(target==='retirement')globalThis.__resourceRetrieval=result;}return results;});report.stagesMs.fourRetrievals=Date.now()-at;report.quality.retrieval=retrieved;

@@ -14,11 +14,12 @@ const {chromium}=require('playwright');
 const {monitorResources,DEFAULT_BUDGET}=require('../tools/measure-resources.js');
 const {syntheticImagePdf}=require('./helpers/ocr-fixture.js');
 const ROOT=path.resolve(__dirname,'..');
-const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.8-office.zip');
+const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.8-larger-model-office.zip');
 const FILE=process.env.PBGC_OFFICE_FILE==='1';
-const MODEL='qwen2.5-0.5b-instruct-q4_k_m.gguf';
-const MODEL_BYTES=491400032;
-const MODEL_SHA='74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db';
+const MODEL_MANIFEST=require('../vendor/local-llm/bundled.manifest.json');
+const MODEL_SPEC=MODEL_MANIFEST.files[0];
+const MODEL_BYTES=MODEL_SPEC.bytes;
+const MODEL_SHA=MODEL_SPEC.sha256;
 async function hashFile(filename){const digest=crypto.createHash('sha256');for await(const block of fs.createReadStream(filename))digest.update(block);return digest.digest('hex');}
 async function serve(directory){
   const base=await fsp.realpath(directory),requests=[];
@@ -41,6 +42,8 @@ test(`${FILE?'actual offline file://':'supplementary HTTP only'} complete extrac
   timeout:480000,
   skip:!required&&!fs.existsSync(ZIP)?'Complete office ZIP absent; no office delivery acceptance is established by this run.':false
 },async t=>{
+  assert.ok(MODEL_BYTES>491400032,'The experimental package must include a larger GGUF than stable 0.8');
+  assert.ok(MODEL_BYTES<=768*1024*1024,'The larger model must retain the existing adapter size limit');
   assert.ok(fs.existsSync(ZIP),'Required complete office ZIP is absent. Build it before running the office gate.');
   const temporary=await fsp.mkdtemp(path.join(os.tmpdir(),'pbgc office package ')),extracted=path.join(temporary,'Extracted office app with spaces');
   let server,browser,context,monitor,resourceError;
@@ -57,6 +60,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     const manifest=JSON.parse(await fsp.readFile(path.join(extracted,'build-manifest.json'),'utf8'));
     assert.equal(manifest.kind,'pbgc-rag-workplace-build');assert.equal(manifest.official,false);
     assert.ok(manifest.includedGenerationModel,'The complete delivery identifies its bundled Qwen model');
+    assert.deepEqual(manifest.includedGenerationModel,MODEL_MANIFEST,'The exact branch model is bundled');
     assert.equal(manifest.includedGenerationModel.files[0].bytes,MODEL_BYTES);
     assert.equal(manifest.includedGenerationModel.files[0].sha256,MODEL_SHA);
     assert.ok(manifest.files.some(entry=>entry.path.startsWith('models/')&&entry.path.endsWith('.js')),'Qwen is inside classic offline script assets, not a user-selected prerequisite');
@@ -68,8 +72,8 @@ with zipfile.ZipFile(sys.argv[1]) as z:
       assert.equal((await fsp.stat(file)).size,entry.bytes,entry.path+' byte length');
       assert.equal(await hashFile(file),entry.sha256,entry.path+' exact bytes');
     }
-    const modelManifest=JSON.parse(await fsp.readFile(path.join(extracted,'models/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
-    assert.equal(modelManifest.files[0].sha256,MODEL_SHA);
+    const modelManifest=JSON.parse(await fsp.readFile(path.join(extracted,'models/bundled.manifest.json'),'utf8'));
+    assert.deepEqual(modelManifest,MODEL_MANIFEST);assert.equal(modelManifest.files[0].sha256,MODEL_SHA);
     const html=await fsp.readFile(path.join(extracted,'index.html'),'utf8');assert.match(html,/connect-src 'none'/);
     const prefix=pathToFileURL(extracted+path.sep).href;
     let target=pathToFileURL(path.join(extracted,'index.html')).href;
@@ -93,7 +97,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     await page.waitForFunction(()=>!document.querySelector('#qwen-next').disabled,null,{timeout:180000});
     assert.equal(fileChoosers,0,'The complete office package starts Qwen without asking the user to find any model file');
     assert.match(await page.locator('#assistant-state').innerText(),/Qwen.*ready|ready.*Qwen/i);
-    assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
+    const modelStatus=await page.locator('#rag-model-status').textContent();assert.ok(modelStatus.includes(MODEL_MANIFEST.name));assert.match(modelStatus,/loaded/i);
     await page.locator('#qwen-next').click();await page.waitForFunction(()=>!document.querySelector('#files').disabled);
     await page.locator('#files').setInputFiles({name:'office-offline-synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Normal retirement age is 65.')});await page.waitForFunction(()=>!document.querySelector('#files').disabled);
     await page.locator('#continue-ask').click();await page.waitForFunction(()=>document.querySelector('#guide').dataset.step==='ask');

@@ -118,10 +118,10 @@ test(`${profile} developer core reports a missing Qwen pack and keeps a working 
 
 test('supplementary HTTP only Qwen setup cancels a pending local part, rejects an incomplete retry and preserves source fallback',{timeout:60000,skip:!process.env.PBGC_TEST_URL?'HTTP interception tests loader error handling; actual offline bundled inference is verified by the office-package gate.':false},async()=>{
  const {browser,context,page,external,errors}=await session();
- const manifest=JSON.parse(await fs.readFile(path.join(ROOT,'vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json'),'utf8'));
+ const manifest=require('../assets/model-profile.js');
  // Synthetic metadata only, never a fake model or fake inference result.
- const totalBytes=491400032,chunkBytes=8388608;
- const pack={schemaVersion:1,model:manifest,totalBytes,chunks:Array.from({length:59},(_,index)=>({path:`models/qwen-part-${String(index).padStart(3,'0')}.js`,bytes:index===58?totalBytes-58*chunkBytes:chunkBytes,sha256:'0'.repeat(64)}))};
+ const totalBytes=manifest.files[0].bytes,chunkBytes=8388608;
+ const pack={schemaVersion:1,model:manifest,totalBytes,chunks:Array.from({length:Math.ceil(totalBytes/chunkBytes)},(_,index)=>({path:`models/qwen-part-${String(index).padStart(3,'0')}.js`,bytes:Math.min(chunkBytes,totalBytes-index*chunkBytes),sha256:'0'.repeat(64)}))};
  let parts=0,releasePart,firstPart;
  const pendingPart=new Promise(resolve=>{releasePart=resolve;});
  const reachedPart=new Promise(resolve=>{firstPart=resolve;});

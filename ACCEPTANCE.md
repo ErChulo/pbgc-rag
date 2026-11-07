@@ -117,3 +117,7 @@ New acceptance must start the actual included Qwen through the first-run wizard 
 ## Original PDF page acceptance — 0.8
 
 Require real native-text and image-only page rendering, independent original-byte hash preservation, page/zoom/input bounds, cancellation and stale-result protection, source/case isolation, both-theme contrast and mobile layout. Explicitly simulated lifecycle tests are distinguished from real raster fidelity checks. The complete extracted office package must exercise the preview as well as bundled Qwen, OCR, cancellation recovery and whole-process resource guards. Windows/Ubuntu actual offline file execution and public delivery-byte verification remain release gates. See docs/PDF-PREVIEW.md for limitations.
+
+## Experimental larger-model branch
+
+Main and stable 0.8 remain unchanged. The separate branch must identify the actual Qwen2.5 1.5B Q3_K_S model by exact name, bytes and digest in real inference, answer-quality, resource and complete-package tests. The office test rejects a bundled model no larger than the stable GGUF or over 768 MiB. Both platform matrices and extracted ZIP tests must pass with actual offline file URLs, followed by anonymous public download/checksum and a delivered-package browser run. The selected lower precision does not waive the fixed four-question factual quality or four unsafe-context gates. Broader model quality is not established by this small synthetic corpus.

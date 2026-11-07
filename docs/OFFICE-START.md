@@ -1,6 +1,8 @@
-# Start PBGC-RAG
+# Start the larger-model PBGC-RAG build
 
-1. Download the complete **PBGC-RAG-0.8-office.zip** and extract it to a local folder.
+This is the separate experimental 1.5B model package. Keep it in its own folder. The stable 0.8 package remains unchanged.
+
+1. Download the complete **PBGC-RAG-0.8-larger-model-office.zip** and extract it to a local folder.
 2. Double-click **index.html**.
 3. Follow the on-screen welcome guide. It explains the included **Qwen** assistant, helps you start it, then takes you through adding documents and asking your first question.
 

@@ -9,6 +9,8 @@ const fs=require('node:fs');
 const {isDeepStrictEqual}=require('node:util');
 const path=require('node:path');
 const fixture=require('../fixtures/rag-challenges.json');
+const MODEL_MANIFEST=require('../vendor/local-llm/bundled.manifest.json');
+const MODEL_SPEC=MODEL_MANIFEST.files[0];
 const {chunkSources}=require('../assets/chunking.js');
 const {answerQuestion}=require('../assets/rag.js');
 const semantic=require('../assets/semantic.js');
@@ -54,7 +56,7 @@ if(process.env.PBGC_CHALLENGE_QWEN==='1')test('REAL Qwen: fixed four-question fa
 },async t=>{
  const {chromium}=require('playwright'),{pathToFileURL}=require('node:url');
  const root=path.resolve(__dirname,'..'),target=process.env.PBGC_TEST_URL||pathToFileURL(path.join(root,'index.html')).href;
- const modelPath=process.env.PBGC_MODEL_PATH||path.join(root,'dist/models/qwen2.5-0.5b-instruct-q4_k_m.gguf');
+ const modelPath=process.env.PBGC_MODEL_PATH||process.env.PBGC_LLM_MODEL||path.join(root,'dist/models',MODEL_SPEC.name);
  assert.ok(fs.existsSync(modelPath),'Real model pack is mandatory for the Qwen quality gate');
  const fixtureSha256=createHash('sha256').update(fs.readFileSync(path.join(root,'fixtures/rag-challenges.json'))).digest('hex');
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -69,7 +71,7 @@ if(process.env.PBGC_CHALLENGE_QWEN==='1')test('REAL Qwen: fixed four-question fa
   await page.evaluate(()=>{const create=PBGCRag.createLocalLlmProvider;PBGCRag.createLocalLlmProvider=async options=>{const provider=await create(options);globalThis.__challengeRealProvider=provider;return provider;};});
   await openManualModel(page);await page.locator('#rag-model-files').setInputFiles(modelPath);await page.locator('#load-rag-model').click();
   await page.waitForFunction(()=>!document.querySelector('#load-rag-model').disabled,null,{timeout:180000});
-  assert.match(await page.locator('#rag-model-status').textContent(),/Qwen.*loaded/i);
+  const modelStatus=await page.locator('#rag-model-status').textContent();assert.ok(modelStatus.includes(MODEL_MANIFEST.name));assert.match(modelStatus,/loaded/i);
   const positiveSources=sourcesFrom(fixture.generation.positiveSources);
   const positives=await page.evaluate(async({sources,queries})=>{
    const api=PBGCRag,real=globalThis.__challengeRealProvider,embedding=await api.createEmbeddingProvider();
@@ -89,6 +91,7 @@ if(process.env.PBGC_CHALLENGE_QWEN==='1')test('REAL Qwen: fixed four-question fa
    },{item,sources}));
   }
   const info=await page.evaluate(()=>globalThis.__challengeRealProvider.info()),accepted=positives.filter(item=>item.status==='answered');
+  assert.equal(info.model,MODEL_MANIFEST.name);assert.equal(info.modelBytes,MODEL_SPEC.bytes);assert.equal(info.sha256,MODEL_SPEC.sha256);
   const report={kind:'real-qwen-fixed-independent-quality-evaluation',profile:target.startsWith('file:')?'actual file://, browser network offline':'supplementary HTTP only',fixtureSha256,provider:info,answerCoverage:accepted.length/positives.length,minimumAnswerCoverage:fixture.generation.minimumAnswerCoverage,positives,negatives,externalRequests:external.length,limitations:'Four synthetic factual questions only; citation guards do not prove entailment or official actuarial correctness. Mock protocol tests and learned retrieval evaluation are separate.'};
   fs.mkdirSync(path.join(root,'test-results'),{recursive:true});fs.writeFileSync(path.join(root,'test-results','rag-challenge-qwen-'+(target.startsWith('file:')?'file':'http')+'.json'),JSON.stringify(report,null,2)+'\n');t.diagnostic(JSON.stringify(report));
   for(const item of accepted){assert.match(item.answer,new RegExp(item.requiredAnswerPattern,'i'),'Accepted answer contains the independently expected fact: '+item.id);assert.ok(item.modelCalls>0,'Accepted factual answer came from real Qwen inference');assert.ok(item.citations.some(c=>c.sourceId===item.target&&c.quotes?.includes(item.expectedQuote)),'Accepted answer must cite the independently expected source sentence: '+item.id);assert.ok(item.citations.every(c=>c.sourceId===item.target),'An unrelated source cannot become a correct answer: '+item.id);}

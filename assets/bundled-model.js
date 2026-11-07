@@ -1,7 +1,7 @@
 /* Classic local scripts make the supplied Qwen weights readable under file://.
  * Only pinned package paths are loaded. This is not a model download. */
 (function(root){'use strict';
-const API=root.PBGCRag,MODEL_BYTES=491400032,MODEL_SHA='74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db';
+const API=root.PBGCRag,MODEL=API.BUNDLED_MODEL,SPEC=MODEL.files[0],MODEL_BYTES=SPEC.bytes,CHUNK_BYTES=8388608,CHUNK_COUNT=Math.ceil(MODEL_BYTES/CHUNK_BYTES);
 let loading=false;
 function abort(){return new DOMException('Assistant setup cancelled.','AbortError');}
 function script(path,signal){return new Promise((resolve,reject)=>{
@@ -13,8 +13,9 @@ function script(path,signal){return new Promise((resolve,reject)=>{
  signal?.addEventListener('abort',cancel,{once:true});timer=setTimeout(()=>{clean();reject(Error('Opening the included Qwen files took too long. Try again from the extracted office folder.'));},20000);document.head.append(node);
 });}
 function validate(pack){
- if(pack?.schemaVersion!==1||pack.totalBytes!==MODEL_BYTES||pack.model?.files?.length!==1||pack.model.files[0].bytes!==MODEL_BYTES||pack.model.files[0].sha256!==MODEL_SHA||pack.model.files[0].name!=='qwen2.5-0.5b-instruct-q4_k_m.gguf'||!Array.isArray(pack.chunks)||pack.chunks.length!==59)throw Error('The included Qwen pack does not match this application. Use the complete office ZIP.');
- let total=0;pack.chunks.forEach((part,i)=>{if(part.path!==`models/qwen-part-${String(i).padStart(3,'0')}.js`||!Number.isSafeInteger(part.bytes)||part.bytes<1||part.bytes>8388608||!/^[a-f0-9]{64}$/.test(part.sha256))throw Error('The included Qwen pack has an invalid part.');total+=part.bytes;});
+ const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
+ if(pack?.schemaVersion!==1||pack.totalBytes!==MODEL_BYTES||canonical(pack.model)!==canonical(MODEL)||!Array.isArray(pack.chunks)||pack.chunks.length!==CHUNK_COUNT)throw Error('The included Qwen pack does not match this application. Use the complete office ZIP.');
+ let total=0;pack.chunks.forEach((part,i)=>{const expectedBytes=Math.min(CHUNK_BYTES,MODEL_BYTES-i*CHUNK_BYTES);if(part.path!==`models/qwen-part-${String(i).padStart(3,'0')}.js`||!Number.isSafeInteger(part.bytes)||part.bytes!==expectedBytes||!/^[a-f0-9]{64}$/.test(part.sha256))throw Error('The included Qwen pack has an invalid part.');total+=part.bytes;});
  if(total!==MODEL_BYTES)throw Error('The included Qwen pack is incomplete.');return pack;
 }
 API.loadBundledQwen=async function({signal,onProgress=()=>{}}={}){
