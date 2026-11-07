@@ -43,6 +43,11 @@ jobs:
             mkdir -p "$EXISTING"
             gh release download "$RELEASE_TAG" --dir "$EXISTING" --pattern "$MODEL_NAME" --pattern bundled.manifest.json
             python tools/bootstrap-larger-model.py --verify-existing "$EXISTING/$MODEL_NAME" --existing-manifest "$EXISTING/bundled.manifest.json"
+            if gh release download "$RELEASE_TAG" --dir "$EXISTING" --pattern LICENSE.Qwen2.5.source; then
+              cmp vendor/local-llm/LICENSE.Qwen2.5.source "$EXISTING/LICENSE.Qwen2.5.source"
+            else
+              gh release upload "$RELEASE_TAG" vendor/local-llm/LICENSE.Qwen2.5.source
+            fi
           else
             python tools/bootstrap-larger-model.py
             cat > "$RUNNER_TEMP/larger-model-weights-notes.md" <<'NOTES'
@@ -51,7 +56,7 @@ jobs:
           This asset is not the office application. The original 0.8 office release and main branch remain separate.
           The GGUF must match the exact size and SHA-256 in bundled.manifest.json. Office application tests have their own acceptance gates.
           NOTES
-            gh release create "$RELEASE_TAG" "dist/models/$MODEL_NAME" vendor/local-llm/bundled.manifest.json vendor/local-llm/larger-model.provenance.json \
+            gh release create "$RELEASE_TAG" "dist/models/$MODEL_NAME" vendor/local-llm/bundled.manifest.json vendor/local-llm/larger-model.provenance.json vendor/local-llm/LICENSE.Qwen2.5.source \
               --target "$GITHUB_SHA" --prerelease --latest=false \
               --title "Experimental larger-model weights" --notes-file "$RUNNER_TEMP/larger-model-weights-notes.md"
           fi
