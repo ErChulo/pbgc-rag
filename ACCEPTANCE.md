@@ -113,3 +113,7 @@ Local supplementary HTTP: guided first case/import/question/source/backup/restor
 ## First-run and built-in model acceptance — 0.7
 
 New acceptance must start the actual included Qwen through the first-run wizard without a model file chooser, preserve citations/original source bytes, exercise scanned PDF OCR and measure the complete startup/browser workload. Packaging must reconstruct the exact pinned model from delivered script parts. Missing/corrupt parts, setup cancellation, retry, explicit source-only fallback, guide back/restart, automatic first case, automatic scan reading, both themes, keyboard access, mobile and reduced-motion behavior are independently exercised. Local HTTP remains supplementary; required Windows/Ubuntu actual offline file gates and exact-asset release checksum verification must pass before delivery. See docs/ux/WIZARD-0.7.md.
+
+## Original PDF page acceptance — 0.8
+
+Require real native-text and image-only page rendering, independent original-byte hash preservation, page/zoom/input bounds, cancellation and stale-result protection, source/case isolation, both-theme contrast and mobile layout. Explicitly simulated lifecycle tests are distinguished from real raster fidelity checks. The complete extracted office package must exercise the preview as well as bundled Qwen, OCR, cancellation recovery and whole-process resource guards. Windows/Ubuntu actual offline file execution and public delivery-byte verification remain release gates. See docs/PDF-PREVIEW.md for limitations.

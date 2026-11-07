@@ -1,19 +1,31 @@
-# Blockers and pending scope
+# Blockers and remaining scope
 
-## External gates requiring authorized input or environment
+## Authoritative inputs and approvals
 
-- **Actual file:// workplace execution:** managed Chromium blocks local file URLs through administrator policy. Local entry tests return `ERR_BLOCKED_BY_ADMINISTRATOR`. Independent GitHub CI run 41152768376 passed its actual-file suite on Linux Chromium; the workflow now also tests Windows. Actual approved workplace policy/browser acceptance is still needed. No policy bypass was attempted. Linux loopback-HTTP evidence does not satisfy this gate.
-- **Official inputs:** approved versioned `data_dictionary_complete.xlsm`; authorized original R1/R5/DEL/PF/V1/436 and review templates/maps; authoritative BSRS grammar/validator; ATPBGC reference specifications/factors are absent. A reviewer must supply/approve official interpretations and rules before actuarial activation. These gaps block their affected official validations and outputs.
-- **Enterprise acceptance:** Windows 11 browser policy, full 508/manual assistive-technology checks and final CPU/RAM acceptance require the actual approved workplace environment. Current synthetic Linux workload metrics are narrower evidence.
-- **Semantic/OCR assets:** no approved local model package and tested deployment contract is supplied. BM25/keyword/regex/SQL remain available. Model inference and OCR are not claimed.
-- **Brand artwork:** approved logo masters are absent. The required labeled placeholder remains.
+The approved field dictionary, original official templates/mappings, authoritative BSRS grammar/validator, reference specifications/factors and approved legal/actuarial interpretations are not available to this session. The user's Google Drive source directory has not been accessed. A folder URL and a proposed network allowlist change do not establish authenticated Drive access or source authority. These gaps block authoritative validation and official output approval; independent engineering continues with synthetic fixtures.
 
-## Review completed without an external blocker
+Never place participant PII, restricted case records, confidential templates or proprietary source material in this public repository or remote coding environment. No official artifact-release path or automated interpretation approval is enabled.
 
-Pinned RAG-Anything source, MIT license, declared dependencies and architecture inspected; no upstream runtime imported. Current workplace code does not need its Python dependency graph. Any future optional upstream integration still needs resolved transitive/license/advisory and runtime isolation review. PDF.js 6.4.299 is pinned with Apache license, npm integrity, source/bundle hashes and denied external runtime capabilities. A bounded npm advisory check returned zero reported vulnerabilities for the checked nonoptional development installation; this is not a comprehensive security certification.
+## Workplace and brand acceptance
 
-## Remaining engineering — not external blockers
+Windows and Ubuntu CI verify actual offline file URLs, real local Qwen, OCR, source integrity and bounded whole-process workloads for the tested builds. The managed development browser can still block local file URLs; HTTP development checks are supplementary. Approval for the actual organization's browser policies, representative workplace workloads and manual assistive-technology/508 acceptance remains outstanding. CI does not certify every enterprise workstation or legal use.
 
-Official dictionary authorization/type rules and final approval UX; approved legal/actuarial definitions and precedence adjudication; actuarial rule engine and independent authoritative numerical comparisons; supplied-template official generation; broader Office/PDF structure/SQL support; optional semantic/OCR adapters; larger malformed-document corpus and final enterprise usability/accessibility/resource testing. Generic dictionary maps, exact-content review records, possible-conflict abstention, typed table queries, v2 review persistence and mapped nonofficial DOCX/XLSX generation are now implemented and tested.
+Approved logo masters are absent. The required labeled placeholder and documented PBGC color/font rules remain in use; no logo was recreated.
 
-Current supported format/query subsets are documented and reject unsupported variants. The application is a substantial validated development build, not final acceptance or an official pension determination system. No official artifact release is enabled. Never place restricted records or confidential fixtures in this public repository or remote development environment.
+## Implemented engineering
+
+The tested 0.7 release includes native bounded document parsing, typed source-table queries, source-bound proposed observations and dictionary mappings, generic mapped Office test outputs, case/review persistence, learned local retrieval, source-guarded real Qwen, English scanned-PDF OCR and the first-run wizard. The complete office package starts its pinned local model without a model-file picker. These capabilities are implemented; they are not outstanding semantic/OCR asset integration tasks.
+
+Build 0.8 adds a bounded read-only original-PDF page view, with exact original downloads and cancellation/source-isolation guards. Release of this new head still requires its exact-commit regression and extracted-package offline platform gates. Its page view excludes interactive content, annotations and attachments and does not create new textual evidence or change citations.
+
+## Remaining engineering and validation
+
+- Complete official dictionary typing/authorization and approval workflows when the authoritative contracts are supplied.
+- Full approved PBGC ontology, authority precedence and date/group applicability workflows; proposed links and conservative abstention are not approved interpretations.
+- Actuarial rules/calculations and independent authoritative numerical comparisons.
+- Official template fidelity, output generation and validation for the requested artifacts, including actual BSRS grammar.
+- Broader native-format/table/image understanding and SQL/graph coverage beyond the documented supported subsets.
+- Larger malformed-document and representative retrieval/generation corpora, including authorized PBGC cases. Existing small synthetic tests do not certify general answer quality or semantic entailment.
+- Final workplace usability, accessibility, performance and security acceptance.
+
+The application is a substantial engineering build, not a completed official pension determination system. Do not fabricate missing definitions, rules, templates, approvals or acceptance evidence.

@@ -33,3 +33,7 @@ Test command: `node tests/pdf.test.js`. This environment requires reviewed proce
 ## Bounded advisory snapshot
 
 On October 30, 2026, `npm audit --omit=optional --json --prefix /tmp/pbgc-pdf` exited zero and reported zero advisories in its checked installation (pdfjs-dist 6.4.299 and esbuild 0.28.2; optional native packages omitted from the audit). Optional native dependencies and the bundler are not workplace runtime imports. This registry snapshot does not replace a full source/model/dependency security audit or prove absence of vulnerabilities.
+
+## Additional application views
+
+The native text adapter above remains a separate bounded text extractor. The application also has an English scanned-page processing adapter (see PDF-OCR.md) and a read-only original-page raster view in the evidence reader (see PDF-PREVIEW.md). Those features do not make native text extraction a full table/layout parser and do not enable active PDF content.

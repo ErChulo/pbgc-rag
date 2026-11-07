@@ -56,7 +56,7 @@ test(`${profile} REAL original PDF pages, including an unparsed image page, stay
   await page.locator('#source-preview-next').click();await ready(page);
   assert.equal(await page.locator('#source-preview-page').inputValue(),'2');assert.equal(await page.locator('#source-preview-next').isDisabled(),true);
   await previewContrast(page,'dark');const second=await pixels(page);assert.ok(second.dark>100,'The original scanned page image renders without OCR');assert.ok(second.light>100);assert.notEqual(second.sha,first.sha,'Different original pages produce different raster bytes');await capture(page,'02-original-scan');
-  await page.locator('#source-preview-zoom').selectOption('200');await ready(page);const zoomed=await pixels(page);assert.ok(zoomed.width>second.width,'Zoom rerenders the page with more pixels for reading');assert.ok(zoomed.width*zoomed.height<=8000000,'Preview stays inside the renderer pixel budget');
+  await page.locator('#source-preview-zoom').selectOption('200');await ready(page);const zoomed=await pixels(page);assert.ok(zoomed.width>second.width,'Zoom rerenders the page with more pixels for reading');assert.ok(zoomed.width*zoomed.height<=4000000,'Preview stays inside its four-million-pixel budget');
   const pending=page.waitForEvent('download');await page.locator('#source-save-original').click();const download=await pending;assert.equal(hash(await fs.readFile(await download.path())),hash(original),'Save original preserves every PDF byte');
   await page.locator('#source-preview-page').fill('1');await page.locator('#source-preview-go').click();await ready(page);assert.equal(await page.locator('#source-preview-page').inputValue(),'1');
   await page.evaluate(()=>{const render=PBGCRag.renderPdfPage;globalThis.__previewInvalidCalls=0;PBGCRag.renderPdfPage=(...args)=>{globalThis.__previewInvalidCalls++;return render(...args);};});
@@ -73,6 +73,34 @@ test(`${profile} REAL original PDF pages, including an unparsed image page, stay
   await page.setViewportSize({width:1280,height:900});await page.locator('#case-name').fill('Synthetic isolated empty case');await page.locator('#create-case').click();await idle(page);await assertCleared(page);assert.equal(await page.locator('#source-preview').isVisible(),false);
   assert.deepEqual(external,[]);assert.deepEqual(errors,[]);assert.deepEqual(dialogs,[]);assert.deepEqual(popups,[]);assert.equal(await page.locator('#source-view iframe,#source-view object,#source-view embed').count(),0,'Original pages use an inert raster, not an active document embed');
   t.diagnostic(JSON.stringify({profile,pages:2,unparsedImagePageRendered:true,originalSha256:hash(original),nativeDarkPixels:first.dark,imageDarkPixels:second.dark,externalRequests:external.length}));
+ }finally{await context.close();await browser.close();}
+});
+
+test(`${profile} REAL page-two OCR citation opens its corresponding original PDF page`,{timeout:180000},async t=>{
+ const{browser,context,page,external,errors,dialogs,popups}=await session();
+ try{
+  await page.goto(target);await showAllTools(page);await idle(page);
+  const original=await syntheticImagePdf(page,{nativeFirst:true});
+  await page.locator('#case-name').fill('Synthetic page-two citation review');await page.locator('#create-case').click();await idle(page);
+  await page.locator('#pdf-ocr').check();
+  await page.locator('#files').setInputFiles({name:'synthetic-page-two-citation.pdf',mimeType:'application/pdf',buffer:original});await idle(page);
+  assert.match(await page.locator('#sources').innerText(),/machine-read text/i,'The real OCR pipeline creates evidence for the image-only second page');
+  await page.locator('#query').fill('retirement');await page.locator('#search').click();await idle(page);
+  assert.match(await page.locator('#results').innerText(),/65/);assert.match(await page.locator('#results').innerText(),/Page 2/);
+  await page.locator('#results').getByRole('button',{name:'View evidence',exact:true}).first().click();
+  assert.match(await page.locator('#source-records article.selected').innerText(),/Page 2/);assert.match(await page.locator('#source-records article.selected').innerText(),/65/);
+  await page.locator('#source-show-original').click();await ready(page);
+  assert.equal(await page.locator('#source-preview-page').inputValue(),'2','The selected evidence page controls the initial preview; this is not hard-coded to page one');
+  assert.equal(await page.locator('#source-preview-page-count').innerText(),'Page 2 of 2');
+  assert.equal(await page.locator('#source-preview-prev').isEnabled(),true);assert.equal(await page.locator('#source-preview-next').isDisabled(),true);
+  const actual=await pixels(page);assert.ok(actual.dark>100,'The citation opens a rendered original scanned page');assert.ok(actual.width*actual.height<=4000000);
+  const expectedPageTwo=await page.evaluate(async raw=>{const raster=await PBGCRag.renderPdfPage(new Uint8Array(raw),2,{scale:1.25,maxPixels:4000000});return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',raster.data)),n=>n.toString(16).padStart(2,'0')).join('');},Array.from(original));
+  assert.equal(actual.sha,expectedPageTwo,'The initial citation preview contains the exact raster of original page two, not only its page label');
+  const pending=page.waitForEvent('download');await page.locator('#source-save-original').click();const download=await pending;
+  assert.equal(hash(await fs.readFile(await download.path())),hash(original),'OCR and citation preview preserve the original two-page PDF bytes');
+  await capture(page,'05-page-two-citation');await page.locator('#source-close').click();await assertCleared(page);
+  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);assert.deepEqual(dialogs,[]);assert.deepEqual(popups,[]);
+  t.diagnostic(JSON.stringify({profile,selectedCitationPage:2,initialPreviewPage:2,documentPages:2,originalSha256:hash(original),externalRequests:external.length}));
  }finally{await context.close();await browser.close();}
 });
 

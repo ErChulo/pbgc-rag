@@ -25,3 +25,7 @@ The **models** folder contains local application files. Do not import these file
 Closing the browser or cancelling an active generation can release Qwen from memory. Start offline answers again when prompted; the included files remain on disk and no new download is needed.
 
 An organization may block local scripts, workers or WebAssembly. The app reports unsupported capabilities; do not change or bypass workplace policy. Use synthetic documents in this development build. Answers and citations are not official actuarial approval.
+
+## Check a PDF citation against the page
+
+Open View evidence or View source and choose **Original PDF page**. Navigate or zoom, then switch back to **Extracted text**. **Save original** downloads the unchanged file. The page view is local and needs no extra setup. Interactive content and annotations are not shown.

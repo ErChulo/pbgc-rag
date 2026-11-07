@@ -45,3 +45,7 @@ Use one visible workspace task by default. Keep Search and Save/reopen reachable
 ### 0.7: remove the model-picker prerequisite
 
 Ship the complete office model as bounded local classic-script chunks. Browser file:// security allows shipped scripts to load without granting arbitrary filesystem access; no network, server, user model selection or automatic download is introduced. Keep original model pinning and full decoded SHA verification. Do not include a duplicate raw GGUF in the office archive. Measure this new reconstruction path's whole-process peak separately. Use an inline first-run wizard with automatic first case, automatic scanned-page processing, a complete example, honest progress and reduced-motion support. Preserve advanced/manual workflows behind an explicit workspace route.
+
+### 0.8: original-page evidence without active PDF embedding
+
+Reuse the pinned denied-network raster worker for a read-only PDF page view in the evidence dialog. Keep one bounded raster, cancel on close/source changes and guard asynchronous completion by source identity and request generation. Do not alter source bytes, citation locators or review selection when navigating pages. Keep active PDF content, annotations and attachments out of the preview; retain original download and text fallback. No case-schema migration or new runtime dependency is introduced.

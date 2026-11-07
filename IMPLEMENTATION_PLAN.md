@@ -1,23 +1,22 @@
 # Implementation plan and gates
 
-Completed initial engineering increments:
+## Completed engineering increments
 
-1. Classic-script local shell, visual tokens, dark/light, guide routes, source viewing and capability detection.
-2. Pinned upstream source/license/architecture review; no Python upstream runtime imported. Pinned PDF.js license/build/hash/advisory inventory.
-3. Source-byte packages, bounded versioned catalog, case/library isolation, IndexedDB/localStorage/memory recovery, prior snapshots, all-workspace backup and verified import checkpoints.
-4. Worker-isolated extraction for documented text/markup/Office/legacy/SQLite/PDF subsets, exact supported locators, cancellation/deadlines and explicit rejections.
-5. Bounded keyword/exact/BM25/safe-regex/read-only record SQL and typed graph traversal with source-bound proposed temporal annotations.
-6. Provisional evidence inventory, R1 text/internal BSRS planning JSON, report layouts, HTML/CSV/timelines and validated reviewer packages.
-7. Independent adversarial/browser/security/accessibility/numerical tests, synthetic workload and extracted portable-package verification.
+1. Offline classic-script shell, PBGC visual tokens, dark/light mode, help, evidence reading and capability reporting.
+2. Pinned/licensed parsing for the documented PDF, Office, legacy, SQLite, text and markup subsets, with original-byte preservation and bounded isolated workers.
+3. Case/reference-library isolation, verified portable/reviewer packages, recovery, snapshots and resumable checked imports.
+4. Keyword/exact/BM25/safe-regex/strict read-only queries, typed source-table SQL and bounded source-bound graph/proposed temporal links.
+5. Generic dictionary mapping, source-linked observations with review invalidation, conservative conflict handling and mapped nonofficial Office test outputs.
+6. Actual learned local sentence embeddings, hybrid retrieval, pinned CPU-only Qwen with source-grounding guards, English scanned-PDF OCR and whole-process resource measurement.
+7. First-run wizard, automatically loaded bundled Qwen, automatic first case/scanned-page reading, guided example and explicit cancellation/recovery.
+8. Build 0.8 original-PDF page view in the evidence dialog: bounded inert raster, page/zoom controls, original download and asynchronous cancellation/isolation. Final exact-head release gates remain required.
 
-Remaining external gates:
+## Required release process
 
-- Approved browser/environment permitting actual file://, plus Windows enterprise policy and final 508/manual assistive-technology evidence.
-- Authorized official dictionary, templates, BSRS grammar/validator, reference specifications/factors and human-approved interpretations.
-- Approved local semantic/OCR model assets and deployment constraints before model-based capability can be claimed.
+Use independent synthetic guards and browser/security/format/persistence checks. Run the full suite and the extracted complete office ZIP with real Qwen, OCR and original-page preview. Actual file URLs with browser networking disabled must pass Windows and Ubuntu CI. Check the public downloadable bytes and exercise the delivered package before claiming delivery. Supplementary HTTP tests never replace actual offline-file acceptance. Preserve meaningful failures and repair them; do not lower thresholds to hide them.
 
-Remaining engineering after/alongside those gates: official dictionary authorization/type/approval completion; approved PBGC ontology and authority/contradiction workflows; full actuarial rules/calculations and independent reference comparisons; template-preserving official generation; broader native-format/SQL/graph support; optional semantic/OCR integration; full resource/corpus/accessibility coverage. Current support is deliberately bounded and documented, not arbitrary feature parity.
+## Next authoritative phase
 
-Do not request routine engineering approvals. Do not bypass browser policy, invent authoritative inputs or classify unfinished engineering as an external blocker. Resume from PROGRESS.md and run appropriate checks before committing.
+Obtain authorized original dictionaries, templates/maps, BSRS grammar/validator, reference factors/specifications and approved interpretations. Establish source versioning and review before activating any rule or official output. Complete the remaining ontology/authority/date/group workflows, full actuarial calculations and independent comparisons, and official template-preserving artifacts against those contracts. Broader native/query coverage and larger retrieval/malformed-document evaluation can proceed independently with licensed public or synthetic material.
 
-Build 0.3 implements generic exact dictionary mapping, source-bound proposed/reviewed facts with edit invalidation, conservative conflict abstention, typed source-table SQL, isolated mapped Office test outputs and v2 review persistence. A lifecycle-owned browser supervisor and CI replace manual checks. These do not establish official authority or final template fidelity.
+See BLOCKERS.md for actual missing inputs and current enterprise/brand acceptance limits. Semantic inference and OCR are already implemented; missing authoritative approval is a separate matter. Do not request routine engineering approval, bypass browser/network policy, invent source authority or treat unfinished independent engineering as an external blocker.

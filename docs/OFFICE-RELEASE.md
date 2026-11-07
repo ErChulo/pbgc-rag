@@ -7,3 +7,5 @@ Keep all extracted folders together. No terminal, Python, installation, local se
 The complete package must pass real Qwen inference and scanned-PDF tests with actual file URLs and browser networking disabled on Windows and Ubuntu before this release is published. Its uploaded/downloaded ZIP bytes are checked against the tested artifact. Read the source passages supplied with answers and check machine-read scan text against the original page.
 
 The independent development build is not an approved PBGC product. Authoritative PBGC interpretation and actual workplace browser approval remain separate acceptance gates.
+
+New in 0.8: view original PDF pages inside the evidence reader, navigate/zoom and save unchanged originals. Active PDF content and annotations are excluded from the preview. No extra download or setup is needed.

@@ -85,3 +85,7 @@ Official dictionary authorization/type definitions, legal/actuarial definitions 
 ## Optional scanned-PDF reading
 
 Enable **Read text from scanned PDF pages** before importing a scan. All English recognition assets are included in the office ZIP. Only pages with no native text are recognized; mixed pages with a native text layer retain that layer without OCR. Limits: 20 image-only pages per PDF, 8 million pixels per rendered page and 180 seconds total. Machine-read text, numbers and line regions can be wrong: check the original page before using them. OCR confidence is not factual confidence. Source bytes are preserved; version 3 exports re-run the pinned processing profile on restore. See docs/OCR.md and docs/PDF-OCR.md.
+
+## Original PDF pages
+
+In View evidence or View source, choose **Original PDF page** to inspect the saved PDF inside the reader. Page navigation, zoom and original downloads stay local. Image pages can be viewed even without a parsed text record; page navigation does not change the citation. Interactive content and annotations are excluded. See [preview limits and verification](docs/PDF-PREVIEW.md).
