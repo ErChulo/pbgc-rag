@@ -26,7 +26,7 @@ Keep this build and the stable build in different folders. Save a portable case 
 | Next candidate | Q3_K_M: 824,178,688 bytes; rejected because it exceeds the cap |
 | Context | 2,048 tokens in the interface; adapter maximum 4,096 |
 | Runtime | Single CPU thread, local WebAssembly; no GPU or network |
-| Output | One source-checked factual statement per question |
+| Output | One exact source sentence that answers the question, with a citation |
 | Workload memory gate | 12 GB for the test process and full browser process tree |
 
 The selected file is larger than the stable 491,400,032-byte model. It is the higher-precision candidate that fit among the two measured standard Q3 variants, not a claim to be the largest or best model in every model catalog. The factual-answer, unsafe-context and citation gates must pass without lower thresholds.
@@ -44,3 +44,5 @@ The manifest, original OCI metadata, source license and quantization provenance 
 Require real inference, source-bound answers and citations, cancellation and reload, source-only recovery, OCR, original PDF preview and byte-preserving source downloads. Require zero external requests, the unchanged quality thresholds and whole-process memory limits. Both Windows and Ubuntu must run the actual offline file profile and extracted complete package before an app prerelease is published. Verify the anonymous public package download and run its extracted app as a separate delivery check.
 
 This branch is not merged into main. Neither the existing office-v0.8.0 tag nor its download is replaced. Experimental releases are prereleases and do not replace the latest stable release.
+
+The initial larger-model run released two of four factual answers. Two paraphrases were correctly rejected by the grounding checks. The experimental prompt now explicitly requests the exact source sentence. The checks and minimum coverage threshold are unchanged; a fresh real-model evaluation is required.
