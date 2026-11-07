@@ -49,3 +49,6 @@ Ship the complete office model as bounded local classic-script chunks. Browser f
 ### 0.8: original-page evidence without active PDF embedding
 
 Reuse the pinned denied-network raster worker for a read-only PDF page view in the evidence dialog. Keep one bounded raster, cancel on close/source changes and guard asynchronous completion by source identity and request generation. Do not alter source bytes, citation locators or review selection when navigating pages. Keep active PDF content, annotations and attachments out of the preview; retain original download and text fallback. No case-schema migration or new runtime dependency is introduced.
+# Pinned model preparation recovery — November 7, 2026
+
+The external six-part weight mirror returned HTTP 404 during both release matrices. Development preparation now recovers the same pinned model from our published 0.7 office ZIP when that mirror returns 404/410. The previous archive has a fixed byte count and SHA-256; scripts are parsed as JSON, never executed. Ordered, bounded chunks and the reconstructed whole model must pass their independent size/hash checks before atomic replacement. Offline local-part and verify-only modes retain their behavior. Both CI workflows run nine synthetic integrity/rejection checks. This is build tooling; office runtime remains offline and does not fetch a model.
