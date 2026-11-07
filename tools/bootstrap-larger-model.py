@@ -23,6 +23,13 @@ PROVENANCE = ROOT / 'vendor/local-llm/larger-model.provenance.json'
 MAX_MODEL_BYTES = 768 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 128 * 1024 * 1024
 MAX_SOURCE_BYTES = 512 * 1024 * 1024
+CURRENT_STAGE = 'metadata'
+
+def stage(value):
+    global CURRENT_STAGE
+    CURRENT_STAGE = value
+    if __import__('os').environ.get('GITHUB_ACTIONS'):
+        print('::notice title=Experimental model preparation::' + value, flush=True)
 
 
 def sha256(path):
@@ -43,7 +50,11 @@ def model_spec(manifest):
 
 
 def verify_model(path, spec):
-    if not path.is_file() or path.stat().st_size != spec['bytes'] or sha256(path) != spec['sha256']:
+    actual_bytes = path.stat().st_size if path.is_file() else 0
+    actual_sha = sha256(path) if path.is_file() else 'absent'
+    if actual_bytes != spec['bytes'] or actual_sha != spec['sha256']:
+        if __import__('os').environ.get('GITHUB_ACTIONS'):
+            print('::error title=Experimental model integrity::' + json.dumps({'bytes':actual_bytes,'sha256':actual_sha,'expectedBytes':spec['bytes'],'expectedSha256':spec['sha256']}), flush=True)
         raise ValueError('Experimental model differs from its pinned size/SHA-256')
     with path.open('rb') as source:
         if source.read(8) not in {b'GGUF\x02\x00\x00\x00', b'GGUF\x03\x00\x00\x00'}:
@@ -125,9 +136,11 @@ def prepare_model(spec, provenance, output):
     cache = ROOT / 'dist/larger-model-bootstrap'
     cache.mkdir(parents=True, exist_ok=True)
     source_model = cache / 'qwen2.5-1.5b-instruct-f16.gguf'
+    stage('source-model')
     subprocess.run([sys.executable, str(ROOT / 'tools/prepare-larger-model-source.py'),
                     '--out', str(source_model)], check=True, cwd=ROOT)
     archive = cache / ('llama.cpp-' + provenance['llamaCommit'] + '.tar.gz')
+    stage('source-archive')
     download_source_archive(archive, provenance)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix('.partial')
@@ -141,13 +154,17 @@ def prepare_model(spec, provenance, output):
                      '-DLLAMA_BUILD_TOOLS=ON', '-DGGML_NATIVE=OFF', '-DGGML_OPENMP=OFF',
                      '-DGGML_AVX=OFF', '-DGGML_AVX2=OFF', '-DGGML_AVX512=OFF',
                      '-DGGML_FMA=OFF', '-DGGML_F16C=OFF']
+            stage('quantizer-configure')
             subprocess.run(['cmake', '-S', str(source), '-B', str(build), *flags], check=True)
+            stage('quantizer-build')
             subprocess.run(['cmake', '--build', str(build), '--config', 'Release',
                             '--target', 'llama-quantize', '-j4'], check=True)
             quantizer = build / 'bin/llama-quantize'
             if not quantizer.is_file():
                 raise ValueError('Pinned quantizer did not produce its expected executable')
+            stage('quantize')
             subprocess.run([str(quantizer), str(source_model), str(temporary), quantization, '4'], check=True)
+            stage('model-verify')
             verify_model(temporary, spec)
         temporary.replace(output)
     finally:
@@ -177,4 +194,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as error:
+        if __import__('os').environ.get('GITHUB_ACTIONS'):
+            detail = str(error) if isinstance(error, ValueError) else type(error).__name__
+            print('::error title=Experimental preparation failed::' + CURRENT_STAGE + ': ' + detail.replace('\n', ' ')[:200], flush=True)
+        raise
