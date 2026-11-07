@@ -11,6 +11,9 @@ const {pathToFileURL} = require('node:url');
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_BUDGET = 12_000_000_000; // Leaves 4 GB of a 16 GB machine for the OS/other work.
 const DEFAULT_TIMEOUT = 300000;
+// A cold Windows CIM provider can take more than 20 s on a hosted runner.
+// Wait for real counters before starting acceptance; never substitute heap data.
+const WINDOWS_SAMPLER_STARTUP_MS = 60000;
 
 function descendants(rows, rootPid, excluded = new Set()) {
   const selected = new Set([rootPid]);
@@ -169,7 +172,7 @@ async function monitorResources({rootPid = process.pid, intervalMs = 200, budget
       const start = Date.now();
       const first = setInterval(() => {
         if (accumulator.summary().samples) { clearInterval(first); resolve(); }
-        else if (errors.length || Date.now()-start > 20000) { clearInterval(first); reject(Error(errors[0] || 'Windows process sampler did not initialize')); }
+        else if (errors.length || Date.now()-start > WINDOWS_SAMPLER_STARTUP_MS) { clearInterval(first); reject(Error(errors[0] || 'Windows process sampler did not initialize')); }
       },100);
     }).catch(error=>{collector.kill();throw error;});
   }
