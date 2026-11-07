@@ -72,6 +72,7 @@ jobs:
             test-results/rag-challenge-*.json
             test-results/resources-*.json
             test-results/ux-flow-*.png
+            test-results/pdf-preview-*.png
             dist/PBGC-RAG-ci.zip
           if-no-files-found: warn
           retention-days: 7

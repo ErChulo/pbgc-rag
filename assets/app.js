@@ -14,7 +14,7 @@
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
-  let caseReviewUI, ragUI, flowUI;
+  let caseReviewUI, ragUI, flowUI, pdfPreview;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   const workspace = () => catalog.activeId === LIBRARY ? catalog.library : catalog.cases.find(c => c.id === catalog.activeId);
@@ -261,11 +261,11 @@
   function renderSource() {
     const {source,index,page} = sourceView;
     $('source-title').textContent = source.name;
-    $('source-meta').textContent=source.records.some(record=>record.locator?.type==='pdf-ocr-line')?'This source includes machine-read text (OCR). Character and number errors are possible. Use Save original to check the scanned pages.':'Extracted text. Use Save original to view the document’s original layout.';
+    $('source-meta').textContent=source.records.some(record=>record.locator?.type==='pdf-ocr-line')?'This source includes machine-read text (OCR). Check words and numbers against Original PDF page.':/\.pdf$/i.test(source.name)?'Extracted text. Use Original PDF page to check the page layout.':'Extracted text. Use Save original to view the document’s original layout.';
     $('source-details').open=false;
     const verification=$('source-verification');verification.replaceChildren(el('p','File fingerprint (SHA-256)'),el('code',source.hash),el('p',`Parser version: ${source.parserVersion}`));
     for(const warning of source.warnings||[])verification.append(el('p',String(warning)));
-    const selected=source.records[index];
+    const selected=source.records[index];pdfPreview?.setSource(source,selected?.locator?.page);
     if(selected)verification.append(el('p',`Exact locator: ${API.formatLocation(selected.locator)}`),el('pre',JSON.stringify(selected.locator,null,2)));
     $('source-records').replaceChildren();
     for (let i = page * 40; i < Math.min(source.records.length, (page + 1) * 40); i++) {
@@ -280,6 +280,8 @@
     updateViewerButtons();
     requestAnimationFrame(() => { const selected = $('source-records').querySelector('.selected'); if (selected) selected.scrollIntoView({block:'nearest'}); else $('source-records').scrollTop = 0; });
   }
+  $('source-save-original').addEventListener('click',()=>{if(sourceView)download(sourceView.source.name,decode(sourceView.source.bytesBase64),'application/octet-stream');});
+  $('source-view').addEventListener('close',()=>{if(!$('source-view').open)sourceView=null;});
   $('source-close').addEventListener('click', () => $('source-view').close());
   $('source-prev').addEventListener('click', () => { sourceView.page--; renderSource(); });
   $('source-next').addEventListener('click', () => { sourceView.page++; renderSource(); });
@@ -516,6 +518,7 @@
     for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
     document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
+  pdfPreview=API.mountPdfPreview({readBytes:source=>decode(source.bytesBase64)});
   flowUI=API.mountFlow({cancel:()=>{abortRequested=true;operationAbort?.abort();},start:async sample=>{
     if(workspace()&&!sample)return;
     await operation(async()=>{const c=newCase(sample?'Guided example':'My first case');if(sample)c.sources.push(await sourceFromBytes('synthetic-plan.txt',new TextEncoder().encode('SYNTHETIC PLAN — test data only\nNormal retirement age is 65.\nThis example is not an official plan provision.\n')));await commit({...catalog,activeId:c.id,cases:[...catalog.cases,c]});status(sample?'Example documents are ready.':'Your first case is ready. Add a document to continue.');});

@@ -14,7 +14,7 @@ const {chromium}=require('playwright');
 const {monitorResources,DEFAULT_BUDGET}=require('../tools/measure-resources.js');
 const {syntheticImagePdf}=require('./helpers/ocr-fixture.js');
 const ROOT=path.resolve(__dirname,'..');
-const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.7-office.zip');
+const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.8-office.zip');
 const FILE=process.env.PBGC_OFFICE_FILE==='1';
 const MODEL='qwen2.5-0.5b-instruct-q4_k_m.gguf';
 const MODEL_BYTES=491400032;

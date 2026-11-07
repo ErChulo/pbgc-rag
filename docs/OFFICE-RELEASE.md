@@ -1,4 +1,4 @@
-Download **PBGC-RAG-0.7-office.zip** below, extract it, and open **index.html**.
+Download **PBGC-RAG-0.8-office.zip** below, extract it, and open **index.html**.
 
 The welcome guide walks through starting **Qwen**, adding documents and asking a first question. Qwen is already included and starts from the package's local files: **no model picker, model download or technical setup is needed**. English scanned-PDF recognition assets, sentence encoder, runtimes and licenses are included too.
 

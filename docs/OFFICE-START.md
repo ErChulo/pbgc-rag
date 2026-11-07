@@ -1,6 +1,6 @@
 # Start PBGC-RAG
 
-1. Download the complete **PBGC-RAG-0.7-office.zip** and extract it to a local folder.
+1. Download the complete **PBGC-RAG-0.8-office.zip** and extract it to a local folder.
 2. Double-click **index.html**.
 3. Follow the on-screen welcome guide. It explains the included **Qwen** assistant, helps you start it, then takes you through adding documents and asking your first question.
 
