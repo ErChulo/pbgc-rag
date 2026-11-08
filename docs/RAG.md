@@ -1,5 +1,13 @@
 # Local grounded question answering
 
+## What the reader can do
+
+Ask a short factual question, read the result, and open its supporting source. Source passages are available without Qwen. The local model answers one fact at a time; the guided-question development branch lets users enter up to three separate questions and checks each in turn. A question can remain unanswered even when another question succeeds. See the [office guide](OFFICE-START.md) for the user steps.
+
+Document search and supported answers do not require official templates, a field dictionary or approved actuarial rules. Those belong to separate optional workflows. This module does not decide legal precedence, participant applicability or official output approval.
+
+## Module boundary
+
 `assets/rag.js` orchestrates retrieval context and a separately supplied local language-model generation provider. It does not load models, run a server, contact an endpoint, implement embeddings or approve actuarial interpretations. Real learned retrieval and generation runtimes have separate model/license/runtime inventories. No toy, lexical or mocked provider is represented as a production semantic model.
 
 ## API and provider contract
@@ -42,6 +50,54 @@ Result:
   diagnostics: {mode,providerId,retrievalMethod,grounding,modelOutputAccepted,reason,warnings,evidenceAnalysis}
 }
 ```
+
+## Independent question set
+
+`assets/rag-questions.js` adds `PBGCRag.answerQuestions`. It accepts one to three explicit, trimmed, unique questions, each at most 1,000 characters. It does not split or rewrite the user's question.
+
+```js
+const set = await PBGCRag.answerQuestions({
+  questions: [
+    'What is the normal retirement age?',
+    'How long are case files retained?'
+  ],
+  chunks,
+  provider,
+  retrieve: ({question, index, chunks, scope, signal}) =>
+    retrieveForThisQuestion(question, {chunks, scope, signal}),
+  scope,
+  signal,
+  onProgress: progress => {},
+  options: {timeoutMs: 120000, batchTimeoutMs: 360000}
+});
+```
+
+`retrieve` is optional. When supplied, it runs independently for each question before the existing `answerQuestion` pipeline. Retrieval and inference are serialized. The caller must supply only the active workspace's verified corpus and cancel the set if its source scope changes.
+
+Results retain the existing source-bound single-answer objects:
+
+```js
+{
+  status: 'answered' | 'partial' | 'conflict' | 'abstained',
+  results: [{index, question, result}],
+  answeredCount,
+  totalQuestions,
+  official: false,
+  officialReleaseAllowed: false,
+  diagnostics: {
+    mode: 'independent-grounded-questions-v1',
+    batchTimeoutMs,
+    automaticDecomposition: false,
+    allQuestionsAnswered
+  }
+}
+```
+
+The aggregate status is `answered` only when every question has an accepted answer. A mixture of accepted and unresolved questions is `partial`. With no accepted answer, any conflict gives `conflict`; otherwise the set is `abstained`. Each result retains its own citations, so citation labels are local to that result. Do not combine their labels into a fictitious shared source list.
+
+The total deadline defaults to 360,000 ms and cannot exceed that bound. Per-question answer budgets remain unchanged. Cancellation and set deadlines reject without returning a partially completed set. Do not present the progress callback as a validated partial answer stream. This API groups separate source-checked statements; it does not establish a comprehensive comparison, cross-document entailment or unrestricted synthesis.
+
+`tests/rag-questions.test.js` uses mock providers to check orchestration and release behavior. Actual Qwen workflow quality must be measured separately. See [the increment notes](ux/RAG-0.9.md) for current acceptance scope.
 
 ## Structured generation and grounding
 
@@ -99,9 +155,9 @@ Conditional source sentences require every substantive condition term in the ans
 
 ## Single-statement local profile and broader checks
 
-The current Qwen `plain-grounded-v1` profile releases one supported factual statement at a time. Recognizable requests for two distinct properties (for example age **and** file-retention period) or separate questions abstain before inference, rather than silently answering one half. `diagnostics.answerProfile` explains that limit. The generic structured protocol can return multiple independently supported claims and citations. This is a declared local-model/orchestration limit, not a claim that multi-document synthesis has passed actual Qwen evaluation.
+The current Qwen `plain-grounded-v1` profile releases one supported factual statement per `answerQuestion` call. Recognizable requests for two distinct properties (for example age **and** file-retention period) or separate questions in that single call abstain before inference, rather than silently answering one half. The guided-question workflow submits explicitly separate user-written questions as independent calls; it does not relax this guard. `diagnostics.answerProfile` explains that limit. The generic structured protocol can return multiple independently supported claims and citations. This is a declared local-model/orchestration limit, not a claim that multi-document synthesis has passed actual Qwen evaluation.
 
-`node tests/rag.test.js` now has 18 passing orchestration checks. Added regressions cover same-chunk and outside-prompt conflicts, relation/preposition reversal in plain and structured output, source-inflated citations, valid separate multi-document claims, wrong named subjects/groups, explicit unverified date/group scope, bounded incomplete analysis, incomplete compound responses, and archival record identifiers/distractor topics. These tests use mock output intentionally to test release guards, not model quality. The independently owned fixed corpus in `tests/rag-challenges.test.js` separately checks safety and actual learned retrieval; real Qwen and whole-process resource acceptance belong to the browser/resource workstreams.
+`tests/rag.test.js` includes orchestration regressions covering same-chunk and outside-prompt conflicts, relation/preposition reversal in plain and structured output, source-inflated citations, valid separate multi-document claims, wrong named subjects/groups, explicit unverified date/group scope, bounded incomplete analysis, incomplete compound responses, and archival record identifiers/distractor topics. These tests use mock output intentionally to test release guards, not model quality. The independently owned fixed corpus in `tests/rag-challenges.test.js` separately checks safety and actual learned retrieval; real Qwen and whole-process resource acceptance belong to the browser/resource workstreams.
 
 
 ## Source-question topic and relationship binding

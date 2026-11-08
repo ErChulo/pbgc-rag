@@ -6,12 +6,29 @@ function loadRuntime(){if(root.PBGCRagWllama)return Promise.resolve();if(!runtim
 API.mountRag=function(host){const $=id=>document.getElementById(id),el=(tag,text)=>{const node=document.createElement(tag);node.textContent=text;return node;};let model=null,embedding=null,index=null,chunks=[],key='',scopeId;
 function fingerprint(){const active=host.getWorkspace();return JSON.stringify([active?.id,(active?.sources||[]).map(source=>[source.id,source.hash,source.parserVersion])]);}
 function announce(state,message,extra={}){root.dispatchEvent(new CustomEvent('pbgc-model-state',{detail:{state,message,...extra}}));}
-function modelStatus(){if(model&&!model.info().loaded)model=null;$('rag-model-status').textContent=model?`${model.info().model} loaded · local CPU processing`:'No model loaded. Source passages work without setup.';updateSetup();announce(model?'ready':'idle',model?'Qwen is ready. Continue to your documents.':'Qwen is not started. Click Start Qwen, or continue with source passages.');}
+function modelStatus(){if(model&&!model.info().loaded)model=null;$('rag-model-status').textContent=model?`${model.info().model} loaded · local CPU processing`:'No model loaded. Source passages work without setup.';updateSetup();announce(model?'ready':'idle',model?'Qwen is ready. Continue to your documents.':'Qwen is not started. Click Start Qwen, or continue with source passages.');if($('rag-response-summary'))updateQuestions();}
 function updateSetup(){const wasReady=!$('offline-ready').hidden;const ready=!!model?.info().loaded;if(wasReady&&!ready)$('model-setup').open=true;$('unload-rag-model').hidden=!ready;$('start-qwen-inline').hidden=ready;$('offline-ready').hidden=!ready;$('model-setup').querySelector('summary').textContent=ready?'Qwen assistant · Ready':'Qwen assistant · Not started';$('rag-answer-mode').options[1].textContent=ready?'Write an answer with sources':'Write an answer · setup required';}
-function clearAnswer(){$('rag-answer').replaceChildren();$('rag-citations').replaceChildren();}
-function refresh(){const activeId=host.getWorkspace()?.id||null;if(activeId!==scopeId){$('rag-question').value='';scopeId=activeId;}const next=fingerprint();if(next!==key){key=next;index=null;chunks=[];clearAnswer();$('rag-index-status').textContent='Documents are prepared when you ask your first question.';$('rag-status').textContent='';}modelStatus();}
+let questionCount=1;
+function updateQuestions(){
+ $('add-rag-question').hidden=questionCount===3;
+ $('ask-question').textContent=questionCount===1?'Ask question':'Ask questions';
+ const generated=$('rag-answer-mode').value==='generated';
+ $('rag-response-summary').textContent=generated?'Qwen · Answers with sources, on this computer.':'Source passages · Qwen is not needed.';
+ $('rag-time-help').textContent=generated?`Each answer can take up to two minutes. ${questionCount>1?'Questions run one at a time. ':''}You can cancel at any time.`:'Find related passages without starting Qwen.';
+}
+function clearAnswer(){$('rag-answer').replaceChildren();$('rag-citations').replaceChildren();$('rag-results-heading').hidden=true;$('first-answer-next').hidden=true;}
+function resetQuestions(){questionCount=1;for(let i=1;i<=3;i++)$('rag-question'+(i===1?'':'-'+i)).value='';for(let i=2;i<=3;i++)$('rag-question-row-'+i).hidden=true;updateQuestions();}
+$('add-rag-question').addEventListener('click',()=>{if(questionCount===3)return;questionCount++;$('rag-question-row-'+questionCount).hidden=false;clearAnswer();$('rag-status').textContent='';updateQuestions();$('rag-question-'+questionCount).focus();});
+for(let i=2;i<=3;i++)$('remove-rag-question-'+i).addEventListener('click',()=>{
+ if(i>questionCount)return;
+ for(let n=i;n<questionCount;n++)$('rag-question-'+n).value=$('rag-question-'+(n+1)).value;
+ $('rag-question-'+questionCount).value='';$('rag-question-row-'+questionCount).hidden=true;questionCount--;
+ clearAnswer();$('rag-status').textContent='';updateQuestions();$('rag-question'+(i<=questionCount?'-'+i:questionCount===1?'':'-'+questionCount)).focus();
+});
+for(let i=1;i<=3;i++)$('rag-question'+(i===1?'':'-'+i)).addEventListener('input',()=>{clearAnswer();$('rag-status').textContent='';});
+function refresh(){const activeId=host.getWorkspace()?.id||null;if(activeId!==scopeId){resetQuestions();scopeId=activeId;}const next=fingerprint();if(next!==key){key=next;index=null;chunks=[];clearAnswer();$('rag-index-status').textContent='Documents are prepared when you ask your first question.';$('rag-status').textContent='';}modelStatus();updateQuestions();}
 $('rag-model-files').addEventListener('change',()=>{const file=$('rag-model-files').files[0];$('model-selection').textContent=file?`Selected: ${file.name}. Click Enable offline answers to continue.`:'';});
-$('rag-answer-mode').addEventListener('change',()=>{if($('rag-answer-mode').value==='generated'&&!model){$('model-setup').open=true;$('start-qwen-inline').focus();}});
+$('rag-answer-mode').addEventListener('change',()=>{clearAnswer();$('rag-status').textContent='';updateQuestions();if($('rag-answer-mode').value==='generated'&&!model){$('model-setup').open=true;$('start-qwen-inline').focus();}});
 function run(task){return host.operation(async()=>{$('cancel-operation').hidden=true;$('progress').hidden=true;$('rag-cancel').hidden=false;$('rag-cancel').disabled=false;try{await task(host.getSignal());}catch(error){$('rag-status').textContent=error.name==='AbortError'?'Cancelled. No new answer was released.':error.message;throw error;}finally{$('rag-cancel').hidden=true;modelStatus();}},true);}
 $('rag-cancel').addEventListener('click',()=>host.cancel());
 $('load-rag-model').addEventListener('click',()=>run(async signal=>{const files=Array.from($('rag-model-files').files);if(files.length!==1)throw Error('Select one local GGUF model file.');let manifest=DEFAULT_MODEL;const custom=$('rag-model-manifest').files[0];if(custom){if(custom.size>16384)throw Error('The model manifest exceeds 16 KB.');manifest=JSON.parse(await custom.text());}if(model){await model.dispose();model=null;}$('rag-status').textContent='Loading the local generation runtime…';await loadRuntime();model=await API.createLocalLlmProvider({files,manifest,signal,contextSize:2048,onProgress:progress=>{$('rag-status').textContent=progress.phase==='hashing'?'Checking the selected model file…':progress.phase==='ready'?'Local model ready.':'Loading the model into memory…';}});$('rag-answer-mode').value='generated';modelStatus();$('model-setup').open=false;$('model-selection').textContent='';requestAnimationFrame(()=>{if(!$('rag-question').disabled)$('rag-question').focus();});}));
@@ -22,7 +39,59 @@ async function startIncluded(event){const trigger=event.currentTarget;let failur
  }catch(error){failure=error;throw error;}});if(failure){announce('error',failure.name==='AbortError'?'Setup cancelled. You can try again or continue with source passages.':failure.message);requestAnimationFrame(()=>{if(trigger.getClientRects().length&&!trigger.disabled)trigger.focus();});}else requestAnimationFrame(()=>{if($('rag-question').getClientRects().length&&!$('rag-question').disabled)$('rag-question').focus();});}
 $('start-qwen').addEventListener('click',startIncluded);$('start-qwen-inline').addEventListener('click',startIncluded);
 $('unload-rag-model').addEventListener('click',()=>run(async()=>{if(model)await model.dispose();model=null;clearAnswer();$('rag-status').textContent='Generation model unloaded.';}));
-function showCitations(citations){$('rag-citations').replaceChildren();for(const citation of citations){const item=el('article','');item.className='rag-citation';const location=(citation.locators||[]).map(locator=>API.formatLocation(locator)).join('; ');if((citation.locators||[]).some(locator=>locator.type==='pdf-ocr-line'))item.append(el('p','Machine-read source (OCR). Check the original page before using words or numbers.'));item.append(el('h3',`${citation.label||'Source'} · ${citation.sourceName}`),el('p',location),el('blockquote',citation.excerpt));const source=host.getWorkspace()?.sources.find(value=>value.id===citation.sourceId&&value.hash===citation.sourceHash);if(source){const button=el('button','View evidence');button.type='button';button.className='secondary';button.addEventListener('click',()=>{const current=host.getWorkspace()?.sources.find(value=>value.id===source.id&&value.hash===source.hash);if(!current)return;const recordIndex=current.records.findIndex(record=>(citation.locators||[]).some(locator=>JSON.stringify(locator)===JSON.stringify(record.locator)));host.openSource(current,Math.max(0,recordIndex));});item.append(button);}$('rag-citations').append(item);}}
-$('ask-question').addEventListener('click',()=>run(async signal=>{refresh();clearAnswer();const active=host.getWorkspace(),question=$('rag-question').value.trim();if(!active?.sources.length)throw Error('Select a workspace and add source documents first.');if(!question)throw Error('Enter a question about the selected documents.');modelStatus();const generated=$('rag-answer-mode').value==='generated';if(generated&&!model)throw Error('Enable offline answers above, or choose Show source passages to continue without setup.');const scopeKey=key;$('rag-status').textContent='Preparing source evidence…';if(!embedding)embedding=await API.createEmbeddingProvider({signal});if(!index){const corpus=await API.chunkSources(active.sources,{signal});chunks=corpus.chunks;if(!chunks.length)throw Error('No readable text was found. Open Documents to check the file or add another document.');const usable=typeof embedding.coverage==='function'?chunks.filter(chunk=>embedding.coverage(chunk.text).embeddable):chunks;if(!usable.length)throw Error('The embedding model could not read these source excerpts. Use Find evidence.');index=await API.buildSemanticIndex(usable,embedding,{signal,onProgress:progress=>{$('rag-index-status').textContent=`Indexing source excerpts: ${progress.completed} of ${progress.total}`;}});$('rag-index-status').textContent=`${index.chunks.length} source excerpts indexed locally.`;}$('rag-status').textContent='Retrieving relevant source excerpts…';const retrieval=await API.retrieveHybrid(index,question,embedding,{signal,topK:4});modelStatus();$('rag-status').textContent=generated?'Drafting and checking the answer against its sources…':'Preparing source excerpts…';const result=await API.answerQuestion({question,chunks,retrieval,provider:generated?model:undefined,signal,options:{contextCharacters:2600,maxChunks:3,maxTokens:384,timeoutMs:120000,groundingMode:'synthesis'}});if(scopeKey!==fingerprint()||signal.aborted)return;$('rag-answer').append(el('p',!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Here are the source passages related to your question. Open the evidence to read more.':result.answer));showCitations(result.citations.length?result.citations:result.retrieved);$('rag-status').textContent=result.status==='answered'?'Generated answer. Check each claim against its cited source.':result.status==='conflict'?'Possible source conflict. Review the excerpts.':generated?'No grounded answer was released.':'Source excerpts only. No answer was generated.';}));
+function showCitations(citations,target=$('rag-citations')){target.replaceChildren();for(const citation of citations){const item=el('article','');item.className='rag-citation';const location=(citation.locators||[]).map(locator=>API.formatLocation(locator)).join('; ');if((citation.locators||[]).some(locator=>locator.type==='pdf-ocr-line'))item.append(el('p','Machine-read source (OCR). Check the original page before using words or numbers.'));item.append(el('h3',`${citation.label||'Source'} · ${citation.sourceName}`),el('p',location),el('blockquote',citation.excerpt));const source=host.getWorkspace()?.sources.find(value=>value.id===citation.sourceId&&value.hash===citation.sourceHash);if(source){const button=el('button','View evidence');button.type='button';button.className='secondary';button.addEventListener('click',()=>{const current=host.getWorkspace()?.sources.find(value=>value.id===source.id&&value.hash===source.hash);if(!current)return;const recordIndex=current.records.findIndex(record=>(citation.locators||[]).some(locator=>JSON.stringify(locator)===JSON.stringify(record.locator)));host.openSource(current,Math.max(0,recordIndex));});item.append(button);}target.append(item);}}
+function revealResults(){
+ $('rag-results-heading').hidden=false;
+ requestAnimationFrame(()=>{$('rag-results-heading').focus({preventScroll:true});$('rag-results-heading').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+}
+function showQuestionResults(batch,generated){
+ for(const entry of batch.results){
+  const result=entry.result,card=el('article','');card.className='rag-question-result';
+  card.append(el('h3',entry.question));
+  const status=el('p',result.status==='conflict'?'Possible source conflict':!generated?'Source passages only':result.status==='answered'?'Answer with sources':'No supported answer');status.className='question-result-status';card.append(status);
+  const text=el('p',!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Read the related passages below.':result.answer);text.className='question-answer';card.append(text);
+  const citations=result.citations.length?result.citations:result.retrieved;
+  if(citations.length){const sources=el('details','');sources.className='question-sources';sources.open=!generated||result.status!=='answered';sources.append(el('summary',`Sources for this question (${citations.length})`));const list=el('div','');showCitations(citations,list);sources.append(list);card.append(sources);}
+  $('rag-answer').append(card);
+ }
+ $('rag-status').textContent=!generated?`Source passages for ${batch.totalQuestions} questions. No answers were generated.`:batch.status==='answered'?`${batch.answeredCount} of ${batch.totalQuestions} questions answered with sources. Check each answer.`:`${batch.answeredCount} of ${batch.totalQuestions} questions answered. Review each result below.`;
+}
+$('ask-question').addEventListener('click',()=>run(async signal=>{
+ refresh();clearAnswer();
+ const active=host.getWorkspace(),questions=Array.from({length:questionCount},(_,i)=>$('rag-question'+(i===0?'':'-'+(i+1))).value.trim());
+ if(!active?.sources.length)throw Error('Select a workspace and add source documents first.');
+ if(questions.some(question=>!question))throw Error('Enter a question in each question box, or remove the empty box.');
+ if(new Set(questions.map(question=>question.normalize('NFKC').replace(/\s+/g,' ').toLowerCase())).size!==questions.length)throw Error('Use a different question in each question box.');
+ modelStatus();const generated=$('rag-answer-mode').value==='generated';
+ if(generated&&!model)throw Error('Start included Qwen above, or choose Show source passages to continue without setup.');
+ const scopeKey=key;$('rag-status').textContent='Preparing your documents…';
+ if(!embedding)embedding=await API.createEmbeddingProvider({signal});
+ if(!index){
+  const corpus=await API.chunkSources(active.sources,{signal});chunks=corpus.chunks;
+  if(!chunks.length)throw Error('No readable text was found. Open Documents to check the file or add another document.');
+  const usable=typeof embedding.coverage==='function'?chunks.filter(chunk=>embedding.coverage(chunk.text).embeddable):chunks;
+  if(!usable.length)throw Error('These passages could not be prepared. Use Search to find words in your documents.');
+  index=await API.buildSemanticIndex(usable,embedding,{signal,onProgress:progress=>{$('rag-status').textContent=`Preparing passages: ${progress.completed} of ${progress.total}`;}});
+  $('rag-index-status').textContent='Your documents are ready for questions.';
+ }
+ const options={contextCharacters:2600,maxChunks:3,maxTokens:384,timeoutMs:120000,groundingMode:'synthesis'};
+ if(questions.length===1){
+  $('rag-status').textContent='Finding related passages…';const retrieval=await API.retrieveHybrid(index,questions[0],embedding,{signal,topK:4});
+  modelStatus();$('rag-status').textContent=generated?'Drafting and checking the answer against its sources…':'Preparing source passages…';
+  const result=await API.answerQuestion({question:questions[0],chunks,retrieval,provider:generated?model:undefined,signal,options});
+  if(scopeKey!==fingerprint()||signal.aborted)return;
+  $('rag-answer').append(el('p',!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Here are the source passages related to your question. Open the evidence to read more.':result.answer));
+  showCitations(result.citations.length?result.citations:result.retrieved);
+  $('rag-status').textContent=result.status==='answered'?'Generated answer. Check each claim against its cited source.':result.status==='conflict'?'Possible source conflict. Review the excerpts.':generated?'No grounded answer was released.':'Source excerpts only. No answer was generated.';
+ }else{
+  const batch=await API.answerQuestions({questions,chunks,provider:generated?model:undefined,signal,options,retrieve:({question,signal})=>API.retrieveHybrid(index,question,embedding,{signal,topK:4}),onProgress:progress=>{
+   if(progress.phase==='complete')return;
+   $('rag-status').textContent=`Question ${progress.index+1} of ${progress.total} · ${progress.phase==='retrieving'?'Finding related passages…':generated?'Drafting and checking the answer…':'Preparing source passages…'}`;
+  }});
+  if(scopeKey!==fingerprint()||signal.aborted)return;
+  showQuestionResults(batch,generated);
+ }
+ revealResults();
+}));
 refresh();return{refresh};};
 })(globalThis);

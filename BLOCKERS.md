@@ -1,5 +1,9 @@
 # Blockers and remaining scope
 
+## Current documentary RAG scope
+
+Document retrieval, source-supported answers and evidence reading do not require official dictionaries, templates or actuarial rules. Those optional legacy workflows are outside the active RAG increment. The stable `office-v0.8.0` and experimental `larger-model-v0.8.0` office packages were delivered; their checks do not automatically establish acceptance of new development commits. New branch code requires fresh tests.
+
 ## Authoritative inputs and approvals
 
 The approved field dictionary, original official templates/mappings, authoritative BSRS grammar/validator, reference specifications/factors and approved legal/actuarial interpretations are not available to this session. The user's Google Drive source directory has not been accessed. A folder URL and a proposed network allowlist change do not establish authenticated Drive access or source authority. These gaps block authoritative validation and official output approval; independent engineering continues with synthetic fixtures.

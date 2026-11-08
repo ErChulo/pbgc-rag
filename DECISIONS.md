@@ -68,3 +68,11 @@ The longer exact-wording prompt passed all four factual questions and all four u
 Packaged startup was intermittent. Captured progress decoded all 91 pinned parts, then Chromium raised NotReadableError when reading the combined in-memory File. Direct picker inference and one complete package run passed, with no OS memory-limit or OOM events; this is not evidence for raising deadlines or memory budgets. Replace the large native Blob assembly with one bounded owned byte buffer, verify its full digest, then stream copied chunks into the unchanged single-thread runtime. Keep native picker support and exact source/citation checks. Preserve initial failure and narrower passing evidence under docs/evidence.
 
 A compact prompt using “verbatim” again released only two of four fixed facts; retain that failure. The final concise prompt retains the successful two-step “Select … Copy that sentence exactly as written … Do not paraphrase” wording. It passed the original 0.75 coverage threshold (three correct cited facts, one abstention), all four unsafe contexts blocked, with about 91–100 seconds per factual response. No size, memory, generation deadline, source guard or factual threshold was relaxed. The long-prompt four-of-four result is a separate historical evaluation, not the final shorter-prompt score.
+
+## Explicit questions and current RAG scope — November 8, 2026
+
+Continue on `codex/rag-guided-questions-0.9` from the completed larger-model experiment. Keep `main` and both published 0.8 office deliveries intact. No new environment or release publication is part of this increment.
+
+Users can enter up to three separate questions. Run fresh retrieval and the unchanged `answerQuestion` guards for each, one at a time. Do not infer a question decomposition or call the result unrestricted synthesis. Return per-question answers, conflicts and abstentions; only a fully answered set has aggregate status `answered`. Cancellation, scope changes or a batch deadline release no partial set. Preserve the two-minute per-question and six-minute whole-set caps.
+
+Help starts with adding documents, asking, checking sources and saving. Advanced query syntax and field-dictionary tools are collapsed. Official dictionaries, actuarial rules and template outputs are not RAG prerequisites. They remain optional legacy workflows with their existing limitations.

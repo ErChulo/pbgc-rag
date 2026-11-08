@@ -1,5 +1,9 @@
 # Implementation plan and gates
 
+## Active RAG increment
+
+The user narrowed the active scope to document search and source-supported answers. Official actuarial calculations and template outputs are deferred, not prerequisites. Stable `main` remains at `c429b8f`; the separate larger-model 0.8 package has completed delivery. New work continues on `codex/rag-guided-questions-0.9` without merging into `main` or publishing an environment. See docs/ux/RAG-0.9.md for the explicit question-set contract and verification. Historical official-validation phases below are separate work.
+
 ## Completed engineering increments
 
 1. Offline classic-script shell, PBGC visual tokens, dark/light mode, help, evidence reading and capability reporting.

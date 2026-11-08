@@ -121,3 +121,9 @@ Require real native-text and image-only page rendering, independent original-byt
 ## Experimental larger-model branch
 
 Main and stable 0.8 remain unchanged. The separate branch must identify the actual Qwen2.5 1.5B Q3_K_S model by exact name, bytes and digest in real inference, answer-quality, resource and complete-package tests. The office test rejects a bundled model no larger than the stable GGUF or over 768 MiB. Both platform matrices and extracted ZIP tests must pass with actual offline file URLs, followed by anonymous public download/checksum and a delivered-package browser run. The selected lower precision does not waive the fixed four-question factual quality or four unsafe-context gates. Broader model quality is not established by this small synthetic corpus.
+
+## Guided separate questions (development branch)
+
+Accept up to three separately authored questions with fresh retrieval and unchanged grounding/conflict/topic guards for each. Per-question answered, conflict and unsupported states remain visible; a partly supported set is never labeled fully answered. Cancellation/deadlines release no partial set, and switching cases clears all private question fields and results. Verify label/focus behavior, validation, evidence buttons, reduced motion, both themes and narrow viewports. Help must explain the basic RAG task before advanced syntax.
+
+Mocks establish orchestration only. Real model acceptance requires two independent synthetic document facts with two correct answers and exact source citations from one question set. Complete-ZIP tests must start its bundled model without a file picker on actual offline file URLs on Windows and Ubuntu. Prior 0.8 results do not substitute for the new commit. Current status and final run evidence are recorded in docs/ux/RAG-0.9.md. No official output or general model-quality claim is implied.

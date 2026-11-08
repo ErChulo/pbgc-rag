@@ -24,4 +24,8 @@ async function openManualModel(page) {
   const manual=page.locator('#manual-model');
   if(!await manual.evaluate(node=>node.open))await manual.locator(':scope > summary').click();
 }
-module.exports = {showAllTools, openModelSetup, openManualModel, dismissGuide};
+async function openDictionaryTools(page) {
+  const dictionary = page.locator('#dictionary-tools');
+  if (!await dictionary.evaluate(node => node.open)) await dictionary.locator(':scope > summary').click();
+}
+module.exports = {showAllTools, openModelSetup, openManualModel, openDictionaryTools, dismissGuide};

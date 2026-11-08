@@ -1,0 +1,98 @@
+name: Verify separate question answers
+
+on:
+  push:
+    branches: ['codex/rag-guided-questions-0.9']
+  workflow_dispatch:
+
+# This branch check never creates a tag, release or public package.
+permissions:
+  contents: read
+
+concurrency:
+  group: rag-questions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  office-questions:
+    if: github.ref == 'refs/heads/codex/rag-guided-questions-0.9'
+    name: packaged questions (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned development browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-questions" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-questions/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-questions/node_modules" >> "$GITHUB_ENV"
+          CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-questions/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Check the model profile and prepare its exact local weights
+        run: |
+          python tools/build-model-profile.py --check
+          python tools/prepare-models.py
+      - name: Build and verify the complete local office ZIP
+        run: |
+          mkdir -p test-results
+          python tools/package.py --office | tee test-results/rag-questions-package.json
+      - name: Verify the same ZIP offline with real Qwen, OCR and original-page reading
+        env:
+          PBGC_REQUIRE_OFFICE: '1'
+          PBGC_OFFICE_FILE: '1'
+        run: node tests/office-package.test.js 2>&1 | tee test-results/rag-questions-office-file.log
+      - name: Extract the checked ZIP to a path with spaces
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path, PurePosixPath
+          import stat
+          import zipfile
+
+          source = Path('dist/PBGC-RAG-0.8-larger-model-office.zip')
+          destination = Path(os.environ['RUNNER_TEMP']) / 'RAG questions office app with spaces'
+          with zipfile.ZipFile(source) as package:
+              for entry in package.infolist():
+                  path = PurePosixPath(entry.filename)
+                  if (path.is_absolute() or '..' in path.parts or '\\' in entry.filename
+                          or ':' in entry.filename or stat.S_ISLNK(entry.external_attr >> 16)):
+                      raise SystemExit('Unsafe office ZIP path')
+              if package.testzip() is not None:
+                  raise SystemExit('Office ZIP CRC validation failed')
+              package.extractall(destination)
+          if not (destination / 'assets/rag-questions.js').is_file():
+              raise SystemExit('The office ZIP lacks the new question orchestration asset')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write('PBGC_QUESTIONS_ROOT=' + str(destination.resolve()) + '\n')
+          PY
+      - name: Check separate source-bound answers in the extracted office app
+        env:
+          PBGC_REQUIRE_BATCH_MODEL: '1'
+        run: node tests/rag-questions-browser.test.js 2>&1 | tee test-results/rag-questions-browser-file.log
+      - name: Upload scoped question and package evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: separate-question-evidence-${{ matrix.os }}
+          path: |
+            test-results/rag-questions*.log
+            test-results/rag-questions*.json
+            test-results/rag-questions*.png
+            test-results/office-resources-file.json
+            test-results/office-package-file.png
+            test-results/office-original-page-file.png
+          if-no-files-found: warn
+          retention-days: 7

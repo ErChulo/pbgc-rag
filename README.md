@@ -1,13 +1,23 @@
 # PBGC-RAG
 
-> **Experimental larger-model branch.** This branch bundles Qwen2.5 1.5B Instruct Q3_K_S. It is separate from the unchanged [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0). Use its own larger-model ZIP and a separate extracted folder. See [larger-model guide](docs/LARGER-MODEL.md).
+> **Guided-question development branch.** This work builds on the separate Qwen2.5 1.5B experiment. It does not change `main`, the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0), or the delivered [larger-model 0.8 package](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0). New branch features are not a new published office release. See [this increment](docs/ux/RAG-0.9.md).
 
 
-An independent offline-first pension casework application in development. This is not an official PBGC product or a completed actuarial system. Use synthetic documents in this build.
+Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
 
-## Open the workplace build
+PBGC-RAG runs on your computer without sending documents or questions to a service. It is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its current purpose is document search and supported answers. Official templates, actuarial rules and field dictionaries are not required for that workflow.
 
-Use the complete **PBGC-RAG-0.8-larger-model-office.zip** delivery. Extract it and double-click `index.html`, keeping its adjacent `assets`, `vendor` and `models` folders intact. Qwen is included and starts with one button. Click **Get started → Start Qwen**, then follow the document and question steps. No model picker or manual case name is required. See [office start](docs/OFFICE-START.md). Do not use the small core developer ZIP or GitHub source archive as the complete office package. The application requires no installation, build, server, Python, Node or network. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports. Actual offline file URLs are tested on Windows and Ubuntu CI. Local development HTTP tests provide separate supplementary evidence.
+## Start here
+
+1. Download a complete office ZIP from the [stable release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) or the separate [larger-model test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0).
+2. Extract the ZIP. Keep `index.html` and its `assets`, `vendor` and `models` folders together.
+3. Double-click `index.html`.
+4. Choose **Get started**, then **Start Qwen**. Follow the guide to add documents and ask your first question.
+5. Open the cited source. Check the words and numbers. Use **Save & reopen** to save a case file before closing the app.
+
+Qwen is included. You do not need to choose a model file, install software or run a server. The GitHub source-code ZIP and small core developer ZIP are not complete office packages. See the [plain-language office guide](docs/OFFICE-START.md).
+
+The delivered 0.8 packages passed actual offline file-URL tests on Windows and Ubuntu. Those results apply to their tested versions. This development branch requires its own tests before a new release. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports.
 
 Create a case or load the synthetic example. The workspace selector keeps up to eight cases and a separate reference library. Search uses only the selected workspace. Original files remain unchanged. Save original downloads the exact bytes. Reading views show clear source locations; Source details holds optional verification metadata. View evidence opens nearby parsed records with precise locators; PDF sources also offer Original PDF page, with page navigation and zoom.
 
@@ -32,26 +42,38 @@ Limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; ei
 
 ## Ask your documents
 
-The 0.4 RAG work adds source-bound chunks, local learned sentence embeddings, semantic/lexical retrieval and an optional local instruction model. The core build includes the sentence encoder and single-thread WebAssembly generation runtime. The complete office ZIP includes Qwen as verified local script parts under `models/`; the smaller core developer ZIP omits those weights. The office app starts the included assistant directly without a file picker. The application does not download models or send prompts or documents to a service.
+Choose the task you need:
 
-Use **Get started → Start Qwen** in the complete office build, add documents and ask a question. The guide creates the first case and selects the answer mode automatically. A guided example includes documents and a suggested question. Source passages remain available without starting Qwen. Manual model selection and custom manifests remain advanced developer options; never import model assets as case documents.
+| Task | What happens | Needs Qwen? |
+| --- | --- | --- |
+| Read source passages | Finds and shows the document text | No |
+| Ask one question | Writes one short answer and links its supporting source | Yes |
+| Ask separate questions — development branch | Checks up to three questions one at a time and shows a result for each | Yes |
 
-Answers retain supporting quotations and links to the original evidence records. Insufficient, conflicting or rejected model output must produce an abstention, not an unsupported answer. Citation and grounding guards do not establish legal correctness or prove semantic entailment. Model generation does not approve a rule or an official artifact. See [local model preparation and limits](docs/LOCAL-MODELS.md), [chunking](docs/CHUNKING.md), [semantic retrieval](docs/SEMANTIC.md) and [answer grounding](docs/RAG.md). Integration and actual-model acceptance evidence are recorded separately in ACCEPTANCE.md; module or mock-provider tests do not prove real inference quality.
+Ask for one fact in each question. For example: **What is the normal retirement age?** To check another fact, add a separate question such as **How long are case files retained?** Each answer must have its own support. A supported answer to one question does not make the other answers valid.
 
-## Search and review
+The local Qwen profile returns one supported statement per question. It does not write an unrestricted report that combines facts across documents. Separate questions can find facts in different documents, with separate source checks. A result can say that no supported answer was found or that sources need review. Keep those results visible when you compare answers.
+
+Open each citation before using an answer. For a PDF, choose **Original PDF page** to check the source page. Scan recognition can misread words and numbers. Source details holds optional technical verification data; you do not need hashes to read a citation.
+
+The complete office package contains the local model files. The app does not download models or send prompts or documents to a service. Source passages remain available without starting Qwen. Manual model selection and custom manifests are advanced developer options; do not import model files as case documents.
+
+Read the [office guide](docs/OFFICE-START.md) for the user flow. Developer details: [model preparation](docs/LOCAL-MODELS.md), [chunking](docs/CHUNKING.md), [semantic retrieval](docs/SEMANTIC.md) and [answer grounding](docs/RAG.md). Guards reduce unsupported output; they do not prove every answer correct. Mock-provider checks and actual-model evaluation are recorded separately.
+
+## Other search tools
 
 - Keywords require all terms in the same record. Exact phrases preserve word order.
 - Ranked lexical search uses BM25 with a visible score explanation. It is a natural-language lexical fallback, not a semantic model or an answer generator.
 - Safe regex supports a documented bounded subset, not unrestricted JavaScript regex.
 - Read-only SQL supports `SELECT * FROM records` with filtering, ordering and limits. It is an internal evidence-record query subset, not a full SQLite engine.
 - Graph tools traverse documentary links and explicit source-bound proposed links, with bounded hops/cycles and optional date filters. User-supplied dates remain unverified. No legal or actuarial relationship is inferred or approved.
-- Provisional R1 text, internal nonexecutable BSRS JSON, source-linked HTML/CSV, reusable layouts and explicit timeline annotations are available. They are drafting/review aids, not official artifacts.
+- Optional review and export tools include source-linked HTML/CSV, report layouts and timeline notes. Legacy R1 and internal BSRS drafts remain nonofficial. You do not need these tools to search or ask questions.
 
 Report layouts and proposed graph links now save with a version 2 case across reloads. Separate layout/graph exports and reviewer packages remain available. Reviewer packages include original sources, five hashed artifacts, a manifest and release blockers. Restore verifies bytes and hashes, source-binds graph/layout annotations and regenerates R1/BSRS/report contents; rehashed forged drafts reject.
 
-## Case review workbench
+## Optional case review tools
 
-Open **Case review** for the selected workspace:
+These advanced tools are separate from the document-question workflow. No field dictionary, template or actuarial approval is required to search documents. Open **Notes and tables** for the selected workspace only when you need its supported review features:
 
 - Save fact, provision or event candidates with exact source references, authority labels, explicit date/group scope and local reviewer claims. Edits invalidate review; unknown scope or conflicting values cause abstention. No legal precedence or actuarial rule is inferred.
 - Map exact field names from an explicitly selected Excel sheet/column/header/version. The official-candidate path requires the actual `data_dictionary_complete.xlsm` name and format. Synthetic mode is labeled. Mapping review never activates official validation, infers field types or substitutes `DD.csv`.
@@ -79,15 +101,19 @@ python tools/package.py --office
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `node tools/verify-browser.js` owns the test server, full Playwright run and cleanup; no manual browser walkthrough or separately managed server is needed. It labels HTTP evidence as supplementary. `--file` uses actual local file URLs without modifying browser policy; the managed Chromium here still blocks that entry. GitHub CI runs both profiles on its test browser. See docs/AUTOMATION.md. Reviewed process-sandbox escalation is needed in this coding environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.8.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The default core ZIP includes the sentence encoder and generation runtime but excludes GGUF weights. Developers prepare the model outside the office, then run `python tools/package.py --office` to produce the complete `dist/PBGC-RAG-0.8-larger-model-office.zip`. That profile fails unless the exact pinned model size and SHA-256 pass, includes model/manifest/license assets, and verifies ZIP CRC plus every packaged file hash. Transfer that complete ZIP to the office. No preparation command is a workplace runtime step.
+`tools/package.py` creates `dist/PBGC-RAG-0.8-larger-model.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The default core ZIP includes the sentence encoder and generation runtime but excludes GGUF weights. Developers prepare the model outside the office, then run `python tools/package.py --office` to produce the complete `dist/PBGC-RAG-0.8-larger-model-office.zip`. That profile fails unless the exact pinned model size and SHA-256 pass, includes model/manifest/license assets, and verifies ZIP CRC plus every packaged file hash. Transfer that complete ZIP to the office. No preparation command is a workplace runtime step.
 
-## Remaining gates
+## Current limits and next development
 
-Official dictionary authorization/type definitions, legal/actuarial definitions and approvals, reference factors, original templates, BSRS syntax and official artifacts require authorized authoritative inputs. Actual-model quality, browser-policy and whole-process resource acceptance must be supported by the current test evidence. Mixed image/text-page OCR, other OCR languages, comprehensive PDF tables/layout, broader format/query support and complete enterprise accessibility/performance acceptance remain pending. No official output is enabled. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for exact evidence and unfinished work.
+The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. This branch adds separate questions while keeping the existing source checks. Its actual-model and browser results must be recorded before delivery.
+
+Mixed image/text-page OCR, other OCR languages, full PDF table reconstruction, broader format/query support and complete assistive-technology/performance evaluation remain unfinished. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for test scope.
+
+Official actuarial calculations and template outputs are outside the current RAG milestone. Their missing source contracts do not block document search or question answering. No official output approval is enabled.
 
 ## Optional scanned-PDF reading
 
-Enable **Read text from scanned PDF pages** before importing a scan. All English recognition assets are included in the office ZIP. Only pages with no native text are recognized; mixed pages with a native text layer retain that layer without OCR. Limits: 20 image-only pages per PDF, 8 million pixels per rendered page and 180 seconds total. Machine-read text, numbers and line regions can be wrong: check the original page before using them. OCR confidence is not factual confidence. Source bytes are preserved; version 3 exports re-run the pinned processing profile on restore. See docs/OCR.md and docs/PDF-OCR.md.
+The first-run guide enables scanned-page reading. In the document workspace, enable **Read text from scanned PDF pages** before importing a scan if it is off. All English recognition assets are included in the office ZIP. Only pages with no native text are recognized; mixed pages with a native text layer retain that layer without OCR. Limits: 20 image-only pages per PDF, 8 million pixels per rendered page and 180 seconds total. Machine-read text, numbers and line regions can be wrong: check the original page before using them. OCR confidence is not factual confidence. Source bytes are preserved; version 3 exports re-run the pinned processing profile on restore. See docs/OCR.md and docs/PDF-OCR.md.
 
 ## Original PDF pages
 

@@ -13,6 +13,14 @@ test('source corpus binding, scope and context budgets reject stale or forged re
 test('raw model tokens remain private until final grounding succeeds',async()=>{const chunks=[chunk('a','Normal retirement age is 65.')],observed=[];const invalid={id:'MOCK-untrusted-stream',generate:async({onToken})=>{onToken('Unsupported 99');return JSON.stringify({status:'answered',answer:'Normal retirement age is 99.',citations:[{label:'C1',quote:chunks[0].text}]});}};assert.equal((await answerQuestion({question,chunks,provider:invalid,onToken:token=>observed.push(token)})).status,'abstained');assert.deepEqual(observed,[]);await answerQuestion({question,chunks,provider:provider(chunks[0].text),onToken:token=>observed.push(token)});assert.deepEqual(observed,['Normal retirement age is 65. [C1]']);});
 test('cancellation and timeout interrupt unresponsive providers without releasing output',async()=>{const chunks=[chunk('a','Normal retirement age is 65.')],never={id:'MOCK-stalled',generate:()=>new Promise(()=>{})};const timed=await answerQuestion({question,chunks,provider:never,options:{timeoutMs:5}});assert.equal(timed.status,'abstained');assert.match(timed.diagnostics.reason,/time budget/);const controller=new AbortController(),pending=answerQuestion({question,chunks,provider:never,signal:controller.signal});const rejected=assert.rejects(pending,error=>error.name==='AbortError');controller.abort();await rejected;});
 
+test('MOCK generation failure diagnostics retain bounded error identity for safe orchestration',async()=>{
+ const chunks=[chunk('a','Normal retirement age is 65.')];
+ for(const identity of [{name:'TimeoutError',code:'TIMEOUT'},{name:'N'.repeat(200),code:'C'.repeat(200)}]){
+  const failure=Object.assign(Error('Synthetic provider failure.'),identity),result=await answerQuestion({question,chunks,provider:{id:'MOCK-failure-identity',generate:()=>{throw failure;}}});
+  assert.equal(result.status,'abstained');assert.equal(result.diagnostics.modelOutputAccepted,false);assert.equal(result.diagnostics.generationErrorName,identity.name.slice(0,80));assert.equal(result.diagnostics.generationErrorCode,identity.code.slice(0,80));assert.equal(result.citations.length,0);
+ }
+});
+
 test('MOCK opt-in plain answers bind exact supporting sentences and reject novel relations, lost qualifications and sentence joins',async()=>{
  const plain=text=>({id:'MOCK-plain-protocol-only',answerFormat:'plain-grounded-v1',generate:async()=>text});
  const chunks=[chunk('a','Normal retirement age is 65.')];

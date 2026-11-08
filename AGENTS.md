@@ -10,6 +10,10 @@ This is the **PBGC-RAG** project at https://github.com/ErChulo/pbgc-rag.
 4. Inspect the current repository, upstream HKUDS/RAG-Anything, and previous tests.
 5. Resume from the latest verified milestone. Never reset completed work.
 
+## Current user scope
+
+The active deliverable is an offline document RAG application: import, retrieve, answer with sources, inspect evidence and save/reopen. The user explicitly deferred official actuarial calculations and template generation. Missing dictionaries, official templates or approved actuarial rules are not prerequisites for this RAG workflow. Develop new increments separately; keep `main` and the published stable office package intact. Do not publish the cloud environment without a new explicit request.
+
 ## Autonomy
 
 Proceed through all implementation phases without unnecessary user questions. Make routine, reversible choices yourself. Persist decisions and exact tests. Do not promise background execution beyond the available session. Never claim success without evidence. Official actuarial interpretation and confidential-data handling require human approval.

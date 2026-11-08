@@ -21,7 +21,7 @@ root.PBGCRag.mountFlow=function(host){
  }
  function focus(){const panel=selected==='welcome'?$('welcome'):$('panel-'+selected);panel?.querySelector('h2')?.focus({preventScroll:true});panel?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
  function go(name,moveFocus=true){if(!names.includes(name)&&!['welcome','qwen'].includes(name))return;if(['welcome','qwen'].includes(name))guided=true;selected=name;pendingFocus=false;if(location.hash&&location.hash!=='#workspace')location.hash='workspace';paint();if(moveFocus&&!expanded)focus();}
- async function documents(){await host.start(sample&&!sampleCreated);if(sample)sampleCreated=true;if(guided)$('pdf-ocr').checked=true;$('rag-answer-mode').value=ready?'generated':'extractive';go('documents');}
+ async function documents(){await host.start(sample&&!sampleCreated);if(sample)sampleCreated=true;if(guided)$('pdf-ocr').checked=true;$('rag-answer-mode').value=ready?'generated':'extractive';$('rag-answer-mode').dispatchEvent(new Event('change'));go('documents');}
  document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>go(button.dataset.view)));
  $('all-tools').addEventListener('click',()=>{expanded=!expanded;paint();});
  $('guide-start').addEventListener('click',()=>{sample=false;go('qwen');});$('guide-sample').addEventListener('click',()=>{sample=true;sampleCreated=false;go('qwen');});
@@ -30,9 +30,9 @@ root.PBGCRag.mountFlow=function(host){
  $('guide-back').addEventListener('click',()=>go(selected==='ask'?'documents':selected==='documents'?'qwen':'welcome'));
  $('qwen-next').addEventListener('click',documents);$('qwen-skip').addEventListener('click',documents);
  $('qwen-cancel').addEventListener('click',()=>host.cancel());
- $('guide-read-passages').addEventListener('click',()=>{$('rag-answer-mode').value='extractive';paint();$('rag-question').focus();});
+ $('guide-read-passages').addEventListener('click',()=>{$('rag-answer-mode').value='extractive';$('rag-answer-mode').dispatchEvent(new Event('change'));paint();$('rag-question').focus();});
  $('finish-guide').addEventListener('click',()=>{guided=false;go('ask');});
- $('suggested-question').addEventListener('click',()=>{$('rag-question').value='What is the normal retirement age?';$('rag-question').focus();});
+ $('suggested-question').addEventListener('click',()=>{$('rag-question').value='What is the normal retirement age?';$('rag-question').dispatchEvent(new Event('input'));$('rag-question').focus();});
  addEventListener('pbgc-model-state',event=>{const state=event.detail;ready=state.state==='ready';$('assistant-state').textContent=ready?'Qwen · Ready':state.state==='loading'?'Qwen · Starting…':'Qwen · Not started';$('qwen-cancel').hidden=state.state!=='loading';$('qwen-cancel').disabled=false;$('qwen-progress').hidden=state.state!=='loading';if(state.total){$('qwen-progress').max=state.total;$('qwen-progress').value=state.completed;}else $('qwen-progress').removeAttribute('value');if(state.message)$('qwen-progress-label').textContent=state.message;$('qwen-error').hidden=state.state!=='error';if(state.state==='error')$('qwen-error').textContent=state.message;paint();if(ready&&guided&&selected==='qwen')requestAnimationFrame(()=>{if(!$('qwen-next').disabled)$('qwen-next').focus();});});
  return {go,exit(){if(!guided)return;guided=false;expanded=false;selected=active?(active.sources.length?'ask':'documents'):'case';paint();},refresh(value,isBusy){active=value;busy=isBusy;const id=value?.id||null;if(id!==previousId){if(!guided){pendingFocus=true;selected=value?(value.sources.length?'ask':'documents'):'case';}previousId=id;}paint();if(pendingFocus&&!busy&&!expanded){pendingFocus=false;focus();}}};
 };})(globalThis);
