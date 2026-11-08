@@ -14,6 +14,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prior-evidence:
+    if: github.ref == 'refs/heads/codex/rag-guided-questions-0.9'
+    name: Read prior synthetic question evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Download the failed synthetic check evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 42502105692 --repo ErChulo/pbgc-rag --name separate-question-evidence-ubuntu-latest --dir prior-evidence
+      - name: Expose bounded prior question diagnostics
+        shell: bash
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          const {extractFailureNames,workflowEscape}=require('./tools/ci-summary.js');
+          const base=path.resolve('prior-evidence');
+          const read=name=>{const file=path.join(base,name);if(!fs.existsSync(file))return null;const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)return null;return fs.readFileSync(file,'utf8');};
+          const clip=(value,length=180)=>typeof value==='string'?value.slice(0,length):null;
+          const log=read('rag-questions-browser-file.log');
+          for(const name of extractFailureNames(log||'').slice(0,12))console.log('::notice title=Prior failed synthetic check::'+workflowEscape(name));
+          const raw=read('rag-questions-real-file.json')||read('rag-questions-real.json');
+          if(raw){
+            const report=JSON.parse(raw),safe={run:42502105692,batchStatus:clip(report.batchStatus),batchError:report.batchError?{name:clip(report.batchError.errorName,100),message:clip(report.batchError.errorMessage)}:null,ragStatus:clip(report.ragStatus),questions:(report.questions||[]).slice(0,3).map(row=>({index:row.index,status:clip(row.status,30),reason:clip(row.reason,100)})),calls:(report.modelOutputs||[]).slice(0,3).map(call=>({state:clip(call.state,30),elapsedMs:Number.isFinite(call.elapsedMs)?call.elapsedMs:null,errorName:clip(call.errorName,100),errorMessage:clip(call.errorMessage,100)})),externalRequests:Number.isFinite(report.externalRequests)?report.externalRequests:null};
+            console.log('::notice title=Prior synthetic question model diagnostics::'+workflowEscape(JSON.stringify(safe)));
+          }else console.log('::warning title=Prior synthetic question diagnostics::No bounded real-model report was available.');
+          JS
   office-questions:
     if: github.ref == 'refs/heads/codex/rag-guided-questions-0.9'
     name: packaged questions (${{ matrix.os }})
@@ -79,9 +113,28 @@ jobs:
               output.write('PBGC_QUESTIONS_ROOT=' + str(destination.resolve()) + '\n')
           PY
       - name: Check separate source-bound answers in the extracted office app
+        id: questions
         env:
           PBGC_REQUIRE_BATCH_MODEL: '1'
         run: node tests/rag-questions-browser.test.js 2>&1 | tee test-results/rag-questions-browser-file.log
+      - name: Expose bounded failed question diagnostics
+        if: ${{ failure() && steps.questions.outcome == 'failure' }}
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          const {extractFailureNames,workflowEscape}=require('./tools/ci-summary.js');
+          const base=path.resolve('test-results');
+          const read=name=>{const file=path.join(base,name);if(!fs.existsSync(file))return null;const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)return null;return fs.readFileSync(file,'utf8');};
+          const clip=(value,length=180)=>typeof value==='string'?value.slice(0,length):null;
+          const names=extractFailureNames(read('rag-questions-browser-file.log')||'');
+          if(!names.length)names.push('Question browser acceptance failed before a named test result was available.');
+          for(const name of names.slice(0,12))console.log('::error title=Failed synthetic question check::'+workflowEscape(name));
+          const raw=read('rag-questions-real-file.json')||read('rag-questions-real.json');
+          if(raw){
+            const report=JSON.parse(raw),safe={batchStatus:clip(report.batchStatus),batchError:report.batchError?{name:clip(report.batchError.errorName,100),message:clip(report.batchError.errorMessage)}:null,ragStatus:clip(report.ragStatus),questions:(report.questions||[]).slice(0,3).map(row=>({index:row.index,status:clip(row.status,30),reason:clip(row.reason,100)})),calls:(report.modelOutputs||[]).slice(0,3).map(call=>({state:clip(call.state,30),elapsedMs:Number.isFinite(call.elapsedMs)?call.elapsedMs:null,errorName:clip(call.errorName,100),errorMessage:clip(call.errorMessage,100)})),externalRequests:Number.isFinite(report.externalRequests)?report.externalRequests:null};
+            console.log('::notice title=Synthetic question model diagnostics::'+workflowEscape(JSON.stringify(safe)));
+          }else console.log('::warning title=Synthetic question diagnostics::No bounded real-model report was available.');
+          JS
       - name: Upload scoped question and package evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
