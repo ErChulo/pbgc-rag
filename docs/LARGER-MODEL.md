@@ -26,7 +26,7 @@ Keep this build and the stable build in different folders. Save a portable case 
 | Next candidate | Q3_K_M: 824,178,688 bytes; rejected because it exceeds the cap |
 | Context | 2,048 tokens in the interface; adapter maximum 4,096 |
 | Runtime | Single CPU thread, local WebAssembly; no GPU or network |
-| Output | One exact source sentence that answers the question, with a citation |
+| Output | One source-checked factual sentence with a citation; the prompt requests exact source wording |
 | Workload memory gate | 12 GB for the test process and full browser process tree |
 
 The selected file is larger than the stable 491,400,032-byte model. It is the higher-precision candidate that fit among the two measured standard Q3 variants, not a claim to be the largest or best model in every model catalog. The factual-answer, unsafe-context and citation gates must pass without lower thresholds.
