@@ -19,18 +19,18 @@ function validate(pack){
  if(total!==MODEL_BYTES)throw Error('The included Qwen pack is incomplete.');return pack;
 }
 API.loadBundledQwen=async function({signal,onProgress=()=>{}}={}){
- if(loading)throw Error('Qwen setup is already running.');loading=true;const buffers=[];
+ if(loading)throw Error('Qwen setup is already running.');loading=true;let modelBytes=null;
  try{
-  delete root.PBGCQwenPack;delete root.PBGCQwenPart;onProgress({phase:'opening',message:'Opening the included Qwen assistant…'});await script('models/qwen-pack.js',signal);const pack=validate(root.PBGCQwenPack);delete root.PBGCQwenPack;
+  delete root.PBGCQwenPack;delete root.PBGCQwenPart;onProgress({phase:'opening',message:'Opening the included Qwen assistant…'});await script('models/qwen-pack.js',signal);const pack=validate(root.PBGCQwenPack);delete root.PBGCQwenPack;modelBytes=new Uint8Array(MODEL_BYTES);
   for(let i=0;i<pack.chunks.length;i++){
    if(signal?.aborted)throw abort();delete root.PBGCQwenPart;await script(pack.chunks[i].path,signal);const part=root.PBGCQwenPart;delete root.PBGCQwenPart;
    if(part?.index!==i||typeof part.data!=='string'||part.data.length!==4*Math.ceil(pack.chunks[i].bytes/3))throw Error('One of the included Qwen files is incomplete. Extract the office ZIP again.');
    let binary;try{binary=atob(part.data);}catch{throw Error('An included Qwen file is damaged. Extract the complete office ZIP again.');}const bytes=new Uint8Array(binary.length);for(let j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);part.data='';
    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
    if(bytes.length!==pack.chunks[i].bytes||hash!==pack.chunks[i].sha256)throw Error('An included Qwen file failed its integrity check. Extract the office ZIP again.');
-   buffers.push(bytes);onProgress({phase:'reading',completed:i+1,total:pack.chunks.length,message:`Reading the included assistant · ${i+1} of ${pack.chunks.length} parts`});await new Promise(resolve=>setTimeout(resolve,0));
+   modelBytes.set(bytes,i*CHUNK_BYTES);onProgress({phase:'reading',completed:i+1,total:pack.chunks.length,message:`Reading the included assistant · ${i+1} of ${pack.chunks.length} parts`});await new Promise(resolve=>setTimeout(resolve,0));
   }
-  if(signal?.aborted)throw abort();const file=new File(buffers,pack.model.files[0].name,{type:'application/octet-stream'});return {files:[file],manifest:pack.model};
- }finally{buffers.length=0;delete root.PBGCQwenPack;delete root.PBGCQwenPart;loading=false;}
+  if(signal?.aborted)throw abort();const modelBuffer=modelBytes.buffer;modelBytes=null;return {modelBuffer,manifest:pack.model};
+ }finally{modelBytes=null;delete root.PBGCQwenPack;delete root.PBGCQwenPart;loading=false;}
 };
 })(globalThis);

@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "scope": "Harness Node and full Chromium descendant tree: bundled Qwen script reconstruction, verified model load, one generated answer and scanned PDF OCR",
+  "budgetBytes": 12000000000,
+  "samples": 663,
+  "measurementMs": 136851,
+  "effectiveSampleIntervalMs": 207,
+  "maximumSampleGapMs": 4425,
+  "peak": {
+    "rssBytes": 5959131136,
+    "pssBytes": 5673628672,
+    "privateBytes": 5559177216,
+    "browserRssBytes": 0,
+    "browserPssBytes": 0,
+    "processCount": 10,
+    "budgetMetricBytes": 5673628672
+  },
+  "cpuMs": 180960,
+  "browserCpuMs": 0,
+  "pssComplete": true,
+  "missingProcessSamples": 0,
+  "exceeded": false,
+  "errors": []
+}

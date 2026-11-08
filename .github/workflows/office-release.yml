@@ -3,7 +3,6 @@ name: Verify and deliver experimental larger-model office package
 on:
   push:
     branches: ['codex/office-delivery-larger-model-0.8']
-    tags: ['larger-model-v*']
   workflow_dispatch:
 
 permissions:
@@ -21,9 +20,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 45
     permissions:
       contents: write
+      actions: read
+      checks: read
     env:
       PBGC_REQUIRE_MODEL: '1'
       PBGC_REQUIRE_OFFICE: '1'
@@ -60,16 +61,142 @@ jobs:
       - name: Write delivery checksum
         if: ${{ success() && matrix.os == 'ubuntu-latest' }}
         run: python tools/office-checksum.py
-      - name: Stage exact tested ZIP as an unpublished release asset
-        if: ${{ success() && matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/larger-model-v') }}
+      - name: Require exact-commit source checks and Windows package acceptance
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/codex/office-delivery-larger-model-0.8' }}
+        timeout-minutes: 31
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: >-
-          gh release create "$RELEASE_TAG"
-          dist/PBGC-RAG-0.8-larger-model-office.zip dist/SHA256SUMS.txt
-          --draft --verify-tag --prerelease --latest=false --title "PBGC-RAG experimental 1.5B offline package"
-          --notes-file docs/OFFICE-RELEASE.md
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, time, urllib.parse, urllib.request
+          repo, commit = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA']
+          branch = 'codex/office-delivery-larger-model-0.8'
+          run_id, attempt = os.environ['GITHUB_RUN_ID'], int(os.environ['GITHUB_RUN_ATTEMPT'])
+          base = os.environ['GITHUB_API_URL'] + '/repos/' + repo + '/'
+          def api(path):
+              request = urllib.request.Request(base + path, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          def successful(item, label):
+              if item['status'] == 'completed' and item.get('conclusion') != 'success':
+                  raise SystemExit('FAIL: ' + label + ' did not pass')
+              return item['status'] == 'completed' and item.get('conclusion') == 'success'
+          source_names = {'verification (ubuntu-latest)', 'verification (windows-latest)'}
+          deadline = time.monotonic() + 30 * 60
+          while time.monotonic() < deadline:
+              current = api('actions/runs/' + run_id)
+              if current['head_sha'] != commit or current['run_attempt'] != attempt:
+                  raise SystemExit('FAIL: release run commit or attempt changed')
+              office_jobs = api('actions/runs/' + run_id + '/jobs?filter=latest&per_page=100')['jobs']
+              windows = [job for job in office_jobs if job['name'] == 'extracted offline office package (windows-latest)']
+              if len(windows) > 1:
+                  raise SystemExit('FAIL: ambiguous Windows package job')
+              office_ready = bool(windows) and successful(windows[0], 'Windows office package')
+              query = urllib.parse.urlencode({'head_sha': commit, 'branch': branch, 'event': 'push', 'per_page': 100})
+              runs = api('actions/workflows/verify.yml/runs?' + query)['workflow_runs']
+              runs = [run for run in runs if run['head_sha'] == commit and run['head_branch'] == branch and run['event'] == 'push']
+              source_ready = False
+              if runs:
+                  source = max(runs, key=lambda run: run['id'])
+                  workflow_ready = successful(source, 'full source workflow')
+                  jobs = api('actions/runs/' + str(source['id']) + '/jobs?filter=latest&per_page=100')['jobs']
+                  checks = api('commits/' + commit + '/check-runs?filter=latest&per_page=100')['check_runs']
+                  prefix = os.environ['GITHUB_SERVER_URL'] + '/' + repo + '/actions/runs/' + str(source['id']) + '/job/'
+                  verified = set()
+                  for name in source_names:
+                      matches = [job for job in jobs if job['name'] == name]
+                      if len(matches) > 1:
+                          raise SystemExit('FAIL: ambiguous source verification job')
+                      job_ready = bool(matches) and successful(matches[0], name)
+                      bound_checks = [check for check in checks if check['name'] == name
+                          and check.get('head_sha') == commit and check.get('app', {}).get('slug') == 'github-actions'
+                          and check.get('details_url', '').startswith(prefix)]
+                      if len(bound_checks) > 1:
+                          raise SystemExit('FAIL: ambiguous source verification check')
+                      check_ready = bool(bound_checks) and successful(bound_checks[0], name + ' check')
+                      if job_ready and check_ready:
+                          verified.add(name)
+                  source_ready = workflow_ready and verified == source_names
+              if source_ready and office_ready:
+                  print('PASS: exact-commit Windows/Ubuntu source checks and Windows office package')
+                  break
+              print('Waiting for exact-commit source checks and Windows office package.', flush=True)
+              time.sleep(30)
+          else:
+              raise SystemExit('FAIL: required exact-commit checks did not finish within 30 minutes')
+          PY
+      - name: Deliver separately verified experimental prerelease
+        if: ${{ success() && matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/codex/office-delivery-larger-model-0.8' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: larger-model-v0.8.0
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, tempfile, urllib.error, urllib.parse, urllib.request
+          repo, commit, tag = os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA'], os.environ['RELEASE_TAG']
+          if tag != 'larger-model-v0.8.0' or os.environ['GITHUB_REF'] != 'refs/heads/codex/office-delivery-larger-model-0.8':
+              raise SystemExit('FAIL: experimental delivery scope differs')
+          base = os.environ['GITHUB_API_URL'] + '/repos/' + repo + '/'
+          def api(path, missing=False):
+              request = urllib.request.Request(base + path, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  if missing and error.code == 404:
+                      return None
+                  raise
+          def tag_commit():
+              ref = api('git/ref/tags/' + urllib.parse.quote(tag, safe=''), missing=True)
+              if ref is None:
+                  return None
+              target = ref['object']
+              for _ in range(8):
+                  if target['type'] == 'commit':
+                      return target['sha']
+                  if target['type'] != 'tag':
+                      break
+                  target = api('git/tags/' + target['sha'])['object']
+              raise SystemExit('FAIL: release tag does not resolve to a commit')
+          existing_commit = tag_commit()
+          if existing_commit is not None and existing_commit != commit:
+              raise SystemExit('FAIL: experimental tag already points to another commit; nothing overwritten')
+          release = api('releases/tags/' + urllib.parse.quote(tag, safe=''), missing=True)
+          if release is not None and not release['prerelease']:
+              raise SystemExit('FAIL: existing release is not an experimental prerelease')
+          archive = pathlib.Path('dist/PBGC-RAG-0.8-larger-model-office.zip')
+          checksum = pathlib.Path('dist/SHA256SUMS.txt')
+          def digest(path):
+              with path.open('rb') as stream:
+                  return hashlib.file_digest(stream, 'sha256').hexdigest()
+          def require_current_branch():
+              branch_ref = api('git/ref/heads/' + urllib.parse.quote('codex/office-delivery-larger-model-0.8', safe=''))
+              if branch_ref['object']['sha'] != commit:
+                  raise SystemExit('FAIL: experimental branch advanced after testing; no release created or changed')
+          require_current_branch()
+          if release is None:
+              subprocess.run(['gh', 'release', 'create', tag, str(archive), str(checksum),
+                  '--target', commit, '--draft', '--prerelease', '--latest=false',
+                  '--title', 'PBGC-RAG experimental 1.5B offline package',
+                  '--notes-file', 'docs/OFFICE-RELEASE.md'], check=True)
+          if tag_commit() != commit:
+              raise SystemExit('FAIL: staged release tag does not identify the tested commit')
+          with tempfile.TemporaryDirectory(prefix='pbgc-release-verify-') as directory:
+              subprocess.run(['gh', 'release', 'download', tag, '--dir', directory,
+                  '--pattern', archive.name, '--pattern', checksum.name], check=True)
+              delivered = pathlib.Path(directory)
+              if digest(delivered / archive.name) != digest(archive) or (delivered / checksum.name).read_bytes() != checksum.read_bytes():
+                  raise SystemExit('FAIL: existing or uploaded release assets differ from this tested ZIP; nothing overwritten')
+          require_current_branch()
+          subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease', '--latest=false'], check=True)
+          print('PASS: separate experimental prerelease; stable release and main were not changed')
+          PY
       - name: Retain synthetic office verification evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -80,25 +207,3 @@ jobs:
             test-results/ux-flow-*.png
           if-no-files-found: warn
           retention-days: 14
-
-  release:
-    name: Deliver verified office ZIP
-    needs: office
-    if: ${{ startsWith(github.ref, 'refs/tags/larger-model-v') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Retrieve staged tested package
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release download "$RELEASE_TAG" --dir dist --pattern PBGC-RAG-0.8-larger-model-office.zip --pattern SHA256SUMS.txt
-      - name: Verify downloaded release bytes match tested ZIP
-        run: python tools/office-checksum.py --verify
-      - name: Make complete tested download available
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false

@@ -82,6 +82,9 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
     context=await browser.newContext();if(FILE)await context.setOffline(true);
     const page=await context.newPage(),external=[],outsidePackage=[],errors=[];
+    const startupAt=Date.now();
+    page.on('console',entry=>{const message=entry.text();if(message.startsWith('PBGC_OFFICE_MODEL_STAGE ')){const detail=message.slice(24);t.diagnostic('Model startup '+(Date.now()-startupAt)+' ms: '+detail);if(process.env.GITHUB_ACTIONS)console.log('::notice title=Bundled model startup::'+detail);}});
+    await page.addInitScript(()=>addEventListener('pbgc-model-state',event=>{const d=event.detail;if(d.phase==='reading'&&d.completed!==1&&d.completed!==d.total&&d.completed%30!==0)return;console.info('PBGC_OFFICE_MODEL_STAGE '+JSON.stringify({state:d.state,phase:d.phase,completed:d.completed,total:d.total,message:String(d.message||'').slice(0,200)}));}));
     context.on('request',request=>{
       const url=request.url();if(/^https?:|^wss?:/.test(url)&&(!server||!url.startsWith(server.url)))external.push(url);
       if(url.startsWith('file:')&&!url.startsWith(prefix))outsidePackage.push(url);
@@ -94,7 +97,8 @@ with zipfile.ZipFile(sys.argv[1]) as z:
     await page.locator('#guide-start').click();await page.waitForFunction(()=>document.querySelector('#guide').dataset.step==='qwen');
     assert.match(await page.locator('#panel-qwen').innerText(),/Qwen/i);
     const started=performance.now();await page.locator('#start-qwen').click();
-    await page.waitForFunction(()=>!document.querySelector('#qwen-next').disabled,null,{timeout:180000});
+    try{await page.waitForFunction(()=>!document.querySelector('#qwen-next').disabled||!document.querySelector('#qwen-error').hidden,null,{timeout:180000});}catch(error){const state=await page.evaluate(()=>Object.fromEntries(['qwen-progress-label','assistant-state','rag-model-status','rag-status','qwen-error'].map(id=>[id,document.getElementById(id)?.textContent])));throw Error('Bundled startup did not finish: '+JSON.stringify(state));}
+    assert.equal(await page.locator('#qwen-next').isDisabled(),false,'Bundled startup failed: '+await page.locator('#qwen-error').textContent());
     assert.equal(fileChoosers,0,'The complete office package starts Qwen without asking the user to find any model file');
     assert.match(await page.locator('#assistant-state').innerText(),/Qwen.*ready|ready.*Qwen/i);
     const modelStatus=await page.locator('#rag-model-status').textContent();assert.ok(modelStatus.includes(MODEL_MANIFEST.name));assert.match(modelStatus,/loaded/i);

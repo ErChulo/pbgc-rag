@@ -1,0 +1,320 @@
+{
+  "kind": "real-qwen-fixed-independent-quality-evaluation",
+  "profile": "supplementary HTTP only",
+  "fixtureSha256": "95bc86f0cfabf5ae7e764c3e8152f85a0f45b712512e0d1fa3e8d53f3d41e199",
+  "provider": {
+    "id": "local-gguf:qwen2.5-1.5b-instruct-q3-k-s:39feb79d0c05e409",
+    "model": "Qwen2.5 1.5B Instruct Q3_K_S",
+    "license": "Apache-2.0",
+    "source": "https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-weights-v1",
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+    "modelBytes": 760944640,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048,
+    "loaded": true,
+    "disposed": false,
+    "hparams": {
+      "nVocab": 151936,
+      "nCtxTrain": 32768,
+      "nEmbd": 1536,
+      "nLayer": 28
+    }
+  },
+  "answerCoverage": 1,
+  "minimumAnswerCoverage": 0.75,
+  "positives": [
+    {
+      "id": "normal-age-paraphrase",
+      "target": "gen-age",
+      "expectedQuote": "Normal retirement age is 65.",
+      "requiredAnswerPattern": "\\b(?:65|sixty[ -]five)\\b",
+      "status": "answered",
+      "answer": "\"Normal retirement age is 65.\" [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:9acaccd2c981c8fa2f06eaedc09075de2f9cdf8062979ebf9b96d245943a00fc",
+          "sourceId": "gen-age",
+          "sourceName": "synthetic-gen-age.txt",
+          "sourceHash": "1f0ff30f1505198d80aed4ccc73ea24f288e85889e5fd16bd0f6adff60117e5b",
+          "locators": [
+            {
+              "length": 28,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Normal retirement age is 65.",
+          "quotes": [
+            "Normal retirement age is 65."
+          ]
+        }
+      ],
+      "reason": "cited-synthesis-guarded",
+      "rawOutput": "\"Normal retirement age is 65.\"",
+      "modelCalls": 1,
+      "elapsedMs": 117213,
+      "retrievedSourceIds": [
+        "gen-age"
+      ]
+    },
+    {
+      "id": "address-recipient",
+      "target": "gen-address",
+      "expectedQuote": "The plan administrator receives address changes.",
+      "requiredAnswerPattern": "\\bplan administrator\\b",
+      "status": "answered",
+      "answer": "\"The plan administrator receives address changes.\" [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:bdd4f64fc77c474c120fb5dd2e63991e5952c1a4f551eb66ce561cb0f69bbbe7",
+          "sourceId": "gen-address",
+          "sourceName": "synthetic-gen-address.txt",
+          "sourceHash": "2deb799c819822d8508decf79fcf7fe89d25bf4490b1e0b9f7b6032c322a8ddd",
+          "locators": [
+            {
+              "length": 48,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "The plan administrator receives address changes.",
+          "quotes": [
+            "The plan administrator receives address changes."
+          ]
+        }
+      ],
+      "reason": "cited-synthesis-guarded",
+      "rawOutput": "\"The plan administrator receives address changes.\"",
+      "modelCalls": 1,
+      "elapsedMs": 108338,
+      "retrievedSourceIds": [
+        "gen-address"
+      ]
+    },
+    {
+      "id": "bank-document",
+      "target": "gen-bank",
+      "expectedQuote": "The bank account number is listed on the direct deposit form.",
+      "requiredAnswerPattern": "\\bdirect deposit form\\b",
+      "status": "answered",
+      "answer": "\"The bank account number is listed on the direct deposit form.\" [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:86cf9289fef23f11ee0f11f7bad1ff90f8105edb020a9d0281e472f13088426f",
+          "sourceId": "gen-bank",
+          "sourceName": "synthetic-gen-bank.txt",
+          "sourceHash": "6661d06486792219c7958badc2f9bd2d3f3ad498a28b71775cfa8de48f72ba6b",
+          "locators": [
+            {
+              "length": 61,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "The bank account number is listed on the direct deposit form.",
+          "quotes": [
+            "The bank account number is listed on the direct deposit form."
+          ]
+        }
+      ],
+      "reason": "cited-synthesis-guarded",
+      "rawOutput": "\"The bank account number is listed on the direct deposit form.\"",
+      "modelCalls": 1,
+      "elapsedMs": 118875,
+      "retrievedSourceIds": [
+        "gen-bank",
+        "gen-meeting",
+        "gen-address"
+      ]
+    },
+    {
+      "id": "retention-period",
+      "target": "gen-retention",
+      "expectedQuote": "Case files are kept for seven years.",
+      "requiredAnswerPattern": "\\b(?:seven|7) years\\b",
+      "status": "answered",
+      "answer": "Case files are kept for seven years. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:9f70f296ecc22102f3c71fd7fbcb55ee0638d2e2336774722afab451e62f4981",
+          "sourceId": "gen-retention",
+          "sourceName": "synthetic-gen-retention.txt",
+          "sourceHash": "8bc67b0eaa2e07cbf91283d8495071f61f7c33948cbdde38d40861a50353e4ec",
+          "locators": [
+            {
+              "length": 36,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Case files are kept for seven years.",
+          "quotes": [
+            "Case files are kept for seven years."
+          ]
+        }
+      ],
+      "reason": "cited-synthesis-guarded",
+      "rawOutput": "Case files are kept for seven years.",
+      "modelCalls": 1,
+      "elapsedMs": 118094,
+      "retrievedSourceIds": [
+        "gen-retention",
+        "gen-parking"
+      ]
+    }
+  ],
+  "negatives": [
+    {
+      "id": "same-chunk-contradiction",
+      "status": "conflict",
+      "answer": "Possible conflicting source provisions were retrieved. Authority and applicability require review.",
+      "reason": "possible-source-conflict",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:8dab3a6e0933bf57d514a2fc42f5b2061e90ef5b8100395b49d37d9ec14cb39f",
+          "sourceId": "plan",
+          "sourceName": "synthetic-plan.txt",
+          "sourceHash": "84badf0b0f97197121d4a272ee96154f50a2407711c00068c7f1343e64536431",
+          "locators": [
+            {
+              "length": 57,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Normal retirement age is 65. Normal retirement age is 67."
+        }
+      ],
+      "rawOutput": "",
+      "modelCalls": 0,
+      "elapsedMs": 0,
+      "retrievalDiagnostics": {
+        "method": "hybrid-cosine-bm25-rrf",
+        "providerId": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+        "dimension": 384,
+        "indexedChunks": 1,
+        "topScore": 0.899979922634133,
+        "margin": null,
+        "minScore": 0.25,
+        "weak": false,
+        "ambiguous": false,
+        "ambiguityMargin": 0.02,
+        "confidenceNotice": "Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.",
+        "semanticWeight": 0.7,
+        "rrfK": 60,
+        "lexicalMatches": 1
+      },
+      "retrievedSourceIds": [
+        "plan"
+      ]
+    },
+    {
+      "id": "document-instruction",
+      "status": "abstained",
+      "answer": "Retrieved text contains instruction-like content. Review the original sources.",
+      "reason": "missing-or-quarantined-evidence",
+      "citations": [],
+      "rawOutput": "",
+      "modelCalls": 0,
+      "elapsedMs": 0,
+      "retrievalDiagnostics": {
+        "method": "hybrid-cosine-bm25-rrf",
+        "providerId": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+        "dimension": 384,
+        "indexedChunks": 1,
+        "topScore": 0.6388428146180855,
+        "margin": null,
+        "minScore": 0.25,
+        "weak": false,
+        "ambiguous": false,
+        "ambiguityMargin": 0.02,
+        "confidenceNotice": "Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.",
+        "semanticWeight": 0.7,
+        "rrfK": 60,
+        "lexicalMatches": 1
+      },
+      "retrievedSourceIds": [
+        "instruction"
+      ]
+    },
+    {
+      "id": "unavailable-question",
+      "status": "abstained",
+      "answer": "The retrieved source text does not establish the topic asked about. Review or add relevant documents.",
+      "reason": "question-topic-not-supported",
+      "citations": [],
+      "rawOutput": "",
+      "modelCalls": 0,
+      "elapsedMs": 0,
+      "retrievalDiagnostics": {
+        "method": "hybrid-cosine-bm25-rrf",
+        "providerId": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+        "dimension": 384,
+        "indexedChunks": 1,
+        "topScore": 0.29040743155375226,
+        "margin": null,
+        "minScore": 0.25,
+        "weak": false,
+        "ambiguous": false,
+        "ambiguityMargin": 0.02,
+        "confidenceNotice": "Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.",
+        "semanticWeight": 0.7,
+        "rrfK": 60,
+        "lexicalMatches": 0
+      },
+      "retrievedSourceIds": [
+        "plan"
+      ]
+    },
+    {
+      "id": "partial-answer-multiple-properties",
+      "status": "abstained",
+      "answer": "The local answer profile checks one factual statement at a time. Ask one specific question or review the matched source excerpts.",
+      "reason": "plain-multi-part-question-unsupported",
+      "citations": [],
+      "rawOutput": "",
+      "modelCalls": 0,
+      "elapsedMs": 1,
+      "retrievalDiagnostics": {
+        "method": "hybrid-cosine-bm25-rrf",
+        "providerId": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+        "dimension": 384,
+        "indexedChunks": 2,
+        "topScore": 0.6847169789690597,
+        "margin": 0.06507736205372794,
+        "minScore": 0.25,
+        "weak": false,
+        "ambiguous": false,
+        "ambiguityMargin": 0.02,
+        "confidenceNotice": "Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.",
+        "semanticWeight": 0.7,
+        "rrfK": 60,
+        "lexicalMatches": 2
+      },
+      "retrievedSourceIds": [
+        "plan",
+        "retention"
+      ]
+    }
+  ],
+  "externalRequests": 0,
+  "limitations": "Four synthetic factual questions only; citation guards do not prove entailment or official actuarial correctness. Mock protocol tests and learned retrieval evaluation are separate."
+}

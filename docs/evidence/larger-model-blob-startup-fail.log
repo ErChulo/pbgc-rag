@@ -1,0 +1,40 @@
+✖ supplementary HTTP only complete extracted office ZIP includes verified Qwen and generates an exact-source answer (21656.164233ms)
+ℹ Model startup 246 ms: {"state":"idle","message":"Qwen is not started. Click Start Qwen, or continue with source passages."}
+ℹ Model startup 283 ms: {"state":"idle","message":"Qwen is not started. Click Start Qwen, or continue with source passages."}
+ℹ Model startup 976 ms: {"state":"loading","message":"Opening the included Qwen assistant…"}
+ℹ Model startup 980 ms: {"state":"loading","phase":"opening","message":"Opening the included Qwen assistant…"}
+ℹ Model startup 1121 ms: {"state":"loading","phase":"reading","completed":1,"total":91,"message":"Reading the included assistant · 1 of 91 parts"}
+ℹ Model startup 4421 ms: {"state":"loading","phase":"reading","completed":30,"total":91,"message":"Reading the included assistant · 30 of 91 parts"}
+ℹ Model startup 7904 ms: {"state":"loading","phase":"reading","completed":60,"total":91,"message":"Reading the included assistant · 60 of 91 parts"}
+ℹ Model startup 11533 ms: {"state":"loading","phase":"reading","completed":90,"total":91,"message":"Reading the included assistant · 90 of 91 parts"}
+ℹ Model startup 11613 ms: {"state":"loading","phase":"reading","completed":91,"total":91,"message":"Reading the included assistant · 91 of 91 parts"}
+ℹ Model startup 11957 ms: {"state":"loading","message":"Checking the included assistant…"}
+ℹ Model startup 11958 ms: {"state":"idle","message":"Qwen is not started. Click Start Qwen, or continue with source passages."}
+ℹ Model startup 11959 ms: {"state":"error","message":"The requested file could not be read, typically due to permission problems that have occurred after a reference to a file was acquired."}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21661.909802
+
+✖ failing tests:
+
+test at tests/office-package.test.js:41:1
+✖ supplementary HTTP only complete extracted office ZIP includes verified Qwen and generates an exact-source answer (21656.164233ms)
+  AssertionError [ERR_ASSERTION]: Bundled startup failed: The requested file could not be read, typically due to permission problems that have occurred after a reference to a file was acquired.
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/workspace/pbgc-rag/tests/office-package.test.js:101:12)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
