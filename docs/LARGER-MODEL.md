@@ -45,4 +45,4 @@ Require real inference, source-bound answers and citations, cancellation and rel
 
 This branch is not merged into main. Neither the existing office-v0.8.0 tag nor its download is replaced. Experimental releases are prereleases and do not replace the latest stable release.
 
-The initial larger-model run released two of four factual answers. Two paraphrases were correctly rejected by the grounding checks. The experimental prompt now explicitly requests the exact source sentence. The checks and minimum coverage threshold are unchanged; a fresh real-model evaluation is required.
+The [initial larger-model run](evidence/larger-model-initial-quality-fail.json) released two of four factual answers. Two paraphrases were correctly rejected by the grounding checks. The experimental prompt now explicitly requests the exact source sentence. The checks and minimum coverage threshold are unchanged; a fresh real-model evaluation is required.
