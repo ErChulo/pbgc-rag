@@ -1,0 +1,88 @@
+name: Publish accepted larger-model package
+
+on:
+  push:
+    branches: ['codex/office-delivery-larger-model-0.8']
+    paths: ['.github/workflows/publish-larger-model.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: larger-model-publication
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: ${{ github.ref == 'refs/heads/codex/office-delivery-larger-model-0.8' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Verify accepted source, identical ZIP tests and existing experimental tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import ast, hashlib, os, subprocess, textwrap
+          RECOVERY_HEAD = 'f82d20c7ec52772bf7b69372d9219b517fb057da'
+          RECOVERY_RUN = 42446804040
+          RELEASE_ID = 438026437
+          ACCEPTED_ZIP_BYTES = 777132222
+          ACCEPTED_ZIP_SHA = '6056683de128295f11a457d2becb004e65a89c11fa741f75ee4c24944d6c58de'
+          # Reuse the immutable, reviewed proof/download functions. Do not run
+          # its action dispatcher or its tag-creation path.
+          template = subprocess.check_output(['git', 'show', RECOVERY_HEAD + ':.github/workflows/larger-model-delivery.yml'], text=True)
+          embedded = template.split('  RECOVERY_SCRIPT: |\n', 1)[1].split('\njobs:\n', 1)[0]
+          helper = textwrap.dedent(embedded).split("action = sys.argv[1]", 1)[0]
+          ast.parse(helper)
+          exec(compile(helper, '<pinned-recovery-functions>', 'exec'), globals())
+          ALLOWED.add('.github/workflows/publish-larger-model.yml')
+          require_workflow_only_changes()
+          require_current_branch()
+          require_prior_acceptance()
+          recovery = api('actions/runs/' + str(RECOVERY_RUN))
+          if recovery['head_sha'] != RECOVERY_HEAD or recovery['status'] != 'completed':
+              fail('identical-ZIP verification run differs or is incomplete')
+          jobs = api('actions/runs/' + str(RECOVERY_RUN) + '/jobs?filter=latest&per_page=100')['jobs']
+          for name in ['stage', 'Retest exact staged ZIP (ubuntu-latest)', 'Retest exact staged ZIP (windows-latest)']:
+              if not passed(one(jobs, name)):
+                  fail('a required identical-ZIP platform check did not pass')
+          # This ref was created through the authorized Git connection after
+          # acceptance. This workflow never creates or moves a Git ref.
+          if tag_commit() != VERIFIED:
+              fail('existing experimental tag does not identify the accepted application')
+          release = api('releases/' + str(RELEASE_ID))
+          require_release(release)
+          selected = assets(release)
+          checksum = (ACCEPTED_ZIP_SHA + '  ' + ZIP_NAME + '\n').encode()
+          values = {'RELEASE_ID': RELEASE_ID, 'ZIP_ASSET_ID': selected[0]['id'],
+              'SUM_ASSET_ID': selected[1]['id'], 'ZIP_SIZE': ACCEPTED_ZIP_BYTES,
+              'SUM_SIZE': len(checksum), 'ZIP_SHA': ACCEPTED_ZIP_SHA,
+              'SUM_SHA': hashlib.sha256(checksum).hexdigest()}
+          os.environ.update({key: str(value) for key, value in values.items()})
+          download(release, expected=True)
+          current = api('releases/' + str(RELEASE_ID))
+          require_release(current)
+          if [(a['id'], a['size']) for a in assets(current)] != [(a['id'], a['size']) for a in selected]:
+              fail('accepted assets changed before publication')
+          require_current_branch()
+          if tag_commit() != VERIFIED:
+              fail('experimental tag changed before publication')
+          updated = api('releases/' + str(RELEASE_ID), method='PATCH',
+              value={'draft': False, 'prerelease': True, 'make_latest': 'false'})
+          require_release(updated)
+          if updated['id'] != RELEASE_ID or updated['draft'] or tag_commit() != VERIFIED:
+              fail('experimental publication could not be verified')
+          print('PASS: accepted experimental ZIP published; main and stable release unchanged')
+          PY
