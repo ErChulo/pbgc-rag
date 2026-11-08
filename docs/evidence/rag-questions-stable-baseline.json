@@ -1,0 +1,98 @@
+{
+  "kind": "real-stable-qwen-new-ui-explicit-question-baseline",
+  "status": "PASS",
+  "profile": "supplementary HTTP only",
+  "stableCommit": "c429b8fa0ecaa41cd40e92fe162e251bea0ccf61",
+  "model": {
+    "id": "local-gguf:qwen2.5-0.5b-instruct-q4-k-m:74a4da8c9fdbcd15",
+    "model": "Qwen2.5 0.5B Instruct Q4_K_M",
+    "license": "Apache-2.0",
+    "source": "https://github.com/rtynbirf/singulyar-llm/releases/tag/weights-v1",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "modelBytes": 491400032,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048,
+    "loaded": true,
+    "disposed": false,
+    "hparams": {
+      "nVocab": 151936,
+      "nCtxTrain": 32768,
+      "nEmbd": 896,
+      "nLayer": 24
+    }
+  },
+  "loadMs": 8153,
+  "answerMs": 108027,
+  "totalMs": 118890,
+  "perCallDeadlineMs": 120000,
+  "batchStatus": "answered",
+  "accepted": 2,
+  "total": 2,
+  "externalRequests": 0,
+  "limitations": "Two fixed synthetic questions through the new UI, stable model selected manually; supplementary HTTP only. Model defaults were unchanged. Not general answer-quality or actual-file acceptance evidence.",
+  "questions": [
+    {
+      "question": "What is the normal retirement age?",
+      "expectedSource": "synthetic-retirement.txt",
+      "expectedQuote": "Normal retirement age is 65.",
+      "correctAndCited": true,
+      "status": "answered",
+      "answer": "Normal retirement age is 65. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:2124b1612762e5cc749b84ba2cd6a446e309567a59f9c1aa86a29a7813de0bf4",
+          "sourceId": "d9aec45a-2d97-4272-be3c-4b5ce6ef9395",
+          "sourceName": "synthetic-retirement.txt",
+          "sourceHash": "fbae1724d6d44763c1e09e9a6051c3f6135d64b6b65dcf1e8a2c03cb158ba5c2",
+          "locators": [
+            {
+              "length": 28,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Normal retirement age is 65.",
+          "quotes": [
+            "Normal retirement age is 65."
+          ]
+        }
+      ]
+    },
+    {
+      "question": "How long are case files kept?",
+      "expectedSource": "synthetic-retention.txt",
+      "expectedQuote": "Case files are kept for seven years.",
+      "correctAndCited": true,
+      "status": "answered",
+      "answer": "Case files are kept for seven years. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:8e222edf8f57aab5a959ad82ec51d1387c19846432e4ab128384a23e6cce20ab",
+          "sourceId": "d5298d26-53c0-4379-a46e-11dae68e6bf3",
+          "sourceName": "synthetic-retention.txt",
+          "sourceHash": "6fab3761caca3d7eed380546f79fed110fec723987fd6faadab051b95ffd6461",
+          "locators": [
+            {
+              "length": 36,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Case files are kept for seven years.",
+          "quotes": [
+            "Case files are kept for seven years."
+          ]
+        }
+      ]
+    }
+  ]
+}

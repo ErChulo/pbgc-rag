@@ -14,58 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prior-evidence:
-    if: github.ref == 'refs/heads/codex/rag-guided-questions-0.9'
-    name: Read prior synthetic question evidence
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
-      - name: Download the failed synthetic check evidence
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh run download 42502105692 --repo ErChulo/pbgc-rag --name separate-question-evidence-ubuntu-latest --dir prior-evidence
-      - name: Expose bounded prior question diagnostics
-        shell: bash
-        run: |
-          node - <<'JS'
-          const fs=require('node:fs'),path=require('node:path');
-          const {extractFailureNames,workflowEscape}=require('./tools/ci-summary.js');
-          const base=path.resolve('prior-evidence');
-          const read=name=>{const file=path.join(base,name);if(!fs.existsSync(file))return null;const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)return null;return fs.readFileSync(file,'utf8');};
-          const clip=(value,length=180)=>typeof value==='string'?value.slice(0,length):null;
-          const log=read('rag-questions-browser-file.log');
-          for(const name of extractFailureNames(log||'').slice(0,12))console.log('::notice title=Prior failed synthetic check::'+workflowEscape(name));
-          // Only the known synthetic passage-flow test is inspected. Publish
-          // primitive assertions and test locations, never captured case text.
-          const lines=(log||'').replace(/\x1b\[[0-9;]*m/g,'').split(/\r?\n/),assertions=[];
-          for(let index=0;index<lines.length;index++){
-            if(!/^(?:not ok\s+\d+\s*-\s*|✖\s+).*REAL learned retrieval keeps separate questions, sources and evidence together/.test(lines[index]))continue;
-            const details={locations:[],message:[],primitives:[]};
-            for(let next=index+1;next<Math.min(lines.length,index+90);next++){
-              const line=lines[next].trim();
-              if(/^(?:# Subtest:|not ok\s+\d+|ok\s+\d+|✔\s+|✖\s+)/.test(line))break;
-              for(const location of line.match(/rag-questions-browser\.test\.js:\d+:\d+/g)||[])if(!details.locations.includes(location))details.locations.push(location);
-              if(/^(?:expected|actual):\s*(?:true|false|null|undefined|-?\d+(?:\.\d+)?)\s*$/.test(line)||/^(?:operator|code):\s*['"]?[A-Za-z_]+['"]?\s*$/.test(line))details.primitives.push(line.slice(0,100));
-              if(/^(?:Expected values to be strictly equal:|The expression evaluated to a falsy value:|assert\.(?:equal|ok|match|deepEqual)\(.{0,180}\))$/.test(line)&&!/prompt|source|raw/i.test(line))details.message.push(line.slice(0,180));
-              const timeout=/(?:page|locator)\.[A-Za-z]+:\s*Timeout\s+(\d+)ms exceeded/.exec(line);
-              if(timeout)details.message.push('Browser action timed out after '+timeout[1]+' ms.');
-            }
-            if(details.locations.length||details.message.length||details.primitives.length)assertions.push(details);
-          }
-          if(assertions.length)console.log('::notice title=Prior synthetic passage-flow assertion::'+workflowEscape(JSON.stringify(assertions.slice(0,2)).slice(0,1200)));
-          const raw=read('rag-questions-real-file.json')||read('rag-questions-real.json');
-          if(raw){
-            const report=JSON.parse(raw),safe={run:42502105692,batchStatus:clip(report.batchStatus),batchError:report.batchError?{name:clip(report.batchError.errorName,100),message:clip(report.batchError.errorMessage)}:null,ragStatus:clip(report.ragStatus),questions:(report.questions||[]).slice(0,3).map(row=>({index:row.index,status:clip(row.status,30),reason:clip(row.reason,100)})),calls:(report.modelOutputs||[]).slice(0,3).map(call=>({state:clip(call.state,30),elapsedMs:Number.isFinite(call.elapsedMs)?call.elapsedMs:null,errorName:clip(call.errorName,100),errorMessage:clip(call.errorMessage,100)})),externalRequests:Number.isFinite(report.externalRequests)?report.externalRequests:null};
-            console.log('::notice title=Prior synthetic question model diagnostics::'+workflowEscape(JSON.stringify(safe)));
-          }else console.log('::warning title=Prior synthetic question diagnostics::No bounded real-model report was available.');
-          JS
   office-questions:
     if: github.ref == 'refs/heads/codex/rag-guided-questions-0.9'
     name: packaged questions (${{ matrix.os }})
@@ -144,7 +92,10 @@ jobs:
           const base=path.resolve('test-results');
           const read=name=>{const file=path.join(base,name);if(!fs.existsSync(file))return null;const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)return null;return fs.readFileSync(file,'utf8');};
           const clip=(value,length=180)=>typeof value==='string'?value.slice(0,length):null;
-          const names=extractFailureNames(read('rag-questions-browser-file.log')||'');
+          const log=read('rag-questions-browser-file.log')||'';
+          const names=extractFailureNames(log);
+          const locations=[...new Set(log.match(/rag-questions-browser\.test\.js:\d+:\d+/g)||[])].slice(0,12);
+          if(locations.length)console.log('::notice title=Synthetic question failure locations::'+workflowEscape(JSON.stringify(locations).slice(0,1200)));
           if(!names.length)names.push('Question browser acceptance failed before a named test result was available.');
           for(const name of names.slice(0,12))console.log('::error title=Failed synthetic question check::'+workflowEscape(name));
           const raw=read('rag-questions-real-file.json')||read('rag-questions-real.json');

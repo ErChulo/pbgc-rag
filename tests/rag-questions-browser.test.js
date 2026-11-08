@@ -87,14 +87,17 @@ test(`${profile} REAL learned retrieval keeps separate questions, sources and ev
   await page.screenshot({path:path.join(ROOT,'test-results','rag-questions-mobile-light.png'),fullPage:true,animations:'disabled'});
   await page.locator('#finish-guide').click();
   await page.locator('nav a[href="#help"]').click();
+  await page.locator('#help .help-steps').waitFor({state:'visible'});
   assert.equal(await page.locator('#help .help-steps').isVisible(),true,'The help route opens with the plain-language document flow');
   assert.equal(await page.locator('#help .help-steps > li').count(),5);
   assert.equal(await page.locator('#query-reference').evaluate(node=>node.open),false,'Advanced query syntax does not compete with the basic guide');
   assert.equal(await page.locator('#help pre').first().isVisible(),false);
   await page.locator('nav a[href="#case-review"]').click();
+  await page.locator('#case-review').waitFor({state:'visible'});
   assert.equal(await page.locator('#dictionary-tools').evaluate(node=>node.open),false,'A dictionary is an optional advanced tool, not a required RAG step');
   assert.equal(await page.locator('#dictionary-source').isVisible(),false);
   await page.locator('nav a[href="#workspace"]').click();
+  await page.locator('#workspace').waitFor({state:'visible'});
   await page.locator('#flow-case').click();
   await page.locator('#case-name').fill('Synthetic isolated multi-question case');
   await page.locator('#create-case').click();await idle(page);
