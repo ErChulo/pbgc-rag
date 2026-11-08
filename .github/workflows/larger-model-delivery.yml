@@ -1,0 +1,335 @@
+name: Recover verified experimental larger-model delivery
+
+on:
+  push:
+    branches: ['codex/office-delivery-larger-model-0.8']
+    paths: ['.github/workflows/larger-model-delivery.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: larger-model-delivery-recovery
+  cancel-in-progress: true
+
+env:
+  VERIFIED_COMMIT: 864c4077bc726ec5233cbfe6c65e72b8c41daf02
+  # Kept inside this workflow so the application and its already verified commit
+  # remain unchanged. The same guards run before staging and publication.
+  RECOVERY_SCRIPT: |
+    import hashlib, json, os, pathlib, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
+    VERIFIED = '864c4077bc726ec5233cbfe6c65e72b8c41daf02'
+    BRANCH = 'codex/office-delivery-larger-model-0.8'
+    TAG = 'larger-model-v0.8.0'
+    ZIP_NAME = 'PBGC-RAG-0.8-larger-model-office.zip'
+    SUM_NAME = 'SHA256SUMS.txt'
+    SOURCE_RUN = 42444114227
+    OFFICE_RUN = 42444114127
+    ALLOWED = {'.github/workflows/larger-model-delivery.yml', '.github/workflows/office-release.yml', '.github/workflows/verify.yml'}
+    REPO = os.environ['GITHUB_REPOSITORY']
+    BASE = os.environ['GITHUB_API_URL'] + '/repos/' + REPO + '/'
+    def fail(message):
+        print('::error title=Experimental delivery recovery::' + message, flush=True)
+        raise SystemExit('FAIL: ' + message)
+    def api(path, method='GET', value=None, missing=False):
+        data = None if value is None else json.dumps(value).encode()
+        request = urllib.request.Request(BASE + path, data=data, method=method, headers={
+            'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json'})
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if missing and error.code == 404:
+                return None
+            fail('GitHub API HTTP ' + str(error.code))
+    def command(args, output=None):
+        result = subprocess.run(args, stdout=output or subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode:
+            fail('required build or GitHub CLI command failed with exit ' + str(result.returncode))
+        return result.stdout
+    def require_workflow_only_changes():
+        if os.environ['GITHUB_REF'] != 'refs/heads/' + BRANCH:
+            fail('delivery is restricted to the experimental branch')
+        command(['git', 'merge-base', '--is-ancestor', VERIFIED, os.environ['GITHUB_SHA']])
+        changed = command(['git', 'diff', '--name-only', '-z', VERIFIED, os.environ['GITHUB_SHA']])
+        paths = {part.decode() for part in changed.split(b'\0') if part}
+        if not paths <= ALLOWED:
+            fail('application files changed after the verified commit')
+    def require_current_branch():
+        ref = api('git/ref/heads/' + urllib.parse.quote(BRANCH, safe='/'))
+        if ref['object']['sha'] != os.environ['GITHUB_SHA']:
+            fail('experimental branch advanced while delivery was running')
+    def one(items, name):
+        matches = [item for item in items if item['name'] == name]
+        if len(matches) != 1:
+            fail('missing or ambiguous required verification record')
+        return matches[0]
+    def passed(item):
+        return item.get('status') == 'completed' and item.get('conclusion') == 'success'
+    def require_prior_acceptance():
+        source = api('actions/runs/' + str(SOURCE_RUN))
+        if source['head_sha'] != VERIFIED or not passed(source):
+            fail('pinned source verification run is not successful')
+        jobs = api('actions/runs/' + str(SOURCE_RUN) + '/jobs?filter=latest&per_page=100')['jobs']
+        for os_name in ['ubuntu-latest', 'windows-latest']:
+            if not passed(one(jobs, 'verification (' + os_name + ')')):
+                fail('pinned source platform verification did not pass')
+        office = api('actions/runs/' + str(OFFICE_RUN))
+        if office['head_sha'] != VERIFIED or office['status'] != 'completed':
+            fail('pinned office run does not identify completed verified application tests')
+        jobs = api('actions/runs/' + str(OFFICE_RUN) + '/jobs?filter=latest&per_page=100')['jobs']
+        required_steps = ['Check static UI accessibility before model preparation',
+            'Test guided first-answer flow with actual offline file URL', 'Verify bundled model profile',
+            'Verify model recovery integrity guards', 'Prepare model before office delivery',
+            'Build complete office ZIP', 'Test extracted ZIP offline with actual file URL and real Qwen']
+        publisher = 'Deliver separately verified experimental prerelease'
+        for os_name in ['ubuntu-latest', 'windows-latest']:
+            job = one(jobs, 'extracted offline office package (' + os_name + ')')
+            if job['status'] != 'completed':
+                fail('pinned office platform is not complete')
+            for name in required_steps:
+                if not passed(one(job['steps'], name)):
+                    fail('a pinned office application check did not pass')
+            for step in job['steps']:
+                if step.get('conclusion') not in ['success', 'skipped'] and not (os_name == 'ubuntu-latest' and step['name'] == publisher and step.get('conclusion') == 'failure'):
+                    fail('the pinned office run failed outside its publication step')
+            if os_name == 'ubuntu-latest':
+                for name in ['Write delivery checksum', 'Require exact-commit source checks and Windows package acceptance']:
+                    if not passed(one(job['steps'], name)):
+                        fail('the pinned office delivery gate did not pass')
+            elif not passed(job):
+                fail('pinned Windows office job did not pass')
+        print('PASS: pinned source matrix and both original office application checks', flush=True)
+    def releases():
+        result = []
+        for page in range(1, 11):
+            batch = api('releases?per_page=100&page=' + str(page))
+            result.extend(item for item in batch if item['tag_name'] == TAG)
+            if len(batch) < 100:
+                break
+        else:
+            fail('release listing exceeded its bounded page count')
+        if len(result) > 1:
+            fail('multiple releases use the experimental tag')
+        return result[0] if result else None
+    def require_release(release):
+        if release['tag_name'] != TAG or release['target_commitish'] != VERIFIED or not release['prerelease']:
+            fail('release identity differs from the tested experimental commit')
+    def assets(release):
+        selected = [one(release['assets'], name) for name in [ZIP_NAME, SUM_NAME]]
+        if any(item.get('state') != 'uploaded' or type(item.get('id')) is not int or item['id'] <= 0 for item in selected):
+            fail('release assets are not completely uploaded')
+        return selected
+    def digest(path):
+        with path.open('rb') as stream:
+            return hashlib.file_digest(stream, 'sha256').hexdigest()
+    def download(release, expected=None):
+        require_release(release)
+        selected = assets(release)
+        if expected:
+            for asset, prefix in zip(selected, ['ZIP', 'SUM']):
+                if asset['id'] != int(os.environ[prefix + '_ASSET_ID']) or asset['size'] != int(os.environ[prefix + '_SIZE']):
+                    fail('staged release asset identity or length changed')
+        directory = pathlib.Path('dist')
+        directory.mkdir(exist_ok=True)
+        for asset in selected:
+            path = directory / asset['name']
+            with path.open('wb') as output:
+                command(['gh', 'api', 'repos/' + REPO + '/releases/assets/' + str(asset['id']),
+                    '-H', 'Accept: application/octet-stream'], output)
+            if path.stat().st_size != asset['size']:
+                fail('downloaded release asset byte count differs')
+            if asset.get('digest') and asset['digest'] != 'sha256:' + digest(path):
+                fail('downloaded asset differs from its GitHub digest')
+        zip_sha = digest(directory / ZIP_NAME)
+        sum_sha = digest(directory / SUM_NAME)
+        if (directory / SUM_NAME).read_text(encoding='utf-8') != zip_sha + '  ' + ZIP_NAME + '\n':
+            fail('downloaded office ZIP does not match its checksum')
+        if expected and (zip_sha != os.environ['ZIP_SHA'] or sum_sha != os.environ['SUM_SHA']):
+            fail('downloaded assets differ from the exact staged bytes')
+        return selected, zip_sha, sum_sha
+    def tag_commit():
+        ref = api('git/ref/tags/' + TAG, missing=True)
+        if ref is None:
+            return None
+        target = ref['object']
+        for _ in range(8):
+            if target['type'] == 'commit':
+                return target['sha']
+            if target['type'] != 'tag':
+                break
+            target = api('git/tags/' + target['sha'])['object']
+        fail('experimental tag does not resolve to a commit')
+    action = sys.argv[1]
+    if action == 'stage':
+        require_workflow_only_changes()
+        require_prior_acceptance()
+        require_current_branch()
+        existing_tag = tag_commit()
+        if existing_tag is not None and existing_tag != VERIFIED:
+            fail('existing experimental tag points to another commit')
+        release = releases()
+        if release is None:
+            command(['python', 'tools/prepare-models.py'])
+            command(['python', 'tools/package.py', '--office', '--out', 'dist/' + ZIP_NAME])
+            command(['python', 'tools/office-checksum.py'])
+            require_current_branch()
+            command(['gh', 'release', 'create', TAG, 'dist/' + ZIP_NAME, 'dist/' + SUM_NAME,
+                '--target', VERIFIED, '--draft', '--prerelease', '--latest=false',
+                '--title', 'PBGC-RAG experimental 1.5B offline package', '--notes-file', 'docs/OFFICE-RELEASE.md'])
+            for _ in range(6):
+                release = releases()
+                if release is not None:
+                    break
+                time.sleep(5)
+            if release is None:
+                fail('new draft release is not visible in the authenticated listing')
+        selected, zip_sha, sum_sha = download(release)
+        values = {'release_id': release['id'], 'zip_asset_id': selected[0]['id'], 'sum_asset_id': selected[1]['id'],
+            'zip_size': selected[0]['size'], 'sum_size': selected[1]['size'], 'zip_sha': zip_sha, 'sum_sha': sum_sha}
+        with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+            for key, value in values.items():
+                output.write(key + '=' + str(value) + '\n')
+        print('::notice title=Verified experimental staging::release_id=' + str(release['id']) + ' zip_bytes=' + str(selected[0]['size']) + ' zip_sha256=' + zip_sha)
+    elif action in ['download', 'publish']:
+        if action == 'publish':
+            require_workflow_only_changes()
+            require_prior_acceptance()
+            require_current_branch()
+        release = api('releases/' + str(int(os.environ['RELEASE_ID'])))
+        selected, zip_sha, sum_sha = download(release, expected=True)
+        if action == 'publish':
+            require_current_branch()
+            existing_tag = tag_commit()
+            if existing_tag is None:
+                api('git/refs', method='POST', value={'ref': 'refs/tags/' + TAG, 'sha': VERIFIED})
+            elif existing_tag != VERIFIED:
+                fail('existing experimental tag points to another commit; nothing overwritten')
+            if tag_commit() != VERIFIED:
+                fail('experimental tag does not identify the tested application commit')
+            updated = api('releases/' + str(release['id']), method='PATCH',
+                value={'draft': False, 'prerelease': True, 'make_latest': 'false'})
+            if updated['id'] != release['id'] or updated['draft'] or not updated['prerelease'] or tag_commit() != VERIFIED:
+                fail('published experimental release identity could not be verified')
+            print('PASS: experimental prerelease published; main and stable release were not changed')
+        else:
+            print('PASS: downloaded the exact staged ZIP and checksum')
+    else:
+        fail('unsupported recovery action')
+
+jobs:
+  stage:
+    if: ${{ github.ref == 'refs/heads/codex/office-delivery-larger-model-0.8' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      release_id: ${{ steps.staged.outputs.release_id }}
+      zip_asset_id: ${{ steps.staged.outputs.zip_asset_id }}
+      sum_asset_id: ${{ steps.staged.outputs.sum_asset_id }}
+      zip_size: ${{ steps.staged.outputs.zip_size }}
+      sum_size: ${{ steps.staged.outputs.sum_size }}
+      zip_sha: ${{ steps.staged.outputs.zip_sha }}
+      sum_sha: ${{ steps.staged.outputs.sum_sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 864c4077bc726ec5233cbfe6c65e72b8c41daf02
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Verify prior acceptance and recover the staged draft by release ID
+        id: staged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: python -c "$RECOVERY_SCRIPT" stage
+
+  office:
+    name: Retest exact staged ZIP (${{ matrix.os }})
+    needs: stage
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      PBGC_REQUIRE_MODEL: '1'
+      PBGC_REQUIRE_OFFICE: '1'
+      PBGC_OFFICE_FILE: '1'
+      RELEASE_ID: ${{ needs.stage.outputs.release_id }}
+      ZIP_ASSET_ID: ${{ needs.stage.outputs.zip_asset_id }}
+      SUM_ASSET_ID: ${{ needs.stage.outputs.sum_asset_id }}
+      ZIP_SIZE: ${{ needs.stage.outputs.zip_size }}
+      SUM_SIZE: ${{ needs.stage.outputs.sum_size }}
+      ZIP_SHA: ${{ needs.stage.outputs.zip_sha }}
+      SUM_SHA: ${{ needs.stage.outputs.sum_sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 864c4077bc726ec5233cbfe6c65e72b8c41daf02
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Download the identical staged release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: python -c "$RECOVERY_SCRIPT" download
+      - name: Install pinned development browser tooling
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-delivery-verification" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-delivery-verification/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-delivery-verification/node_modules" >> "$GITHUB_ENV"
+          echo "CHROMIUM_PATH=$(NODE_PATH="$RUNNER_TEMP/pbgc-delivery-verification/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Test the exact downloaded ZIP with actual offline file URL and real Qwen
+        run: node tests/office-package.test.js
+      - name: Retain synthetic delivered-package evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: recovered-office-verification-${{ matrix.os }}
+          path: test-results/office-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    needs: [stage, office]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    env:
+      RELEASE_ID: ${{ needs.stage.outputs.release_id }}
+      ZIP_ASSET_ID: ${{ needs.stage.outputs.zip_asset_id }}
+      SUM_ASSET_ID: ${{ needs.stage.outputs.sum_asset_id }}
+      ZIP_SIZE: ${{ needs.stage.outputs.zip_size }}
+      SUM_SIZE: ${{ needs.stage.outputs.sum_size }}
+      ZIP_SHA: ${{ needs.stage.outputs.zip_sha }}
+      SUM_SHA: ${{ needs.stage.outputs.sum_sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: 864c4077bc726ec5233cbfe6c65e72b8c41daf02
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Verify exact accepted bytes and publish only the experimental prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: python -c "$RECOVERY_SCRIPT" publish

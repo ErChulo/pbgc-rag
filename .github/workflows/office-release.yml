@@ -3,6 +3,7 @@ name: Verify and deliver experimental larger-model office package
 on:
   push:
     branches: ['codex/office-delivery-larger-model-0.8']
+    paths-ignore: ['.github/workflows/**']
   workflow_dispatch:
 
 permissions:
