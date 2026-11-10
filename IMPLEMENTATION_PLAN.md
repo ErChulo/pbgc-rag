@@ -2,7 +2,7 @@
 
 ## Active RAG increment
 
-The user narrowed the active scope to document search and source-supported answers. Official actuarial calculations and template outputs are deferred, not prerequisites. Stable `main` remains at `c429b8f`; the separate larger-model 0.8 package has completed delivery. New work continues on `codex/rag-guided-questions-0.9` without merging into `main` or publishing an environment. See docs/ux/RAG-0.9.md for the explicit question-set contract and verification. Historical official-validation phases below are separate work.
+The user narrowed the active scope to document search and source-supported answers. Official actuarial calculations and template outputs are deferred, not prerequisites. Stable `main` remains at `c429b8f`; the separate larger-model 0.8 package has completed delivery. The guided-question increment completed at `2c4786b` with both full source and complete-ZIP Windows/Ubuntu workflows passing. New work continues on `codex/rag-document-scope-0.10` without merging into `main` or publishing an environment or release. See docs/ux/DOCUMENT-SCOPE-0.10.md for per-question document selection; docs/ux/RAG-0.9.md records the preceding question-set contract. Historical official-validation phases below are separate work.
 
 ## Completed engineering increments
 

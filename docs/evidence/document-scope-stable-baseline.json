@@ -1,0 +1,146 @@
+{
+  "kind": "real-stable-qwen-per-question-document-scope-baseline",
+  "status": "PASS",
+  "profile": "supplementary HTTP only",
+  "stableCommit": "c429b8fa0ecaa41cd40e92fe162e251bea0ccf61",
+  "model": {
+    "id": "local-gguf:qwen2.5-0.5b-instruct-q4-k-m:74a4da8c9fdbcd15",
+    "model": "Qwen2.5 0.5B Instruct Q4_K_M",
+    "license": "Apache-2.0",
+    "source": "https://github.com/rtynbirf/singulyar-llm/releases/tag/weights-v1",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "modelBytes": 491400032,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048,
+    "loaded": true,
+    "disposed": false,
+    "hparams": {
+      "nVocab": 151936,
+      "nCtxTrain": 32768,
+      "nEmbd": 896,
+      "nLayer": 24
+    }
+  },
+  "loadMs": 6635,
+  "answerMs": 106086,
+  "totalMs": 116427,
+  "perCallDeadlineMs": 120000,
+  "allDocumentsConflictBlocked": true,
+  "allDocuments": {
+    "status": "Possible source conflict. Review the excerpts.",
+    "result": "Searched: all 2 documentsPossible conflicting source provisions were retrieved. Authority and applicability require review.",
+    "generationCalls": 2
+  },
+  "batchStatus": "answered",
+  "batchError": null,
+  "accepted": 2,
+  "total": 2,
+  "externalRequests": 0,
+  "pageErrors": [],
+  "limitations": "The same synthetic question against two explicit document selections using actual learned retrieval and unchanged guards; All documents must conflict with no third inference. This comparison does not establish general model quality, file-profile acceptance or workplace readiness. No product model default changed.",
+  "questions": [
+    {
+      "question": "What is the normal retirement age?",
+      "expectedSource": "plan-a.txt",
+      "expectedQuote": "Normal retirement age is 65.",
+      "expectedHash": "fbae1724d6d44763c1e09e9a6051c3f6135d64b6b65dcf1e8a2c03cb158ba5c2",
+      "correctAndCited": true,
+      "scope": {
+        "sourceIds": [
+          "a2495aa0-a223-4ecb-b1eb-8b44f8ccc047"
+        ]
+      },
+      "searchedSources": [
+        {
+          "sourceId": "a2495aa0-a223-4ecb-b1eb-8b44f8ccc047",
+          "sourceName": "plan-a.txt",
+          "sourceHash": "fbae1724d6d44763c1e09e9a6051c3f6135d64b6b65dcf1e8a2c03cb158ba5c2"
+        }
+      ],
+      "status": "answered",
+      "answer": "Normal retirement age is 65. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:a4e0279b11df610bc23bd54a501d8b2d690b60a2f0cb795847bbec4633849664",
+          "sourceId": "a2495aa0-a223-4ecb-b1eb-8b44f8ccc047",
+          "sourceName": "plan-a.txt",
+          "sourceHash": "fbae1724d6d44763c1e09e9a6051c3f6135d64b6b65dcf1e8a2c03cb158ba5c2",
+          "locators": [
+            {
+              "length": 28,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Normal retirement age is 65.",
+          "quotes": [
+            "Normal retirement age is 65."
+          ]
+        }
+      ]
+    },
+    {
+      "question": "What is the normal retirement age?",
+      "expectedSource": "plan-b.txt",
+      "expectedQuote": "Normal retirement age is 67.",
+      "expectedHash": "5d49a4df0b0638dde9d18f63e2a2ffda17f892fd69976a044182593ae611b5ff",
+      "correctAndCited": true,
+      "scope": {
+        "sourceIds": [
+          "4b506b4f-fd33-4361-804c-4020c7123121"
+        ]
+      },
+      "searchedSources": [
+        {
+          "sourceId": "4b506b4f-fd33-4361-804c-4020c7123121",
+          "sourceName": "plan-b.txt",
+          "sourceHash": "5d49a4df0b0638dde9d18f63e2a2ffda17f892fd69976a044182593ae611b5ff"
+        }
+      ],
+      "status": "answered",
+      "answer": "Normal retirement age is 67. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:59f18e3aac21ae7273f8554c94900719e6e81362d4076fe7f3de2efff4bbb2ca",
+          "sourceId": "4b506b4f-fd33-4361-804c-4020c7123121",
+          "sourceName": "plan-b.txt",
+          "sourceHash": "5d49a4df0b0638dde9d18f63e2a2ffda17f892fd69976a044182593ae611b5ff",
+          "locators": [
+            {
+              "length": 28,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "excerpt": "Normal retirement age is 67.",
+          "quotes": [
+            "Normal retirement age is 67."
+          ]
+        }
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "state": "completed",
+      "elapsedMs": 56586,
+      "errorName": null,
+      "errorMessage": null
+    },
+    {
+      "state": "completed",
+      "elapsedMs": 48740,
+      "errorName": null,
+      "errorMessage": null
+    }
+  ]
+}

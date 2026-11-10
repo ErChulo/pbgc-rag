@@ -8,7 +8,53 @@ function fingerprint(){const active=host.getWorkspace();return JSON.stringify([a
 function announce(state,message,extra={}){root.dispatchEvent(new CustomEvent('pbgc-model-state',{detail:{state,message,...extra}}));}
 function modelStatus(){if(model&&!model.info().loaded)model=null;$('rag-model-status').textContent=model?`${model.info().model} loaded · local CPU processing`:'No model loaded. Source passages work without setup.';updateSetup();announce(model?'ready':'idle',model?'Qwen is ready. Continue to your documents.':'Qwen is not started. Click Start Qwen, or continue with source passages.');if($('rag-response-summary'))updateQuestions();}
 function updateSetup(){const wasReady=!$('offline-ready').hidden;const ready=!!model?.info().loaded;if(wasReady&&!ready)$('model-setup').open=true;$('unload-rag-model').hidden=!ready;$('start-qwen-inline').hidden=ready;$('offline-ready').hidden=!ready;$('model-setup').querySelector('summary').textContent=ready?'Qwen assistant · Ready':'Qwen assistant · Not started';$('rag-answer-mode').options[1].textContent=ready?'Write an answer with sources':'Write an answer · setup required';}
-let questionCount=1;
+let questionCount=1,sourceSelections=[null,null,null];
+function sourceLabel(source){
+ const sources=host.getWorkspace()?.sources||[];
+ return sources.filter(item=>item.name===source.name).length>1?`${source.name} (document ${sources.findIndex(item=>item.id===source.id)+1})`:source.name;
+}
+function selectionText(i){const selection=sourceSelections[i-1];return selection?selection.label:'All documents';}
+function refreshSourceChoices(){
+ const sources=host.getWorkspace()?.sources||[];
+ for(let i=1;i<=3;i++){
+  const select=$('rag-source-'+i),selection=sourceSelections[i-1];select.replaceChildren();const all=el('option','All documents');all.value='';select.append(all);
+  for(const source of sources){const option=el('option',sourceLabel(source));option.value=source.id;select.append(option);}
+  if(selection){const current=sources.find(source=>source.id===selection.sourceId&&source.hash===selection.sourceHash);if(current)select.value=selection.sourceId;else{const stale=el('option','Selected document changed or is unavailable — choose again');stale.value='__unavailable__';stale.disabled=true;select.append(stale);select.value=stale.value;}}
+  $('rag-source-options-'+i).hidden=sources.length<2&&!selection;
+  $('rag-source-options-'+i).querySelector('summary').textContent='Documents: '+selectionText(i);
+ }
+}
+function requestSignature(){return JSON.stringify([questionCount,$('rag-answer-mode').value,Array.from({length:questionCount},(_,index)=>[$('rag-question'+(index?'-'+(index+1):'')).value,$('rag-source-'+(index+1)).value,sourceSelections[index]?.sourceHash||null])]);}
+function readQuestionScopes(){
+ const sources=host.getWorkspace()?.sources||[];
+ return Array.from({length:questionCount},(_,index)=>{
+  const selection=sourceSelections[index],value=$('rag-source-'+(index+1)).value;
+  if(!selection){if(value)throw Error('The selected document is unavailable. Choose it again.');return{};}
+  if(value!==selection.sourceId||!sources.some(source=>source.id===selection.sourceId&&source.hash===selection.sourceHash))throw Error('The selected document changed or is no longer available. Choose it again.');
+  return{sourceIds:[selection.sourceId]};
+ });
+}
+for(let i=1;i<=3;i++)$('rag-source-'+i).addEventListener('change',()=>{
+ const value=$('rag-source-'+i).value,source=host.getWorkspace()?.sources.find(item=>item.id===value);
+ sourceSelections[i-1]=!value?null:source?{sourceId:source.id,sourceHash:source.hash,label:sourceLabel(source)}:{sourceId:value,sourceHash:null,label:'Unavailable document'};
+ $('rag-source-options-'+i).querySelector('summary').textContent='Documents: '+selectionText(i);
+ clearAnswer();$('rag-status').textContent='';
+});
+function searchSummary(searchedSources){
+ const sources=host.getWorkspace()?.sources||[],indexedIds=new Set(index?.chunks.map(chunk=>chunk.sourceId)||[]);
+ const searched=(searchedSources||[]).filter(source=>indexedIds.has(source.sourceId));
+ const names=searched.map(item=>{const source=sources.find(value=>value.id===item.sourceId&&value.hash===item.sourceHash);return source?sourceLabel(source):item.sourceName;});
+ if(names.length===1)return'Searched: '+names[0];
+ if(names.length===sources.length)return`Searched: all ${names.length} documents`;
+ return`Searched: ${names.length} of ${sources.length} documents with text available for questions`;
+}
+function currentSearchSources(){const seen=new Set();return(index?.chunks||[]).filter(chunk=>{if(seen.has(chunk.sourceId))return false;seen.add(chunk.sourceId);return true;}).map(chunk=>({sourceId:chunk.sourceId,sourceName:chunk.sourceName,sourceHash:chunk.sourceHash}));}
+function requestStillCurrent(scopeKey,signature,signal){
+ if(scopeKey!==fingerprint()||signal.aborted)return false;
+ if(signature!==requestSignature()){clearAnswer();$('rag-status').textContent='The questions or document selection changed. Ask again.';return false;}
+ return true;
+}
+
 function updateQuestions(){
  $('add-rag-question').hidden=questionCount===3;
  $('ask-question').textContent=questionCount===1?'Ask question':'Ask questions';
@@ -17,17 +63,17 @@ function updateQuestions(){
  $('rag-time-help').textContent=generated?`Each answer can take up to two minutes. ${questionCount>1?'Questions run one at a time. ':''}You can cancel at any time.`:'Find related passages without starting Qwen.';
 }
 function clearAnswer(){$('rag-answer').replaceChildren();$('rag-citations').replaceChildren();$('rag-results-heading').hidden=true;$('first-answer-next').hidden=true;}
-function resetQuestions(){questionCount=1;for(let i=1;i<=3;i++)$('rag-question'+(i===1?'':'-'+i)).value='';for(let i=2;i<=3;i++)$('rag-question-row-'+i).hidden=true;updateQuestions();}
+function resetQuestions(){questionCount=1;sourceSelections=[null,null,null];for(let i=1;i<=3;i++)$('rag-question'+(i===1?'':'-'+i)).value='';for(let i=2;i<=3;i++)$('rag-question-row-'+i).hidden=true;for(let i=1;i<=3;i++)$('rag-source-options-'+i).open=false;refreshSourceChoices();updateQuestions();}
 $('add-rag-question').addEventListener('click',()=>{if(questionCount===3)return;questionCount++;$('rag-question-row-'+questionCount).hidden=false;clearAnswer();$('rag-status').textContent='';updateQuestions();$('rag-question-'+questionCount).focus();});
 for(let i=2;i<=3;i++)$('remove-rag-question-'+i).addEventListener('click',()=>{
  if(i>questionCount)return;
- for(let n=i;n<questionCount;n++)$('rag-question-'+n).value=$('rag-question-'+(n+1)).value;
- $('rag-question-'+questionCount).value='';$('rag-question-row-'+questionCount).hidden=true;questionCount--;
+ for(let n=i;n<questionCount;n++){$('rag-question-'+n).value=$('rag-question-'+(n+1)).value;sourceSelections[n-1]=sourceSelections[n];}
+ $('rag-question-'+questionCount).value='';sourceSelections[questionCount-1]=null;$('rag-question-row-'+questionCount).hidden=true;questionCount--;refreshSourceChoices();
  clearAnswer();$('rag-status').textContent='';updateQuestions();$('rag-question'+(i<=questionCount?'-'+i:questionCount===1?'':'-'+questionCount)).focus();
 });
 for(let i=1;i<=3;i++)$('rag-question'+(i===1?'':'-'+i)).addEventListener('input',()=>{clearAnswer();$('rag-status').textContent='';});
-function refresh(){const activeId=host.getWorkspace()?.id||null;if(activeId!==scopeId){resetQuestions();scopeId=activeId;}const next=fingerprint();if(next!==key){key=next;index=null;chunks=[];clearAnswer();$('rag-index-status').textContent='Documents are prepared when you ask your first question.';$('rag-status').textContent='';}modelStatus();updateQuestions();}
-$('rag-model-files').addEventListener('change',()=>{const file=$('rag-model-files').files[0];$('model-selection').textContent=file?`Selected: ${file.name}. Click Enable offline answers to continue.`:'';});
+function refresh(){const activeId=host.getWorkspace()?.id||null;if(activeId!==scopeId){resetQuestions();scopeId=activeId;}const next=fingerprint();if(next!==key){key=next;index=null;chunks=[];clearAnswer();refreshSourceChoices();$('rag-index-status').textContent='Documents are prepared when you ask your first question.';$('rag-status').textContent='';}modelStatus();updateQuestions();}
+$('rag-model-files').addEventListener('change',()=>{const file=$('rag-model-files').files[0];$('model-selection').textContent=file?`Selected: ${file.name}. Click Load selected model to continue.`:'';});
 $('rag-answer-mode').addEventListener('change',()=>{clearAnswer();$('rag-status').textContent='';updateQuestions();if($('rag-answer-mode').value==='generated'&&!model){$('model-setup').open=true;$('start-qwen-inline').focus();}});
 function run(task){return host.operation(async()=>{$('cancel-operation').hidden=true;$('progress').hidden=true;$('rag-cancel').hidden=false;$('rag-cancel').disabled=false;try{await task(host.getSignal());}catch(error){$('rag-status').textContent=error.name==='AbortError'?'Cancelled. No new answer was released.':error.message;throw error;}finally{$('rag-cancel').hidden=true;modelStatus();}},true);}
 $('rag-cancel').addEventListener('click',()=>host.cancel());
@@ -47,7 +93,7 @@ function revealResults(){
 function showQuestionResults(batch,generated){
  for(const entry of batch.results){
   const result=entry.result,card=el('article','');card.className='rag-question-result';
-  card.append(el('h3',entry.question));
+  card.append(el('h3',entry.question));const selection=el('p',searchSummary(entry.searchedSources));selection.className='question-source-scope';card.append(selection);
   const status=el('p',result.status==='conflict'?'Possible source conflict':!generated?'Source passages only':result.status==='answered'?'Answer with sources':'No supported answer');status.className='question-result-status';card.append(status);
   const text=el('p',!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Read the related passages below.':result.answer);text.className='question-answer';card.append(text);
   const citations=result.citations.length?result.citations:result.retrieved;
@@ -61,10 +107,12 @@ $('ask-question').addEventListener('click',()=>run(async signal=>{
  const active=host.getWorkspace(),questions=Array.from({length:questionCount},(_,i)=>$('rag-question'+(i===0?'':'-'+(i+1))).value.trim());
  if(!active?.sources.length)throw Error('Select a workspace and add source documents first.');
  if(questions.some(question=>!question))throw Error('Enter a question in each question box, or remove the empty box.');
- if(new Set(questions.map(question=>question.normalize('NFKC').replace(/\s+/g,' ').toLowerCase())).size!==questions.length)throw Error('Use a different question in each question box.');
+ const questionScopes=readQuestionScopes(),sourceSet=scope=>(scope.sourceIds||active.sources.map(source=>source.id)).slice().sort().join('\n');
+ const duplicateKeys=questions.map((question,index)=>JSON.stringify([question.normalize('NFKC').replace(/\s+/g,' ').toLowerCase(),sourceSet(questionScopes[index])]));
+ if(new Set(duplicateKeys).size!==questions.length)throw Error('Use a different question in each question box.');
  modelStatus();const generated=$('rag-answer-mode').value==='generated';
  if(generated&&!model)throw Error('Start included Qwen above, or choose Show source passages to continue without setup.');
- const scopeKey=key;$('rag-status').textContent='Preparing your documents…';
+ const scopeKey=key,signature=requestSignature();$('rag-status').textContent='Preparing your documents…';
  if(!embedding)embedding=await API.createEmbeddingProvider({signal});
  if(!index){
   const corpus=await API.chunkSources(active.sources,{signal});chunks=corpus.chunks;
@@ -74,21 +122,25 @@ $('ask-question').addEventListener('click',()=>run(async signal=>{
   index=await API.buildSemanticIndex(usable,embedding,{signal,onProgress:progress=>{$('rag-status').textContent=`Preparing passages: ${progress.completed} of ${progress.total}`;}});
   $('rag-index-status').textContent='Your documents are ready for questions.';
  }
+ if(!requestStillCurrent(scopeKey,signature,signal))return;
+ for(let i=0;i<questions.length;i++)if(questionScopes[i].sourceIds&&!index.chunks.some(chunk=>questionScopes[i].sourceIds.includes(chunk.sourceId)))throw Error(`No searchable text was found in ${selectionText(i+1)}. Use Search or check the original file.`);
  const options={contextCharacters:2600,maxChunks:3,maxTokens:384,timeoutMs:120000,groundingMode:'synthesis'};
- if(questions.length===1){
+ if(questions.length===1&&!questionScopes[0].sourceIds){
   $('rag-status').textContent='Finding related passages…';const retrieval=await API.retrieveHybrid(index,questions[0],embedding,{signal,topK:4});
+  if(!requestStillCurrent(scopeKey,signature,signal))return;
   modelStatus();$('rag-status').textContent=generated?'Drafting and checking the answer against its sources…':'Preparing source passages…';
   const result=await API.answerQuestion({question:questions[0],chunks,retrieval,provider:generated?model:undefined,signal,options});
-  if(scopeKey!==fingerprint()||signal.aborted)return;
+  if(!requestStillCurrent(scopeKey,signature,signal))return;
+  const selection=el('p',searchSummary(currentSearchSources()));selection.className='question-source-scope';$('rag-answer').append(selection);
   $('rag-answer').append(el('p',!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Here are the source passages related to your question. Open the evidence to read more.':result.answer));
   showCitations(result.citations.length?result.citations:result.retrieved);
   $('rag-status').textContent=result.status==='answered'?'Generated answer. Check each claim against its cited source.':result.status==='conflict'?'Possible source conflict. Review the excerpts.':generated?'No grounded answer was released.':'Source excerpts only. No answer was generated.';
  }else{
-  const batch=await API.answerQuestions({questions,chunks,provider:generated?model:undefined,signal,options,retrieve:({question,signal})=>API.retrieveHybrid(index,question,embedding,{signal,topK:4}),onProgress:progress=>{
+  const batch=await API.answerQuestions({questions,questionScopes,chunks,provider:generated?model:undefined,signal,options,retrieve:({question,scope,searchedSources,signal})=>API.retrieveHybrid(index,question,embedding,{signal,topK:4,...(scope.sourceIds||scope.sourceHashes?{sourceIds:searchedSources.map(source=>source.sourceId)}:{})}),onProgress:progress=>{
    if(progress.phase==='complete')return;
    $('rag-status').textContent=`Question ${progress.index+1} of ${progress.total} · ${progress.phase==='retrieving'?'Finding related passages…':generated?'Drafting and checking the answer…':'Preparing source passages…'}`;
   }});
-  if(scopeKey!==fingerprint()||signal.aborted)return;
+  if(!requestStillCurrent(scopeKey,signature,signal))return;
   showQuestionResults(batch,generated);
  }
  revealResults();

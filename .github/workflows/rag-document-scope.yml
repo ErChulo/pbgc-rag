@@ -1,0 +1,127 @@
+name: Verify selected document answers
+
+on:
+  push:
+    branches: ['codex/rag-document-scope-0.10']
+  workflow_dispatch:
+
+# This branch check never creates a tag, release or public package.
+permissions:
+  contents: read
+
+concurrency:
+  group: rag-document-scope-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  office-document-scope:
+    if: github.ref == 'refs/heads/codex/rag-document-scope-0.10'
+    name: packaged document scope (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned development browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-document-scope" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-document-scope/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-document-scope/node_modules" >> "$GITHUB_ENV"
+          CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-document-scope/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Check the model profile and prepare its exact local weights
+        run: |
+          python tools/build-model-profile.py --check
+          python tools/prepare-models.py
+      - name: Build and verify the complete local office ZIP
+        run: |
+          mkdir -p test-results
+          python tools/package.py --office | tee test-results/rag-source-scope-package.json
+      - name: Verify the same ZIP offline with real Qwen, OCR and original-page reading
+        env:
+          PBGC_REQUIRE_OFFICE: '1'
+          PBGC_OFFICE_FILE: '1'
+        run: node tests/office-package.test.js 2>&1 | tee test-results/rag-source-scope-office-file.log
+      - name: Extract the checked ZIP to a path with spaces
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path, PurePosixPath
+          import stat
+          import zipfile
+
+          source = Path('dist/PBGC-RAG-0.8-larger-model-office.zip')
+          destination = Path(os.environ['RUNNER_TEMP']) / 'RAG document scope office app with spaces'
+          with zipfile.ZipFile(source) as package:
+              for entry in package.infolist():
+                  path = PurePosixPath(entry.filename)
+                  if (path.is_absolute() or '..' in path.parts or '\\' in entry.filename
+                          or ':' in entry.filename or stat.S_ISLNK(entry.external_attr >> 16)):
+                      raise SystemExit('Unsafe office ZIP path')
+              if package.testzip() is not None:
+                  raise SystemExit('Office ZIP CRC validation failed')
+              package.extractall(destination)
+          if not (destination / 'assets/rag-questions.js').is_file():
+              raise SystemExit('The office ZIP lacks the document-scope orchestration asset')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write('PBGC_QUESTIONS_ROOT=' + str(destination.resolve()) + '\n')
+              output.write('PBGC_SCOPE_ROOT=' + str(destination.resolve()) + '\n')
+          PY
+      - name: Check the previous question flow in the extracted office app
+        id: questions
+        # The new scope test owns the two real inferences in this workflow.
+        run: node tests/rag-questions-browser.test.js 2>&1 | tee test-results/rag-source-scope-questions-file.log
+      - name: Check selected document answers in the extracted office app
+        id: scope
+        env:
+          PBGC_REQUIRE_SCOPE_MODEL: '1'
+        run: node tests/rag-source-scope-browser.test.js 2>&1 | tee test-results/rag-source-scope-browser-file.log
+      - name: Expose bounded failed document-scope diagnostics
+        if: ${{ failure() && (steps.questions.outcome == 'failure' || steps.scope.outcome == 'failure') }}
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          const {extractFailureNames,workflowEscape}=require('./tools/ci-summary.js');
+          const base=path.resolve('test-results');
+          const read=name=>{const file=path.join(base,name);if(!fs.existsSync(file))return null;const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>1024*1024)return null;return fs.readFileSync(file,'utf8');};
+          const clip=(value,length=180)=>typeof value==='string'?value.slice(0,length):null;
+          const number=value=>Number.isFinite(value)?value:null;
+          const log=(read('rag-source-scope-questions-file.log')||'')+'\n'+(read('rag-source-scope-browser-file.log')||'');
+          const names=extractFailureNames(log);
+          const locations=[...new Set(log.match(/rag-(?:questions|source-scope)-browser\.test\.js:\d+:\d+/g)||[])].slice(0,12);
+          if(locations.length)console.log('::notice title=Synthetic document-scope failure locations::'+workflowEscape(JSON.stringify(locations).slice(0,1200)));
+          if(!names.length)names.push('Document-scope browser acceptance failed before a named test result was available.');
+          for(const name of names.slice(0,12))console.log('::error title=Failed synthetic document-scope check::'+workflowEscape(name));
+          const raw=read('rag-source-scope-real-file.json')||read('rag-source-scope-real.json');
+          if(raw){
+            const report=JSON.parse(raw),safe={batchStatus:clip(report.batchStatus),batchError:report.batchError?{name:clip(report.batchError.errorName,100),message:clip(report.batchError.errorMessage)}:null,ragStatus:clip(report.ragStatus),packagedBundledStartup:report.packagedBundledStartup===true,realGenerationCalls:number(report.realGenerationCalls),allDocumentsConflictBlocked:report.allDocumentsConflictBlocked===true,allDocumentsStatus:clip(report.allDocumentsStatus),realGenerationCallsAfterAllDocuments:number(report.realGenerationCallsAfterAllDocuments),questions:(report.questions||[]).slice(0,3).map(row=>({index:number(row.index),status:clip(row.status,30),reason:clip(row.reason,100),searchedSourceCount:Array.isArray(row.searchedSources)?row.searchedSources.length:null})),calls:(report.modelOutputs||[]).slice(0,3).map(call=>({state:clip(call.state,30),elapsedMs:number(call.elapsedMs),errorName:clip(call.errorName,100),errorMessage:clip(call.errorMessage,100)})),externalRequests:number(report.externalRequests)};
+            console.log('::notice title=Synthetic selected-document model diagnostics::'+workflowEscape(JSON.stringify(safe)));
+          }else console.log('::warning title=Synthetic document-scope diagnostics::No bounded real-model report was available.');
+          JS
+      - name: Upload scoped document-selection and package evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: selected-document-evidence-${{ matrix.os }}
+          path: |
+            test-results/rag-source-scope*.log
+            test-results/rag-source-scope*.json
+            test-results/rag-source-scope*.png
+            test-results/rag-questions*.png
+            test-results/office-resources-file.json
+            test-results/office-package-file.png
+            test-results/office-original-page-file.png
+          if-no-files-found: warn
+          retention-days: 7

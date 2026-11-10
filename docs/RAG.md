@@ -2,7 +2,7 @@
 
 ## What the reader can do
 
-Ask a short factual question, read the result, and open its supporting source. Source passages are available without Qwen. The local model answers one fact at a time; the guided-question development branch lets users enter up to three separate questions and checks each in turn. A question can remain unanswered even when another question succeeds. See the [office guide](OFFICE-START.md) for the user steps.
+Ask a short factual question, read the result, and open its supporting source. Source passages are available without Qwen. The local model answers one fact at a time; the development branch lets users enter up to three separate questions and checks each in turn. Each question can search all documents or one selected file. A question can remain unanswered even when another question succeeds. See the [office guide](OFFICE-START.md) for the user steps.
 
 Document search and supported answers do not require official templates, a field dictionary or approved actuarial rules. Those belong to separate optional workflows. This module does not decide legal precedence, participant applicability or official output approval.
 
@@ -53,7 +53,7 @@ Result:
 
 ## Independent question set
 
-`assets/rag-questions.js` adds `PBGCRag.answerQuestions`. It accepts one to three explicit, trimmed, unique questions, each at most 1,000 characters. It does not split or rewrite the user's question.
+`assets/rag-questions.js` adds `PBGCRag.answerQuestions`. It accepts one to three explicit, trimmed questions, each at most 1,000 characters. A normalized question must be unique within the same effective document selection. The same text can be used with different document selections. It does not split or rewrite the user's question.
 
 ```js
 const set = await PBGCRag.answerQuestions({
@@ -61,16 +61,25 @@ const set = await PBGCRag.answerQuestions({
     'What is the normal retirement age?',
     'How long are case files retained?'
   ],
+  questionScopes: [{sourceIds: ['plan-source-id']}, {}], // optional, one entry per question
   chunks,
   provider,
-  retrieve: ({question, index, chunks, scope, signal}) =>
-    retrieveForThisQuestion(question, {chunks, scope, signal}),
+  retrieve: ({question, scope, searchedSources, signal}) =>
+    PBGCRag.retrieveHybrid(semanticIndex, question, embeddingProvider, {
+      signal,
+      topK: 4,
+      ...(scope.sourceIds || scope.sourceHashes
+        ? {sourceIds: searchedSources.map(source => source.sourceId)}
+        : {})
+    }),
   scope,
   signal,
   onProgress: progress => {},
   options: {timeoutMs: 120000, batchTimeoutMs: 360000}
 });
 ```
+
+`searchedSources` in the callback contains the frozen effective ID/name/hash bindings. Derive candidate IDs from it when a source filter exists, including a global hash-only filter. Use an index built from the verified active corpus; do not filter a global top-K afterward. Empty effective selections skip retrieval.
 
 `retrieve` is optional. When supplied, it runs independently for each question before the existing `answerQuestion` pipeline. Retrieval and inference are serialized. The caller must supply only the active workspace's verified corpus and cancel the set if its source scope changes.
 
@@ -79,7 +88,7 @@ Results retain the existing source-bound single-answer objects:
 ```js
 {
   status: 'answered' | 'partial' | 'conflict' | 'abstained',
-  results: [{index, question, result}],
+  results: [{index, question, scope, searchedSources, result}],
   answeredCount,
   totalQuestions,
   official: false,
@@ -98,6 +107,34 @@ The aggregate status is `answered` only when every question has an accepted answ
 The total deadline defaults to 360,000 ms and cannot exceed that bound. Per-question answer budgets remain unchanged. Cancellation and set deadlines reject without returning a partially completed set. Do not present the progress callback as a validated partial answer stream. This API groups separate source-checked statements; it does not establish a comprehensive comparison, cross-document entailment or unrestricted synthesis.
 
 `tests/rag-questions.test.js` uses mock providers to check orchestration and release behavior. Actual Qwen workflow quality must be measured separately. See [the increment notes](ux/RAG-0.9.md) for current acceptance scope.
+
+## Document selection for each question
+
+The UI starts with **All documents**. Its collapsed **Documents: All documents** control lets the user choose one file under **Documents for this question**. Each result displays **Searched:** with the actual selection. This label is part of the evidence boundary: an answer from a selected file is not a conclusion about excluded files or their authority.
+
+`answerQuestions` keeps the existing `questions: string[]` API and adds optional `questionScopes`. When present, this must be a dense array with exactly one entry per question. Each entry is either `{}` to inherit the global scope or `{sourceIds: [...]}` to select source IDs. An explicit source-ID list must be nonempty and contain distinct valid IDs. Unknown or stale selected IDs fail before retrieval or generation. The UI initially exposes one-file selection; the API can represent a bounded source-ID list.
+
+The orchestrator intersects each question's selected IDs with the existing global `scope.sourceIds` and `scope.sourceHashes` limits. It preserves global date/group limits. A question cannot widen its caller's source scope. An empty intersection yields no evidence and does not call the retrieval callback or fall back to all documents. Each effective scope is validated and snapshotted before the first asynchronous callback.
+
+Duplicate checks use normalized question text plus canonical effective source-ID/hash bindings. Reordering the same IDs does not make a new request. **All documents** and an explicit list covering the same verified documents are equivalent. Equal question text is allowed when the effective document sets differ.
+
+The retrieval callback receives the effective `scope` for that question. For actual hybrid retrieval, pass its effective source IDs as `retrieveHybrid(index, question, provider, {sourceIds, signal, ...limits})`. Candidate filtering must occur before both dense cosine scoring and BM25 ranking, before either method selects its top results. A global top-result list filtered afterward can miss the selected document. Ranking strength, margin and ambiguity must be calculated within the selected candidates; an excluded strong result must not make a weak selected result look sufficient. No matching indexed passages yields no evidence, never a wider search.
+
+Each returned entry adds:
+
+```js
+{
+  index,
+  question,
+  scope, // effective source and inherited applicability limits
+  searchedSources: [{sourceId, sourceName, sourceHash}],
+  result // unchanged source-bound answerQuestion result
+}
+```
+
+`searchedSources` is derived from the verified corpus and effective selection. Filenames belong in the user view; IDs and hashes remain technical metadata. The caller must make selected unreadable or removed documents visible and must not silently reset their selection to **All documents**. Editing a question or its selected document clears stale results; changing cases resets the question selections.
+
+All-document possible-conflict detection remains unchanged. Selecting one of two disagreeing files allows a question about that file's statement; it does not resolve which provision applies. Existing citation, topic, numeric, qualification, injection, cancellation and deadline checks still apply. Current acceptance is tracked in [the document-selection increment](ux/DOCUMENT-SCOPE-0.10.md).
 
 ## Structured generation and grounding
 

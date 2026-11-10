@@ -76,3 +76,11 @@ Continue on `codex/rag-guided-questions-0.9` from the completed larger-model exp
 Users can enter up to three separate questions. Run fresh retrieval and the unchanged `answerQuestion` guards for each, one at a time. Do not infer a question decomposition or call the result unrestricted synthesis. Return per-question answers, conflicts and abstentions; only a fully answered set has aggregate status `answered`. Cancellation, scope changes or a batch deadline release no partial set. Preserve the two-minute per-question and six-minute whole-set caps.
 
 Help starts with adding documents, asking, checking sources and saving. Advanced query syntax and field-dictionary tools are collapsed. Official dictionaries, actuarial rules and template outputs are not RAG prerequisites. They remain optional legacy workflows with their existing limitations.
+
+## Document choices before ranking — November 10, 2026
+
+Keep the verified guided-question branch intact and develop document selection on `codex/rag-document-scope-0.10`. A collapsed All documents/one document control belongs beside each question, and every result names its actual search selection. The same normalized question is distinct only when its verified effective source ID/hash set differs. Intersect per-question choices with global filters; no removed/unreadable source or empty intersection may fall back to the whole case.
+
+Filter before dense scoring and BM25. A global top-K followed by filtering can hide the requested file and is not acceptable. Snapshot selected IDs, source metadata and validated vector values before awaiting embeddings. Retain index issuance/provenance checks and all existing answer guards, deadlines, quality and resource thresholds. Input signatures are checked after preparation and before publication; a changed choice never converts an old selected-file request into an all-file request.
+
+This is documentary comparison through separate statements, not unrestricted synthesis or legal authority resolution. Explicit selected-page OCR is a later increment: preserve legacy record positions, persist ordered page processing, and include processing identity in retrieval invalidation before implementing it. It is not part of the current document-selection change.

@@ -28,7 +28,7 @@
     for(const value of vector){if(!Number.isFinite(value))fail('Embedding vector contains a nonfinite value.');squares+=value*value;}
     const norm=Math.sqrt(squares);if(!Number.isFinite(norm)||norm===0)fail('Embedding vector has zero or invalid norm; semantic evidence is unavailable for this text.');
     if(alreadyNormalized&&Math.abs(norm-1)>0.0001)fail('Cached semantic vector is not normalized.');
-    const output=new Float32Array(dimension);for(let i=0;i<dimension;i++)output[i]=vector[i]/norm;return output;
+    const output=new Float32Array(dimension);for(let i=0;i<dimension;i++)output[i]=alreadyNormalized?vector[i]:vector[i]/norm;return output;
   }
   async function embedding(provider,texts,signal){
     cancelled(signal);let remove=()=>{};
@@ -57,27 +57,68 @@
     return clean;
   }
   function validateSemanticIndex(index,verifiedChunks,provider){try{validateIndex(index,verifiedChunks,provider);return{valid:true,errors:[]};}catch(error){return{valid:false,errors:[error.message]};}}
-  function retrievalConfig(query,config){options(config);if(typeof query!=='string'||!query.trim()||query.length>SEMANTIC_LIMITS.query)fail('Semantic queries need one to 2,000 characters.');const topK=config.topK===undefined?8:config.topK,minScore=config.minScore===undefined?0.25:config.minScore,ambiguityMargin=config.ambiguityMargin===undefined?0.02:config.ambiguityMargin;if(!Number.isInteger(topK)||topK<1||topK>SEMANTIC_LIMITS.topK||typeof minScore!=='number'||!Number.isFinite(minScore)||minScore< -1||minScore>1||typeof ambiguityMargin!=='number'||!Number.isFinite(ambiguityMargin)||ambiguityMargin<0||ambiguityMargin>2)fail('Invalid semantic retrieval limit, threshold or ambiguity margin.');return{topK,minScore,ambiguityMargin};}
+  function sourceSelection(value){
+    if(value===undefined)return undefined;
+    if(!Array.isArray(value))fail('Semantic source selection requires one to 200 distinct source IDs.');
+    const length=value.length;if(!Number.isInteger(length)||length<1||length>200)fail('Semantic source selection requires one to 200 distinct source IDs.');
+    const seen=new Set(),ids=[];
+    for(let index=0;index<length;index++){
+      if(!Object.hasOwn(value,index))fail('Semantic source selection requires bounded, distinct source ID strings.');
+      const id=value[index];if(typeof id!=='string'||!id.trim()||id.length>300||seen.has(id))fail('Semantic source selection requires bounded, distinct source ID strings.');
+      seen.add(id);ids.push(id);
+    }
+    return Object.freeze(ids);
+  }
+  function retrievalConfig(query,config){options(config);if(typeof query!=='string'||!query.trim()||query.length>SEMANTIC_LIMITS.query)fail('Semantic queries need one to 2,000 characters.');const topK=config.topK===undefined?8:config.topK,minScore=config.minScore===undefined?0.25:config.minScore,ambiguityMargin=config.ambiguityMargin===undefined?0.02:config.ambiguityMargin;if(!Number.isInteger(topK)||topK<1||topK>SEMANTIC_LIMITS.topK||typeof minScore!=='number'||!Number.isFinite(minScore)||minScore< -1||minScore>1||typeof ambiguityMargin!=='number'||!Number.isFinite(ambiguityMargin)||ambiguityMargin<0||ambiguityMargin>2)fail('Invalid semantic retrieval limit, threshold or ambiguity margin.');return{topK,minScore,ambiguityMargin,sourceIds:sourceSelection(config.sourceIds)};}
   const citation=chunk=>({chunkId:chunk.id,sourceId:chunk.sourceId,sourceName:chunk.sourceName,sourceHash:chunk.sourceHash,locators:copy(chunk.locators),excerpt:chunk.text});
-  async function retrieveSemantic(index,query,provider,config={}){
-    const settings=retrievalConfig(query,config);validateIndex(index,undefined,provider);const id=provider.id,dimension=provider.dimension,batch=await embedding(provider,[query],config.signal);
-    if(!Array.isArray(batch)||batch.length!==1)fail('Embedding provider returned an invalid query batch.');const vector=normalize(batch[0],dimension);if(provider.id!==id||provider.dimension!==dimension)fail('Embedding provider changed during retrieval.');
-    const scored=[];for(let i=0;i<index.chunks.length;i++){if(i%256===0)cancelled(config.signal);let score=0;for(let d=0;d<dimension;d++)score+=index.vectors[i][d]*vector[d];scored.push({index:i,score:Math.max(-1,Math.min(1,score))});}
-    scored.sort((a,b)=>b.score-a.score||(index.chunks[a.index].id<index.chunks[b.index].id?-1:index.chunks[a.index].id>index.chunks[b.index].id?1:0));
+  function selectedPositions(chunks,sourceIds){
+    const allowed=sourceIds===undefined?null:new Set(sourceIds),positions=[];
+    for(let index=0;index<chunks.length;index++)if(!allowed||allowed.has(chunks[index].sourceId))positions.push(index);
+    return positions;
+  }
+  async function denseResult(index,clean,positions,query,provider,config,settings){
+    const id=provider.id,dimension=provider.dimension,scored=[];
+    if(positions.length){
+      // Retain the same validated vectors as the captured source metadata even
+      // if a caller changes its issued index while query embedding is pending.
+      const vectors=positions.map(position=>normalize(index.vectors[position],dimension,true));
+      const batch=await embedding(provider,[query],config.signal);
+      if(!Array.isArray(batch)||batch.length!==1)fail('Embedding provider returned an invalid query batch.');
+      const vector=normalize(batch[0],dimension);if(provider.id!==id||provider.dimension!==dimension)fail('Embedding provider changed during retrieval.');
+      for(let candidate=0;candidate<positions.length;candidate++){
+        if(candidate%256===0)cancelled(config.signal);const position=positions[candidate];let score=0;
+        for(let d=0;d<dimension;d++)score+=vectors[candidate][d]*vector[d];
+        scored.push({index:position,score:Math.max(-1,Math.min(1,score))});
+      }
+      scored.sort((a,b)=>b.score-a.score||(clean[a.index].id<clean[b.index].id?-1:clean[a.index].id>clean[b.index].id?1:0));
+    }
+    cancelled(config.signal);
     const topScore=scored[0]?.score??null,margin=scored.length>1?scored[0].score-scored[1].score:null,weak=topScore===null||topScore<settings.minScore;
-    const results=scored.filter(item=>item.score>=settings.minScore).slice(0,settings.topK).map(item=>({...copy(index.chunks[item.index]),score:item.score,semanticScore:item.score,citations:[citation(index.chunks[item.index])]}));
-    return{results,diagnostics:{method:'dense-cosine',providerId:id,dimension,indexedChunks:index.chunks.length,topScore,margin,minScore:settings.minScore,weak,ambiguous:!weak&&margin!==null&&margin<=settings.ambiguityMargin,ambiguityMargin:settings.ambiguityMargin,confidenceNotice:'Cosine similarity is a retrieval score, not a calibrated probability, factual confidence or legal authority.'}};
+    const results=scored.filter(item=>item.score>=settings.minScore).slice(0,settings.topK).map(item=>({...copy(clean[item.index]),score:item.score,semanticScore:item.score,citations:[citation(clean[item.index])]}));
+    const diagnostics={method:'dense-cosine',providerId:id,dimension,indexedChunks:positions.length,topScore,margin,minScore:settings.minScore,weak,ambiguous:!weak&&margin!==null&&margin<=settings.ambiguityMargin,ambiguityMargin:settings.ambiguityMargin,confidenceNotice:'Cosine similarity is a retrieval score, not a calibrated probability, factual confidence or legal authority.'};
+    if(settings.sourceIds!==undefined){
+      const matched=new Set(positions.map(position=>clean[position].sourceId));
+      diagnostics.totalIndexedChunks=clean.length;
+      diagnostics.sourceSelection={sourceIds:settings.sourceIds.slice(),matchedSourceIds:settings.sourceIds.filter(id=>matched.has(id)),missingSourceIds:settings.sourceIds.filter(id=>!matched.has(id))};
+      if(!positions.length)diagnostics.reason='no-indexed-source-chunks';
+    }
+    return{results,diagnostics};
+  }
+  async function retrieveSemantic(index,query,provider,config={}){
+    const settings=retrievalConfig(query,config),clean=validateIndex(index,undefined,provider),positions=selectedPositions(clean,settings.sourceIds);
+    return denseResult(index,clean,positions,query,provider,config,settings);
   }
   async function retrieveHybrid(index,query,provider,config={}){
     const settings=retrievalConfig(query,config),weight=config.semanticWeight===undefined?0.7:config.semanticWeight,k=config.rrfK===undefined?60:config.rrfK;
     if(typeof weight!=='number'||!Number.isFinite(weight)||weight<0||weight>1||!Number.isInteger(k)||k<1||k>1000)fail('Invalid hybrid fusion weight or rank constant.');
-    const semantic=await retrieveSemantic(index,query,provider,{...config,topK:SEMANTIC_LIMITS.topK}),rank=root.PBGCRag?.rankRecords||(typeof require==='function'?require('./ranking.js').rankRecords:null);if(typeof rank!=='function')fail('BM25 lexical ranking is unavailable.');
     if(query.length>500)fail('Hybrid queries exceed the 500-character lexical limit.');
-    const lexical=rank(index.chunks,query,{limit:SEMANTIC_LIMITS.topK}),map=new Map();
+    const clean=validateIndex(index,undefined,provider),positions=selectedPositions(clean,settings.sourceIds),selected=positions.map(position=>clean[position]);
+    const semantic=await denseResult(index,clean,positions,query,provider,config,{...settings,topK:SEMANTIC_LIMITS.topK}),rank=root.PBGCRag?.rankRecords||(typeof require==='function'?require('./ranking.js').rankRecords:null);if(typeof rank!=='function')fail('BM25 lexical ranking is unavailable.');
+    const lexical=rank(selected,query,{limit:SEMANTIC_LIMITS.topK}),map=new Map(),byId=new Map(selected.map(chunk=>[chunk.id,chunk]));
     semantic.results.forEach((chunk,i)=>map.set(chunk.id,{chunk,semanticRank:i+1,semanticScore:chunk.semanticScore,lexicalRank:null,lexicalScore:null}));
     lexical.forEach((chunk,i)=>{const entry=map.get(chunk.id)||{chunk,semanticRank:null,semanticScore:null,lexicalRank:null,lexicalScore:null};entry.lexicalRank=i+1;entry.lexicalScore=chunk.score;map.set(chunk.id,entry);});
     const scored=Array.from(map.values()).map(entry=>({...entry,fusionScore:(entry.semanticRank===null?0:weight/(k+entry.semanticRank))+(entry.lexicalRank===null?0:(1-weight)/(k+entry.lexicalRank))})).sort((a,b)=>b.fusionScore-a.fusionScore||(a.chunk.id<b.chunk.id?-1:a.chunk.id>b.chunk.id?1:0));
-    cancelled(config.signal);return{results:scored.slice(0,settings.topK).map(entry=>{const chunk=index.chunks.find(item=>item.id===entry.chunk.id);return{...copy(chunk),score:entry.fusionScore,semanticScore:entry.semanticScore,lexicalScore:entry.lexicalScore,citations:[citation(chunk)],explanation:{method:'weighted reciprocal-rank fusion',semanticRank:entry.semanticRank,lexicalRank:entry.lexicalRank,semanticWeight:weight,rrfK:k}};}),diagnostics:{...semantic.diagnostics,method:'hybrid-cosine-bm25-rrf',semanticWeight:weight,rrfK:k,lexicalMatches:lexical.length,confidenceNotice:'Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.'}};
+    cancelled(config.signal);return{results:scored.slice(0,settings.topK).map(entry=>{const chunk=byId.get(entry.chunk.id);return{...copy(chunk),score:entry.fusionScore,semanticScore:entry.semanticScore,lexicalScore:entry.lexicalScore,citations:[citation(chunk)],explanation:{method:'weighted reciprocal-rank fusion',semanticRank:entry.semanticRank,lexicalRank:entry.lexicalRank,semanticWeight:weight,rrfK:k}};}),diagnostics:{...semantic.diagnostics,method:'hybrid-cosine-bm25-rrf',semanticWeight:weight,rrfK:k,lexicalMatches:lexical.length,confidenceNotice:'Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.'}};
   }
   async function rerankSemantic(index,query,provider,candidateIds,config={}){
     validateIndex(index,undefined,provider);if(!Array.isArray(candidateIds)||!candidateIds.length||candidateIds.length>1000||candidateIds.some(id=>typeof id!=='string')||new Set(candidateIds).size!==candidateIds.length)fail('Provide one to 1,000 distinct candidate chunk IDs.');

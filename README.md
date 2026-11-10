@@ -1,6 +1,6 @@
 # PBGC-RAG
 
-> **Guided-question development branch.** This work builds on the separate Qwen2.5 1.5B experiment. It does not change `main`, the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0), or the delivered [larger-model 0.8 package](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0). New branch features are not a new published office release. See [this increment](docs/ux/RAG-0.9.md).
+> **Document-selection development branch.** This work adds document choice to the completed guided-question increment. It does not change `main`, the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0), or the delivered [larger-model 0.8 package](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0). These new controls are not in a published office release. See [document selection](docs/ux/DOCUMENT-SCOPE-0.10.md) and the [guided-question increment](docs/ux/RAG-0.9.md).
 
 
 Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
@@ -49,8 +49,13 @@ Choose the task you need:
 | Read source passages | Finds and shows the document text | No |
 | Ask one question | Writes one short answer and links its supporting source | Yes |
 | Ask separate questions — development branch | Checks up to three questions one at a time and shows a result for each | Yes |
+| Ask about one document — development branch | Searches the document selected for that question | Only for a written answer |
 
 Ask for one fact in each question. For example: **What is the normal retirement age?** To check another fact, add a separate question such as **How long are case files retained?** Each answer must have its own support. A supported answer to one question does not make the other answers valid.
+
+To ask about one file, open **Documents: All documents** below the question. Use **Documents for this question** to select the file. Keep **All documents** to search the case. With two question boxes, you can ask the same question about two different files. Select a different file in each box.
+
+Each result states what was searched: **Searched: filename** or **Searched: all N documents**. Read that line before comparing answers. A result from one file says nothing about an excluded file. Selecting one file does not decide which document governs. If a selected file is unavailable or has no readable passages, the app shows a message; it does not switch to all documents.
 
 The local Qwen profile returns one supported statement per question. It does not write an unrestricted report that combines facts across documents. Separate questions can find facts in different documents, with separate source checks. A result can say that no supported answer was found or that sources need review. Keep those results visible when you compare answers.
 
@@ -105,7 +110,7 @@ Development tests need Node, Playwright, Chromium and Python's standard library 
 
 ## Current limits and next development
 
-The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. This branch adds separate questions while keeping the existing source checks. Its actual-model and browser results must be recorded before delivery.
+The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. The guided-question increment passed its Windows and Ubuntu checks at `2c4786b`. This branch adds document selection while keeping those source checks. The new selection controls need their own actual-model, browser and complete-package results before delivery. See [current verification](docs/ux/DOCUMENT-SCOPE-0.10.md).
 
 Mixed image/text-page OCR, other OCR languages, full PDF table reconstruction, broader format/query support and complete assistive-technology/performance evaluation remain unfinished. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for test scope.
 

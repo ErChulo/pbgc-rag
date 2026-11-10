@@ -28,15 +28,27 @@ Each written answer must pass source checks. If the app cannot support an answer
 
 ## Ask separate questions in this development branch
 
-These controls belong to the guided-question development branch. They are not in the published 0.8 packages. Current verification is recorded in `docs/ux/RAG-0.9.md` in the package.
+These controls belong to development branches. They are not in the published 0.8 packages. Current document-selection work is recorded in `docs/ux/DOCUMENT-SCOPE-0.10.md` in the package.
 
 1. In **Ask your documents**, write the first question.
-2. Choose **Add another question**. Enter a different question in **Question 2**. You can add **Question 3**.
+2. Choose **Add another question**. Enter **Question 2**. You can add **Question 3**. Use different questions when you search the same documents.
 3. Ask one thing in each question. For example, ask about the retirement age in one field and the case file retention period in another.
 4. Choose **Ask questions**. The app checks the questions one at a time.
 5. Read the result and sources for each question. Some questions can have supported answers while others need more evidence or source review.
 
 Each question gets its own search and source checks. An answer can come from a different document. This does not create a free-form combined report or decide which conflicting provision governs.
+
+## Ask about one document in this development branch
+
+1. Below the question, open **Documents: All documents**.
+2. In **Documents for this question**, choose one file. Leave **All documents** selected to search the case.
+3. Ask the question. Check **Searched:** in the result, then open its evidence.
+
+To check the same fact in two files, add a second question. Enter the same question in both boxes. Choose the first file for Question 1 and the second file for Question 2. Each result has its own sources.
+
+The same question must search a different document selection in each box. This prevents duplicate requests. Choosing one file narrows the search. It does not decide which provision applies or which file has priority. To look for a possible conflict across the case, choose **All documents**.
+
+Changing a document choice clears the old result. Switching cases clears all question choices. If a chosen file is removed or has no readable text, check it under **Documents** and select a readable file. The app does not expand that search to other files without your choice.
 
 ## Read passages without Qwen
 
@@ -67,7 +79,8 @@ Open **View evidence** or **View source**. For a PDF, choose **Original PDF page
 
 - **Qwen is not ready:** Start it from the guide or Ask screen. Source passages remain available.
 - **You cancelled a question:** Start Qwen again when prompted. The included model files remain on disk.
-- **No supported answer:** Ask about one fact. Use words from the document. Read the retrieved passages and check that the needed document is in this case.
+- **No supported answer:** Ask about one fact. Use words from the document. Check **Searched:** and confirm that the needed document is included. Read the retrieved passages.
+- **A selected document cannot be searched:** Check it under **Documents**. Add readable text or choose another file. Choose **All documents** yourself if you want a wider search.
 - **The package is incomplete:** Extract the complete office ZIP again. Keep its folders beside **index.html**. Do not import model files as documents.
 
 PBGC-RAG is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its answers are review aids. Synthetic fixtures belong in the public repository and remote development environment; your local case documents do not belong there.

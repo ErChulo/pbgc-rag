@@ -104,3 +104,77 @@ test('MOCK an adapter timeout after one valid answer discards the set and never 
   assert.equal(completed,1,'Only progress metadata can describe the first completed question');assert.equal(calls,2,'An adapter deadline must stop the set before a third model call');
  }
 });
+
+test('MOCK equal questions can select different documents while all-documents conflicts remain guarded',async()=>{
+ const older=age(),newer=chunk('new-age','Normal retirement age is 67.'),chunks=[older,newer];let calls=0;
+ const provider=mockProvider(({prompt})=>{calls++;return prompt.includes('67.')?newer.text:older.text;});
+ const all=await answerQuestions({questions:[ageQuestion],chunks,provider,retrieve:()=>chunks});assert.equal(all.status,'conflict');assert.equal(calls,0,'All-documents scope still checks both conflicting source statements');
+ const scopes=[{sourceIds:[older.sourceId]},{sourceIds:[newer.sourceId]}],requests=[];
+ const result=await answerQuestions({questions:[ageQuestion,ageQuestion],questionScopes:scopes,chunks,provider,retrieve:request=>{requests.push(request.scope);assert.ok(Object.isFrozen(request.searchedSources));assert.deepEqual(request.searchedSources.map(source=>source.sourceId),request.scope.sourceIds);return request.chunks;}});
+ assert.equal(result.status,'answered');assert.equal(result.answeredCount,2);assert.equal(calls,2);
+ for(const [index,entry] of result.results.entries()){
+  const source=chunks[index];assert.deepEqual(entry.scope.sourceIds,[source.sourceId]);assert.ok(Object.isFrozen(entry.scope.sourceIds));assert.equal(entry.result.answer,source.text+' [C1]');assert.deepEqual(entry.result.citations.map(value=>value.sourceId),[source.sourceId]);assert.equal(entry.result.citations[0].sourceHash,source.sourceHash);
+  assert.deepEqual(entry.searchedSources,[{sourceId:source.sourceId,sourceName:source.sourceName,sourceHash:source.sourceHash}]);assert.ok(Object.isFrozen(entry.searchedSources));assert.ok(Object.isFrozen(entry.searchedSources[0]));
+ }
+ assert.deepEqual(requests.map(value=>value.sourceIds),[[older.sourceId],[newer.sourceId]]);
+});
+
+test('MOCK source selection intersects global IDs and hashes and never widens empty results',async()=>{
+ const older=age(),newer=chunk('new-age','Normal retirement age is 67.'),chunks=[older,newer];
+ for(const scope of [{sourceIds:[older.sourceId]},{sourceHashes:[older.sourceHash]},{sourceIds:[older.sourceId,newer.sourceId],sourceHashes:[older.sourceHash]}]){
+  let retrieved=0,generated=0;
+  const result=await answerQuestions({questions:[ageQuestion,ageQuestion],questionScopes:[{sourceIds:[older.sourceId,newer.sourceId]},{sourceIds:[newer.sourceId]}],scope,chunks,provider:mockProvider(()=>{generated++;return older.text;}),retrieve:request=>{retrieved++;assert.deepEqual(request.scope.sourceIds,[older.sourceId]);return request.chunks;}});
+  assert.equal(result.status,'partial');assert.equal(retrieved,1,'An empty intersection does not call a retriever with empty IDs or fall back to all sources');assert.equal(generated,1);assert.equal(result.results[0].result.status,'answered');assert.equal(result.results[1].result.status,'abstained');assert.deepEqual(result.results[1].scope.sourceIds,[]);assert.deepEqual(result.results[1].searchedSources,[]);assert.deepEqual(result.results[1].result.retrieved,[]);
+ }
+ for(const scope of [{sourceIds:[]},{sourceHashes:[]},{sourceIds:['unknown-global-source']}]){
+  let called=false;
+  const result=await answerQuestions({questions:[ageQuestion],questionScopes:[{sourceIds:[older.sourceId]}],scope,chunks,retrieve:()=>{called=true;return chunks;},provider:mockProvider(()=>{called=true;return older.text;})});
+  assert.equal(called,false);assert.equal(result.status,'abstained');assert.deepEqual(result.results[0].searchedSources,[]);
+ }
+});
+
+test('MOCK duplicate checks use effective verified source bindings rather than selection order or syntax',async()=>{
+ const chunks=[age(),retention()],all=chunks.map(value=>value.sourceId);let called=false;const common={questions:[ageQuestion,ageQuestion],chunks,retrieve:()=>{called=true;return chunks;},provider:mockProvider(()=>{called=true;return age().text;})};
+ for(const questionScopes of [[{},{}],[{},{sourceIds:all}],[{sourceIds:all},{sourceIds:all.slice().reverse()}]])await assert.rejects(answerQuestions({...common,questionScopes}),/different question or document selection/);
+ await assert.rejects(answerQuestions({...common,scope:{sourceIds:[all[0]]},questionScopes:[{}, {sourceIds:all}]}),/different question or document selection/,'Selections that become equal after the global restriction are duplicates');
+ await assert.rejects(answerQuestions({...common,scope:{sourceIds:[]},questionScopes:[{sourceIds:[all[0]]},{sourceIds:[all[1]]}]}),/different question or document selection/,'Two empty effective source sets are also equal');
+ assert.equal(called,false);
+});
+
+test('MOCK invalid or stale per-question document scopes reject before any callback',async()=>{
+ const chunks=[age(),retention()],id=chunks[0].sourceId;let called=false;
+ const common={questions:[ageQuestion,retentionQuestion],chunks,provider:mockProvider(()=>{called=true;return age().text;}),retrieve:()=>{called=true;return chunks;},onProgress:()=>{called=true;}};
+ const bad=[null,{},[],[{}],[{},null],[{},undefined],Object.assign(Array(2),{0:{}}),[{},{sourceIds:[]}],[{},{sourceIds:[id,id]}],[{},{sourceIds:[42]}],[{},{sourceIds:['']}],[{},{sourceIds:['missing-source']}],[{},{sourceIds:Array.from({length:201},(_,index)=>'s'+index)}],[{},{sourceIds:[id],group:'Hourly'}],[{},{sourceHashes:[chunks[0].sourceHash]}],[{},{asOf:'2026-01-01'}]];
+ for(const questionScopes of bad)await assert.rejects(answerQuestions({...common,questionScopes}));
+ const inconsistent=[chunks[0],{...chunk('other','Normal retirement age is 67.'),sourceId:id}];await assert.rejects(answerQuestions({...common,chunks:inconsistent,questionScopes:[{},{}]}),/inconsistent names or hashes/);
+ assert.equal(called,false);
+});
+
+test('MOCK per-question document selections and verified labels are frozen before asynchronous work',async()=>{
+ const first=age(),second=chunk('new-age','Normal retirement age is 67.'),chunks=[first,second],questionScopes=[{sourceIds:[first.sourceId]},{sourceIds:[second.sourceId]}],scope={sourceIds:[first.sourceId,second.sourceId]},questions=[ageQuestion,ageQuestion];let release;
+ const ready=new Promise(resolve=>{release=resolve;});
+ const pending=answerQuestions({questions,questionScopes,scope,chunks,provider:mockProvider(({prompt})=>prompt.includes('67.')?'Normal retirement age is 67.':'Normal retirement age is 65.'),retrieve:async request=>{
+  if(request.index===0){release();await nextTurn();}
+  assert.ok(Object.isFrozen(request.scope));assert.ok(Object.isFrozen(request.scope.sourceIds));assert.throws(()=>request.scope.sourceIds.push('wrong-source'),TypeError);
+  return request.chunks.filter(value=>request.scope.sourceIds.includes(value.sourceId));
+ }});
+ await ready;questionScopes[0].sourceIds[0]=second.sourceId;questionScopes[1].sourceIds[0]=first.sourceId;scope.sourceIds.splice(0,2);chunks[0].sourceName='Changed caller name.txt';chunks[0].sourceHash='f'.repeat(64);questions[1]='Who receives the money?';
+ const result=await pending;assert.equal(result.status,'answered');assert.deepEqual(result.results.map(entry=>entry.question),[ageQuestion,ageQuestion]);assert.deepEqual(result.results.map(entry=>entry.searchedSources[0].sourceId),['source-age','source-new-age']);assert.equal(result.results[0].searchedSources[0].sourceName,'synthetic-age.txt');assert.equal(result.results[0].searchedSources[0].sourceHash,'a'.repeat(64));assert.equal(result.results[1].result.answer,'Normal retirement age is 67. [C1]');
+});
+
+test('MOCK scoped calls preserve global applicability guards and do not trust excluded evidence',async()=>{
+ const chunks=[age(),chunk('new-age','Normal retirement age is 67.')];let calls=0;
+ const result=await answerQuestions({questions:[ageQuestion],questionScopes:[{sourceIds:[chunks[0].sourceId]}],chunks,retrieve:()=>chunks,provider:mockProvider(()=>{calls++;return chunks[1].text;})});assert.equal(result.status,'abstained');assert.equal(calls,1);assert.equal(result.results[0].result.diagnostics.reason,'model-grounding-rejected');assert.ok(result.results[0].result.retrieved.every(value=>value.sourceId===chunks[0].sourceId));
+ for(const scope of [{group:'Hourly'},{asOf:'2026-01-01'}]){
+  let generated=false;
+  const guarded=await answerQuestions({questions:[ageQuestion],questionScopes:[{sourceIds:[chunks[0].sourceId]}],scope,chunks,retrieve:request=>{for(const key of Object.keys(scope))assert.equal(request.scope[key],scope[key]);return request.chunks;},provider:mockProvider(()=>{generated=true;return chunks[0].text;})});assert.equal(guarded.status,'abstained');assert.equal(guarded.results[0].result.diagnostics.reason,'unverified-source-applicability');assert.equal(generated,false);
+ }
+});
+
+test('MOCK all-documents callers can still use more than 200 verified corpus sources',async()=>{
+ const chunks=Array.from({length:201},(_,index)=>chunk('doc-'+index,'Normal retirement age is 65.'));
+ for(const scope of [undefined,{sourceHashes:['b'.repeat(64)]}]){
+  const result=await answerQuestions({questions:[ageQuestion],chunks,scope,retrieve:request=>{assert.equal(request.scope.sourceIds,undefined,'All documents does not manufacture an over-limit core sourceIds list');assert.equal(request.searchedSources.length,201);assert.ok(Object.isFrozen(request.searchedSources));return[request.chunks[200]];},provider:mockProvider(()=>chunks[200].text)});
+  assert.equal(result.status,'answered');assert.equal(result.results[0].searchedSources.length,201);assert.equal(result.results[0].result.citations[0].sourceId,chunks[200].sourceId);
+ }
+});
