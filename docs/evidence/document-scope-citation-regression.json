@@ -1,0 +1,72 @@
+{
+  "kind": "synthetic-long-document-citation-regression",
+  "before": {
+    "status": "FAIL_BEFORE_FIX",
+    "expectedTargetLine": 75,
+    "citationLines": [
+      73,
+      74,
+      75,
+      76,
+      77
+    ],
+    "citationLocatorKeyOrder": [
+      [
+        "length",
+        "line",
+        "offset",
+        "offsetUnit",
+        "type"
+      ],
+      [
+        "length",
+        "line",
+        "offset",
+        "offsetUnit",
+        "type"
+      ],
+      [
+        "length",
+        "line",
+        "offset",
+        "offsetUnit",
+        "type"
+      ],
+      [
+        "length",
+        "line",
+        "offset",
+        "offsetUnit",
+        "type"
+      ],
+      [
+        "length",
+        "line",
+        "offset",
+        "offsetUnit",
+        "type"
+      ]
+    ],
+    "sourceNativeLocatorKeyOrder": [
+      "type",
+      "line",
+      "offset",
+      "length",
+      "offsetUnit"
+    ],
+    "openedRange": "Records 1\u201340 of 90",
+    "selectedHeading": "Line 1",
+    "targetIncludedInOpenedRecords": false,
+    "externalRequests": 0,
+    "browserErrors": []
+  },
+  "after": {
+    "status": "PASS_TARGETED_BROWSER_REGRESSION",
+    "expectedOpenedRange": "Records 41\u201380 of 90",
+    "targetIncludedInOpenedRecords": true,
+    "regressionTest": "tests/rag-source-scope-browser.test.js",
+    "pureTests": 5,
+    "behavior": "Match exact locator values independent of JSON key order; prefer a quoted record only within bound locations; never open record zero when locations do not bind."
+  },
+  "limitations": "Synthetic learned-retrieval test, supplementary HTTP. Final complete-ZIP offline platform gates remain required."
+}

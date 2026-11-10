@@ -55,3 +55,7 @@ No source date, participant group, provision, field name or rule is guessed. Val
 At most 2,000 annotations, 50 references each, 4,000 value characters, 20,000 canonical content characters, 4,096 locator characters and bounded JSON depth/complexity. At most 2,000 possible-conflict pairs are returned; callers must narrow an excessive conflict scope rather than receive silent truncation. Verified source input is limited to 200 sources/50,000 records. Calendar dates are validated, including leap days.
 
 `node tests/evidence.test.js` verifies exact binding, review/content/version checks, edit invalidation, immutable operations, canonical locators, unknown-fact abstention, temporal/group filtering, conflict flags, malformed-input bounds and the absence of fabricated official definitions.
+
+## Open a cited passage
+
+The question reader resolves citation locators by their exact values, independent of JSON property order. It can prefer a record containing the accepted quote, but only among records with an exact cited locator. A quote elsewhere in the document cannot redirect the link. If no location binds, the reader asks you to refresh the question; it does not silently open the first record. Original bytes, locator data and record order stay unchanged.

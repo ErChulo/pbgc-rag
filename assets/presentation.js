@@ -1,4 +1,4 @@
-/* Reading labels only. Exact locators and integrity metadata remain unchanged. */
+/* Reading labels and exact citation navigation. Original locators remain unchanged. */
 (function(root,factory){'use strict';const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;root.PBGCRag=Object.assign(root.PBGCRag||{},api);})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const number=value=>Number.isInteger(value)&&value>0;
@@ -32,5 +32,62 @@
       default:return fallback;
     }
   }
-  return {formatLocation};
+  // Key order is not part of a JSON locator's identity. Keep every value exact.
+  function citationLocatorKey(locator){
+    try{
+      const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value));
+      if(!plain(locator))return null;
+      const type=Object.getOwnPropertyDescriptor(locator,'type');
+      if(!type||!Object.hasOwn(type,'value')||typeof type.value!=='string'||!type.value.trim())return null;
+      const state={nodes:0,characters:0,parents:new Set()};
+      const token=value=>{state.characters+=value.length;if(state.characters>4096)throw Error('Locator character budget exceeded.');return value;};
+      function encode(value,depth){
+        if(++state.nodes>512||depth>12)throw Error('Locator complexity budget exceeded.');
+        if(value===null)return token('null');
+        if(typeof value==='string'){if(value.length>4096)throw Error('Locator string budget exceeded.');return token(JSON.stringify(value));}
+        if(typeof value==='boolean')return token(value?'true':'false');
+        if(typeof value==='number'&&Number.isFinite(value))return token(JSON.stringify(value));
+        if(typeof value!=='object'||state.parents.has(value))throw Error('Invalid JSON locator.');
+        if(!Array.isArray(value)&&!plain(value))throw Error('Locator values must be plain JSON.');
+        state.parents.add(value);let result;
+        if(Array.isArray(value)){
+          if(value.length>512)throw Error('Locator array budget exceeded.');
+          token('[]');const parts=[];
+          for(let i=0;i<value.length;i++){const entry=Object.getOwnPropertyDescriptor(value,String(i));if(!entry||!Object.hasOwn(entry,'value'))throw Error('Sparse or active locator array.');if(i)token(',');parts.push(encode(entry.value,depth+1));}
+          result='['+parts.join(',')+']';
+        }else{
+          const keys=Object.keys(value).sort();if(keys.length>512)throw Error('Locator key budget exceeded.');
+          token('{}');const parts=[];
+          for(let i=0;i<keys.length;i++){const key=keys[i];if(key.length>4096)throw Error('Locator key budget exceeded.');const entry=Object.getOwnPropertyDescriptor(value,key);if(!entry||!Object.hasOwn(entry,'value'))throw Error('Active locator property.');if(i)token(',');const name=token(JSON.stringify(key));token(':');parts.push(name+':'+encode(entry.value,depth+1));}
+          result='{'+parts.join(',')+'}';
+        }
+        state.parents.delete(value);return result;
+      }
+      return encode(locator,0);
+    }catch(_){return null;}
+  }
+  function findCitationRecordIndex(records,citation){
+    try{
+      if(!Array.isArray(records)||records.length>50000||!citation||typeof citation!=='object'||Array.isArray(citation))return -1;
+      const data=(object,key)=>{const entry=Object.getOwnPropertyDescriptor(object,key);return entry&&Object.hasOwn(entry,'value')?entry.value:undefined;};
+      const locators=data(citation,'locators');if(!Array.isArray(locators)||!locators.length||locators.length>200)return -1;
+      const cache=new WeakMap(),keyFor=locator=>{if(!locator||typeof locator!=='object')return null;if(cache.has(locator))return cache.get(locator);const key=citationLocatorKey(locator);cache.set(locator,key);return key;};
+      const keys=new Set();for(let i=0;i<locators.length;i++){const key=keyFor(data(locators,String(i)));if(key!==null)keys.add(key);}if(!keys.size)return -1;
+      const quotes=data(citation,'quotes'),needles=[];let quoteCharacters=0;
+      if(Array.isArray(quotes)&&quotes.length<=36)for(let i=0;i<quotes.length;i++){const quote=data(quotes,String(i));if(typeof quote==='string'&&quote.trim()&&quote.length<=2000&&quoteCharacters+quote.length<=16000){needles.push(quote);quoteCharacters+=quote.length;}}
+      const value=data(citation,'excerpt'),excerpt=typeof value==='string'&&value.trim()&&value.length<=12000?value:null;
+      let first=-1,excerptMatch=-1;
+      for(let i=0;i<records.length;i++){
+        const record=data(records,String(i));if(!record||typeof record!=='object')continue;
+        const key=keyFor(data(record,'locator'));if(key===null||!keys.has(key))continue;
+        if(first<0)first=i;
+        const text=data(record,'text');
+        // Text preference is allowed only after an exact cited locator matches.
+        // Quote count and text sizes are fixed bounds, never a locator cross-product.
+        if(typeof text==='string'&&text.length<=2000000){if(needles.some(quote=>text.includes(quote)))return i;if(excerpt!==null&&excerptMatch<0&&text.includes(excerpt))excerptMatch=i;}
+      }
+      return excerptMatch>=0?excerptMatch:first;
+    }catch(_){return -1;}
+  }
+  return {formatLocation,findCitationRecordIndex};
 });

@@ -246,3 +246,22 @@ if(process.env.PBGC_REQUIRE_SCOPE_MODEL==='1')test(`${profile} REAL Qwen answers
   throw error;
  }finally{await close(run);}
 });
+
+
+test(`${profile} REAL learned citation beyond forty records opens its bound source page`,{timeout:180000},async()=>{
+ const run=await session(),{page}=run;
+ try{
+  const targetText='Normal retirement age is 65.';
+  const filler='The archive team stores scanned office correspondence in cabinets. Staff organize paper forms by department and maintain the catalog. A librarian checks catalog descriptions and verifies shelf labels. ';
+  const text=Array.from({length:90},(_,index)=>index===74?targetText:`Archive record ${index+1}: ${filler.repeat(2)}`).join('\n');
+  await documents(page,[{name:'synthetic-long-citation.txt',mimeType:'text/plain',buffer:Buffer.from(text)}]);
+  await ask(page);
+  const citation=page.locator('#rag-citations .rag-citation').filter({hasText:targetText}).first();await citation.waitFor({state:'visible'});
+  assert.match(await citation.innerText(),/Line 75/,'The returned citation contains the actual target locator');
+  await citation.getByRole('button',{name:'View evidence',exact:true}).click();await page.locator('#source-view').waitFor({state:'visible'});
+  assert.equal(await page.locator('#source-page').innerText(),'Records 41–80 of 90','Canonical locator matching must not fall back to the first source page');
+  assert.ok((await page.locator('#source-records').innerText()).includes(targetText),'The actual cited passage is visible in the opened source page');
+  assert.notEqual(await page.locator('#source-records article.selected h3').innerText(),'Line 1');
+  await clean(run);await capture(page,'rag-source-scope-long-citation.png');
+ }finally{await close(run);}
+});
