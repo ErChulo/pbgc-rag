@@ -27,7 +27,7 @@ function snapshot(chunks,scope,questionScopes){
   const chunk=chunks[index];
   if(!object(chunk)||typeof chunk.text!=='string'||chunk.text.length>core.RAG_LIMITS.chunkCharacters)fail('Question-set chunks require bounded source text.');
   characters+=chunk.text.length;if(characters>core.RAG_LIMITS.totalCharacters)fail('Question-set source text exceeds its corpus budget.');
-  return cloneJson({id:chunk.id,text:chunk.text,sourceId:chunk.sourceId,sourceName:chunk.sourceName,sourceHash:chunk.sourceHash,locators:chunk.locators,recordIndices:Array.isArray(chunk.recordIndices)?chunk.recordIndices.slice(0,200):[],...(chunk.evidenceKind!==undefined?{evidenceKind:chunk.evidenceKind,tableEvidence:chunk.tableEvidence,...(chunk.parserVersion!==undefined?{parserVersion:chunk.parserVersion}:{})}:{})},state);
+  return cloneJson({id:chunk.id,text:chunk.text,sourceId:chunk.sourceId,sourceName:chunk.sourceName,sourceHash:chunk.sourceHash,locators:chunk.locators,recordIndices:Array.isArray(chunk.recordIndices)?chunk.recordIndices.slice(0,200):[],...((chunk.evidenceKind!==undefined||chunk.tableEvidence!==undefined)?{...(chunk.evidenceKind!==undefined?{evidenceKind:chunk.evidenceKind}:{}),...(chunk.tableEvidence!==undefined?{tableEvidence:chunk.tableEvidence}:{}),...(chunk.parserVersion!==undefined?{parserVersion:chunk.parserVersion}:{})}:{})},state);
  });
  return{chunks:Object.freeze(sources),scope:scope===undefined?undefined:cloneJson(scope,state),questionScopes:questionScopes===undefined?undefined:cloneJson(questionScopes,state)};
 }

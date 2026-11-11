@@ -158,3 +158,8 @@ test('selection cancellation, timeout and raw token streaming never release pend
  await assert.rejects(answerQuestion({question:combined,chunks,retrieval:chunks,provider,signal:controller.signal,onToken:value=>tokens.push(value)}),error=>error.name==='AbortError');assert.deepEqual(tokens,[]);
  const timeout=await run(combined,chunks,{id:'MOCK-timeout-selection',answerFormat:'auto-grounded-v2',generate:()=>new Promise(()=>{})},{timeoutMs:5});assert.equal(timeout.status,'abstained');assert.match(timeout.diagnostics.reason,/generation-failed/);
 });
+
+test('literal Property/Value and Provision/Answer labels cannot conceal the same conflicting property',async()=>{
+ const first=await table('Property,Value\nNormal retirement age,65','one'),second=await table('Provision,Answer\nNormal retirement age,67','two');let calls=0;
+ const result=await run('What is the normal retirement age?',[...first,...second],auto('S1',()=>calls++));assert.equal(result.status,'conflict');assert.equal(calls,0);assert.equal(result.citations.length,2);assert.deepEqual(new Set(result.citations.map(citation=>citation.tableEvidence.focus.rawText)),new Set(['65','67']));
+});

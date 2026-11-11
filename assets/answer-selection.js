@@ -42,13 +42,29 @@ function planFactualQuestion(value){
  return{kind:'single',question,parts:[question]};
 }
 function plainStatement(text){
- if(!text||text.length>SELECTION_LIMITS.choiceCharacters||/[;\r\n]|\b(?:and|but|while|whereas|however|yet)\b/i.test(text)||REFERENTIAL.test(text))return false;
+ if(!text||text.length>SELECTION_LIMITS.choiceCharacters||/[;\r\n/&|=<>\\\u2012-\u2015\u2022]|\s-\s|(?<!\d),|,(?!\d)|\b(?:and|or|but|while|whilst|whereas|however|yet|also|plus|additionally|moreover|although|though|nevertheless|neither|nor|both|because|therefore|thus|hence|consequently|since|as)\b/i.test(text)||REFERENTIAL.test(text)||text.split(':').length>2)return false;
  // A compound request must not borrow different roles from a joined multi-person assertion.
  const names=new Set((text.replace(/['’]s\b/g,'').match(/\b[A-Z][A-Za-z]*(?:[-'][A-Za-z]+)?\b/g)||[]).map(word=>word.toLowerCase()).filter(word=>!NOT_NAMES.has(word)));
  if(names.size>1)return false;
- const commaParts=text.split(',');
- if(commaParts.filter(part=>PROPERTY.test(part)).length>1)return false;
+ // A unit has one primary property. Numeric units and complete conditions stay
+ // literal; another property must not donate a value or a person to this one.
+ const properties=[/\bages?\b/i,/\b(?:amounts?|benefits?|income|costs?|rates?|payments?)\b/i,/\b(?:retention|retain(?:ed|s)?|kept|keep(?:s)?)\b/i,/\b(?:dates?|deadlines?)\b/i,/\b(?:addresses|address)\b/i];
+ if(properties.filter(property=>property.test(text)).length>1)return false;
+ // Count finite predicates before a condition, rather than clipping off the
+ // condition. Two unjoined clauses remain ambiguous even after OCR loses case.
+ const head=text.split(/\b(?:if|unless|except|provided|before|after|until|when)\b/i)[0];
+ const finite=head.match(/\b(?:is|are|was|were|has|have|had|does|do|did|may|might|can|could|must|shall|should|will|would|receives?|pays?|retires?|begins?|ends?|starts?|lists?|retains?|keeps?|lasts?|remains?|requires?|contains?|provides?|equals?|gets?|gives?|goes|sends?|mails?|delivers?|specifies|shows?|states?|includes?|documents?)\b/gi)||[];
+ if(finite.length>1)return false;
  return true;
+}
+function completeStatements(text){
+ const result=[];let start=0;const boundaries=/(?<=[.!?])\s+/gu;let match;
+ while((match=boundaries.exec(text))){
+  const prefix=text.slice(start,match.index),last=/\b([A-Za-z]+)\.$/.exec(prefix);
+  if(last&&(/^(?:dr|mr|mrs|ms|prof|sr|jr|st|no|sec|art|inc|ltd|co|etc|vs|pp)$/i.test(last[1])||/^[A-Z]$/.test(last[1])))continue;
+  const statement=prefix.trim();if(statement)result.push(statement);start=match.index+match[0].length;
+ }
+ const tail=text.slice(start).trim();if(tail)result.push(tail);return result;
 }
 function validPlan(plan){return!!plan&&typeof plan.question==='string'&&plan.question.length>0&&plan.question.length<=SELECTION_LIMITS.questionCharacters&&Array.isArray(plan.parts)&&plan.parts.length>0&&plan.parts.length<=SELECTION_LIMITS.parts&&(plan.kind==='single'&&plan.parts.length===1||plan.kind==='compound'&&plan.parts.length>=2)&&plan.parts.every(part=>typeof part==='string'&&part.length>0&&part.length<=(plan.kind==='single'?SELECTION_LIMITS.questionCharacters:SELECTION_LIMITS.partCharacters));}
 function buildSelectionPrompt(plan,choices){
@@ -66,13 +82,14 @@ function createAnswerChoices(context,{plan,bind}={}){
   if(!item||!item.chunk||typeof item.chunk.text!=='string'||item.chunk.text.length>12000||typeof item.excerpt!=='string'||!/^C[1-6]$/.test(item.label))continue;
   const table=item.chunk.evidenceKind==='table-field-v1'&&item.chunk.tableEvidence&&item.chunk.tableEvidence.schemaVersion===1;
   // Split the complete chunk, never the clipped prompt excerpt. A wrapped condition stays whole.
-  const statements=table?[item.chunk.text]:item.chunk.text.split(/(?<=[.!?])\s+/u).map(part=>part.trim()).filter(Boolean);
+  const statements=table?[item.chunk.text]:completeStatements(item.chunk.text);
   for(const text of statements){
    if(choices.length===SELECTION_LIMITS.choices)return choices;
    if(!text||text.length>SELECTION_LIMITS.choiceCharacters||!item.excerpt.includes(text)||!table&&!plainStatement(text))continue;
    const choice={id:'S'+(choices.length+1),label:item.label,text,context:item};
    if(table){choice.tableEvidence=item.chunk.tableEvidence;choice.trustedTableField=true;}
-   if(!plan.parts.some(part=>safeBind(bind,part,choice)))continue;
+   const matches=plan.parts.filter(part=>safeBind(bind,part,choice)).length;
+   if(!matches||!table&&matches>1)continue;
    try{buildSelectionPrompt(plan,[...choices,choice]);}catch(_){continue;}
    choices.push(choice);
   }

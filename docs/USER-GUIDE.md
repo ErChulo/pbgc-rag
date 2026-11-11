@@ -26,6 +26,8 @@ Use the same words as the document when possible. For a person in a table, inclu
 
 > What is Alice's age?
 
+If more than one row has that name, include its ID. For example: **What is Alice's age for ID 1?** The app will not choose between same-named people.
+
 You can ask up to three independent facts in one result. Write each question in full:
 
 > What is the normal retirement age? How long are case files kept?

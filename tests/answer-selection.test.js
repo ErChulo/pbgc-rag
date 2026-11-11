@@ -53,6 +53,19 @@ test('joined assertions, different named subjects and role endpoint mixtures are
  const values=['Alice retirement age is 65 while Bob receives a monthly benefit of 100 dollars.','Alice retirement age is 65 and case files are retained for seven years.','Normal retirement age is 65; case files are retained for seven years.','Alice retirement age is 65, Bob monthly benefit is 100 dollars.','Alice pays Bob a retirement benefit of 65 dollars.','Alice retirement age is 65, her monthly benefit is 100 dollars.'];
  for(const text of values)assert.deepEqual(createAnswerChoices([context(text)],{plan:plan(),bind:()=>true}),[],text);
 });
+test('OCR casing, punctuation joins, causal links and repeated finite predicates cannot hide multiple assertions',()=>{
+ const p=planFactualQuestion("What is Alice's age? What is Bob's monthly benefit?");
+ const values=["alice's monthly benefit is 100 dollars / bob's age is 65.","alice's monthly benefit is 100 dollars — bob's age is 65.","alice's monthly benefit is 100 dollars & bob's age is 65.","alice's monthly benefit is 100 dollars because bob's age is 65.","alice's monthly benefit is 100 dollars bob's age is 65.","alice receives 100 dollars bob age is 65.","alice's age is 65 because bob retires."];
+ for(const text of values)assert.deepEqual(createAnswerChoices([context(text)],{plan:p,bind:()=>true}),[],text);
+ const broad=context('The documented age is 65.');assert.deepEqual(createAnswerChoices([broad],{plan:p,bind:()=>true}),[],'one broad prose statement cannot satisfy independently named parts');
+});
+test('sentence boundaries do not cut a condition at a title abbreviation or initial',()=>{
+ for(const text of ['Normal retirement age is 65 only if Dr. Smith certifies disability.','Normal retirement age is 65 only if J. Smith certifies disability.']){
+  const clipped=context(text,'C1',text.slice(0,text.indexOf('. ')+1));assert.deepEqual(createAnswerChoices([clipped],{plan:plan(),bind:propertyBind}),[],text);
+  const choices=createAnswerChoices([context(text)],{plan:plan(),bind:propertyBind});assert.ok(choices.length===0||choices[0].text===text,'an abbreviation never emits only the condition prefix');
+ }
+ const ordinary='Normal retirement age may be 65 only if the participant meets the service condition.';const choices=createAnswerChoices([context(ordinary)],{plan:plan(),bind:propertyBind});assert.equal(choices.length,1);assert.equal(choices[0].text,ordinary);
+});
 test('trusted table fields remain one whole candidate and ignore untrusted top-level metadata',()=>{
  const text='Row: Alice\nNormal retirement age: 65';
  const chunkMetadata={evidenceKind:'table-field-v1',tableEvidence:{schemaVersion:1,focus:{propertyText:'Normal retirement age'}}};
