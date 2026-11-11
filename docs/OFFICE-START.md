@@ -1,5 +1,7 @@
 # Use PBGC-RAG
 
+This is the 1.0 candidate guide. The published 0.8 downloads do not contain its new controls. See the [complete step-by-step guide](USER-GUIDE.md) and [candidate test status](HABEMUS-ACCEPTANCE.md).
+
 PBGC-RAG helps you find information in documents and check the source of an answer. It runs on your computer. It does not send your documents or questions to a service.
 
 ## Open the app
@@ -67,7 +69,7 @@ The case file contains original documents and saved case data. Browser recovery 
 
 The first-run guide enables scanned-page reading. In the document workspace, enable it before adding an image-only PDF if it is off. If a PDF has no readable text, its entry offers **Read scanned pages**.
 
-English recognition files are included. Machine-read words and numbers can be wrong. Check them against **Original PDF page**. Pages that already have a native text layer are not processed again, even if part of the page is an image.
+English recognition files are included. Machine-read words and numbers can be wrong. Check them against **Original PDF page**. To read an image area on a page that also has selectable text, open **Original PDF page**, go to that page and choose **Read text from this page**. **Cancel reading** keeps earlier text.
 
 ## Check an original file
 
@@ -84,3 +86,9 @@ Open **View evidence** or **View source**. For a PDF, choose **Original PDF page
 - **The package is incomplete:** Extract the complete office ZIP again. Keep its folders beside **index.html**. Do not import model files as documents.
 
 PBGC-RAG is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its answers are review aids. Synthetic fixtures belong in the public repository and remote development environment; your local case documents do not belong there.
+
+## Tables and combined facts in the 1.0 candidate
+
+For CSV and Excel, confirm the column-name row in **Documents** before asking about a cell. Table answers show literal labels and values. Formulas, missing cells and unverified merged layouts are excluded. SQLite uses its stored column names.
+
+To ask two independent facts in one result, write two full questions: **What is the normal retirement age? How long are case files kept?** Each fact must have its own source. The app does not decide how separate rules apply together.

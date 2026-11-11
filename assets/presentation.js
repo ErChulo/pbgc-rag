@@ -73,6 +73,15 @@
       const locators=data(citation,'locators');if(!Array.isArray(locators)||!locators.length||locators.length>200)return -1;
       const cache=new WeakMap(),keyFor=locator=>{if(!locator||typeof locator!=='object')return null;if(cache.has(locator))return cache.get(locator);const key=citationLocatorKey(locator);cache.set(locator,key);return key;};
       const keys=new Set();for(let i=0;i<locators.length;i++){const key=keyFor(data(locators,String(i)));if(key!==null)keys.add(key);}if(!keys.size)return -1;
+      // A table field opens its value cell, even when a distant heading is also
+      // cited. The anchor must be both the validated focus and a cited locator.
+      const primary=data(citation,'primaryLocator');
+      if(primary!==undefined){
+        const meta=data(citation,'tableEvidence'),focus=meta&&data(meta,'focus'),primaryKey=keyFor(primary);
+        if(data(citation,'evidenceKind')!=='table-field-v1'||!primaryKey||!keys.has(primaryKey)||primaryKey!==keyFor(focus&&data(focus,'locator')))return -1;
+        for(let i=0;i<records.length;i++){const record=data(records,String(i));if(record&&keyFor(data(record,'locator'))===primaryKey)return i;}
+        return -1;
+      }
       const quotes=data(citation,'quotes'),needles=[];let quoteCharacters=0;
       if(Array.isArray(quotes)&&quotes.length<=36)for(let i=0;i<quotes.length;i++){const quote=data(quotes,String(i));if(typeof quote==='string'&&quote.trim()&&quote.length<=2000&&quoteCharacters+quote.length<=16000){needles.push(quote);quoteCharacters+=quote.length;}}
       const value=data(citation,'excerpt'),excerpt=typeof value==='string'&&value.trim()&&value.length<=12000?value:null;

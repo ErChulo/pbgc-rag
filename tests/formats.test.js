@@ -21,3 +21,10 @@ test('entities decode once; invalid attribute entities and impossible grid cells
 test('nested Word tables do not change the outer table locator',async()=>{const parts={...docx};parts['word/document.xml']='<w:document xmlns:w="word"><w:body><w:tbl><w:tr><w:tc><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Inner</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc><w:tc><w:p><w:r><w:t>Outer second</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>';const result=await parseBytes('x.docx',zip(parts));assert.equal(result.records[0].locator.table,2);assert.equal(result.records[1].locator.table,1);assert.equal(result.records[1].locator.column,2);});
 
 test('CDATA and BOM source offsets point to actual original content',async()=>{const source='\uFEFF<x><![CDATA[Exact text]]></x>';const parsed=await parseBytes('x.xml',enc(source));const record=parsed.records[0];assert.equal(record.text,'Exact text');assert.equal(source.slice(record.locator.offset,record.locator.offset+record.text.length),record.text);const html='\uFEFF<p>Text</p>';const h=await parseBytes('x.html',enc(html));assert.equal(html.slice(h.records[0].locator.offset,h.records[0].locator.offset+4),'Text');});
+
+// Layout comes from inert worksheet XML, never from imported case metadata.
+test('XLSX records bind table layout to actual merge declarations',async()=>{
+ const plain=await parseBytes('synthetic.xlsx',zip(xlsx()));assert.equal(plain.parserVersion,'office-2');assert.ok(plain.records.every(record=>record.tableLayoutProfile==='unmerged-sheet-v1'));
+ const parts=xlsx();parts['xl/worksheets/sheet1.xml']=parts['xl/worksheets/sheet1.xml'].replace('</worksheet>','<mergeCells count="1"><mergeCell ref="A1:B1"/></mergeCells></worksheet>');
+ const merged=await parseBytes('synthetic-merged.xlsx',zip(parts));assert.ok(merged.records.every(record=>record.tableLayoutProfile==='merged-sheet-v1'));assert.deepEqual(merged.records.map(record=>record.locator),plain.records.map(record=>record.locator));
+});

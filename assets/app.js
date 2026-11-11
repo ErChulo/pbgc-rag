@@ -10,11 +10,12 @@
   const LIBRARY = 'reference-library';
   let catalog = {schemaVersion: 2, activeId: null, cases: [], library: null};
   let recovery, recoveryBlocked = false, busy = false, abortRequested = false, operationAbort;
+  let pageReadJob = null;
   let sourceView = null, lastResults = [], review = null;
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
-  let caseReviewUI, ragUI, flowUI, pdfPreview;
+  let caseReviewUI, tableGuideUI, ragUI, flowUI, pdfPreview;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
   const workspace = () => catalog.activeId === LIBRARY ? catalog.library : catalog.cases.find(c => c.id === catalog.activeId);
@@ -60,7 +61,7 @@
       busy = false; operationAbort = null;
       document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = false; });
       $('cancel-operation').hidden = true; $('progress').hidden = true;
-      updateViewerButtons(); renderCheckpoint();flowUI?.refresh(workspace(),busy);
+      updateViewerButtons(); pdfPreview?.refreshControls(); renderCheckpoint();flowUI?.refresh(workspace(),busy);
     }
   }
   $('cancel-operation').addEventListener('click', () => { abortRequested = true; operationAbort?.abort(); status('Cancellation requested. Waiting for the current file check to finish.'); });
@@ -107,14 +108,14 @@
   async function saveCurrentReviewView(){await updateWorkbench({reportLayout:currentLayout(),graphAssertions});}
   function sourceProcessing(value, name) {
     if (value === undefined) return undefined;
-    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['schemaVersion','pdfOcr','engineId'].includes(key)) || value.schemaVersion !== 1 || value.pdfOcr !== 'missing-text' || typeof value.engineId !== 'string' || !API.OCR_ENGINE?.id || !name.toLowerCase().endsWith('.pdf') || value.engineId !== API.OCR_ENGINE?.id) throw Error('Unsupported or changed OCR processing profile. Keep the original package and engine version.');
-    return {schemaVersion:1,pdfOcr:'missing-text',engineId:value.engineId};
+    if (!name.toLowerCase().endsWith('.pdf') || typeof API.validatePdfOcrProfile !== 'function') throw Error('Unsupported or changed OCR processing profile. Keep the original package and engine version.');
+    return API.validatePdfOcrProfile(value);
   }
   async function sourceFromBytes(name, bytes, id, knownHash, processing) {
     if (typeof name !== 'string' || !name.trim() || name.length > 255) throw Error('Invalid source name.');
     if (!(bytes instanceof Uint8Array) || bytes.length > MAX_FILE) throw Error('Source exceeds the 5 MB limit.');
     const profile=sourceProcessing(processing,name);
-    const parsed = profile ? await API.parsePdfWithOcr(bytes,{signal:operationAbort?.signal,mode:'missing-text',onProgress:progress=>status(`Reading scanned PDF pages${progress.page ? ` · page ${progress.page}` : ''}. You can cancel.`)}) : name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
+    const parsed = profile ? await API.parsePdfWithOcr(bytes,{signal:operationAbort?.signal,mode:profile.pdfOcr,...(profile.schemaVersion===2?{base:profile.base,pages:profile.pages}:{}),onProgress:progress=>{const message=`Reading scanned PDF text${progress.page ? ` · page ${progress.page}` : ''}. You can cancel.`;status(message);if(pageReadJob)$('source-read-page-status').textContent=message;}}) : name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
     const {sourceProcessing:parsedProfile,...content}=parsed;
     if(profile && JSON.stringify(sourceProcessing(parsedProfile,name))!==JSON.stringify(profile))throw Error('OCR output does not match the requested processing profile.');
     return {id: id || crypto.randomUUID(), name, hash: knownHash || await hash(bytes), bytesBase64: base64(bytes), ...content,...(profile?{processing:profile}:{})};
@@ -243,7 +244,7 @@
     if(!$('report-sections').value){const option=new Option(reportLayout.sections.join(', '),reportLayout.sections.join(','));$('report-sections').append(option);$('report-sections').value=option.value;}
     $('timeline-list').replaceChildren(...(reportLayout.timeline||[]).map(item=>el('li',`${item.date}: ${item.label} · Unverified annotation`))); $('report-preview').replaceChildren();
     $('results').replaceChildren(); $('review-results').replaceChildren(); $('graph-results').replaceChildren();
-    renderCheckpoint();caseReviewUI?.refresh();ragUI?.refresh();flowUI?.refresh(active,busy);
+    renderCheckpoint();caseReviewUI?.refresh();tableGuideUI?.refresh();ragUI?.refresh();flowUI?.refresh(active,busy);
     if ($('source-view').open) $('source-view').close(); sourceView = null;
   }
   function openSource(source, index) {
@@ -280,8 +281,43 @@
     updateViewerButtons();
     requestAnimationFrame(() => { const selected = $('source-records').querySelector('.selected'); if (selected) selected.scrollIntoView({block:'nearest'}); else $('source-records').scrollTop = 0; });
   }
+  function cancelPageRead() {
+    if(!pageReadJob)return;
+    abortRequested=true;operationAbort?.abort();
+    const message='Reading cancelled. Existing text was kept unchanged.';
+    status(message);$('source-read-page-status').textContent=message;
+  }
+  async function readPreviewPage() {
+    const target=pdfPreview?.getReadTarget(),source=sourceView?.source;
+    if(!target||!source)return;
+    await operation(async()=>{
+      const current=requireCase();
+      if(current.sources.find(item=>item.id===target.sourceId)!==source||source.hash!==target.sourceHash)throw Error('This document is no longer in the active case.');
+      const prior=source.processing,profile={schemaVersion:2,pdfOcr:'selected-pages',engineId:API.OCR_ENGINE.id,base:prior?.schemaVersion===1?'missing-text':prior?.base||'native',pages:[...(prior?.schemaVersion===2?prior.pages:[]),target.page]};
+      pageReadJob={source,caseId:current.id,page:target.page};pdfPreview.setTextReadBusy(true);
+      try{
+        const rebuilt=await sourceFromBytes(source.name,decode(source.bytesBase64),source.id,source.hash,profile);
+        checkCancelled();
+        if(workspace()!==current||current.sources.find(item=>item.id===source.id)!==source)throw Error('The active source changed while its page was being read. Existing text was kept unchanged.');
+        if(rebuilt.records.length<source.records.length||source.records.some((record,index)=>JSON.stringify(record)!==JSON.stringify(rebuilt.records[index])))throw Error('Earlier source text could not be reproduced exactly. Existing text was kept unchanged.');
+        const sources=current.sources.map(item=>item.id===source.id?rebuilt:item);checkSources(sources);
+        const updated={...current,schemaVersion:3,sources};
+        if(current.workbench)updated.workbench=API.validateWorkbench(current.workbench,updated);
+        API.validateWorkbench({...API.emptyWorkbench(),...(current.workbench||{}),reportLayout:currentLayout(),graphAssertions},updated);
+        checkCancelled();pageReadJob=null;pdfPreview.setTextReadBusy(false);
+        await commit(current.id===LIBRARY?{...catalog,library:updated}:{...catalog,cases:catalog.cases.map(item=>item.id===current.id?updated:item)});
+        const index=rebuilt.records.findIndex((record,i)=>i>=source.records.length&&record.locator.page===target.page);
+        openSource(rebuilt,index<0?0:index);await pdfPreview.showOriginalPage(target.page);
+        const count=rebuilt.records.length-source.records.length,message=count?`Page ${target.page} read. Added ${count} machine-read ${count===1?'line':'lines'}. Check words and numbers against the original.`:`Page ${target.page} read. No additional text was found. Existing text was kept.`;
+        status(message);$('source-read-page-status').textContent=message;
+      }catch(error){$('source-read-page-status').textContent=error.message||'Reading failed. Existing text was kept unchanged.';throw error;}
+      finally{pageReadJob=null;pdfPreview.setTextReadBusy(false);}
+    },true);
+  }
+  $('source-read-page')?.addEventListener('click',readPreviewPage);
+  $('source-view').addEventListener('cancel',cancelPageRead);
   $('source-save-original').addEventListener('click',()=>{if(sourceView)download(sourceView.source.name,decode(sourceView.source.bytesBase64),'application/octet-stream');});
-  $('source-view').addEventListener('close',()=>{if(!$('source-view').open)sourceView=null;});
+  $('source-view').addEventListener('close',()=>{if(!$('source-view').open){cancelPageRead();sourceView=null;}});
   $('source-close').addEventListener('click', () => $('source-view').close());
   $('source-prev').addEventListener('click', () => { sourceView.page--; renderSource(); });
   $('source-next').addEventListener('click', () => { sourceView.page++; renderSource(); });
@@ -518,12 +554,13 @@
     for(const id of ['workspace','case-review','help'])$(id).hidden='#'+id!==page;
     document.querySelectorAll('nav a').forEach(a=>{if(a.hash===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
-  pdfPreview=API.mountPdfPreview({readBytes:source=>decode(source.bytesBase64)});
+  pdfPreview=API.mountPdfPreview({readBytes:source=>decode(source.bytesBase64),cancelTextRead:cancelPageRead});
   flowUI=API.mountFlow({cancel:()=>{abortRequested=true;operationAbort?.abort();},start:async sample=>{
     if(workspace()&&!sample)return;
     await operation(async()=>{const c=newCase(sample?'Guided example':'My first case');if(sample)c.sources.push(await sourceFromBytes('synthetic-plan.txt',new TextEncoder().encode('SYNTHETIC PLAN — test data only\nNormal retirement age is 65.\nThis example is not an official plan provision.\n')));await commit({...catalog,activeId:c.id,cases:[...catalog.cases,c]});status(sample?'Example documents are ready.':'Your first case is ready. Add a document to continue.');});
   }});
   ragUI=API.mountRag({getWorkspace:workspace,operation,getSignal:()=>operationAbort.signal,cancel:()=>{abortRequested=true;operationAbort?.abort();},openSource});
+  tableGuideUI=API.mountTableGuide({getWorkspace:workspace,updateWorkbench,operation,status});
   caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();
   for (const text of [

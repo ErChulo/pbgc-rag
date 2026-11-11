@@ -95,14 +95,14 @@
   async function excel(zip,macro){const out=collector();const workbook=xml(await zip.read('xl/workbook.xml'));const rels=xml(await zip.read('xl/_rels/workbook.xml.rels'));const map=new Map();for(const rel of descendants(rels,'Relationship')){if(attr(rel,'TargetMode')==='External')continue;const id=attr(rel,'Id');if(map.has(id))fail('Duplicate workbook relationship.');map.set(id,resolvePart('xl/workbook.xml',attr(rel,'Target')));}
     let shared=[];if(zip.entries.has('xl/sharedStrings.xml')){const doc=xml(await zip.read('xl/sharedStrings.xml'));shared=descendants(doc,'si').map(si=>descendants(si,'t').map(textOf).join(''));if(shared.length>BUDGET.records)fail('Shared string limit exceeded.');}
     const sheets=descendants(workbook,'sheet');if(sheets.length>1000)fail('Sheet limit exceeded.');const seenSheets=new Set();
-    for(const sheet of sheets){const name=attr(sheet,'name'),part=map.get(attr(sheet,'id'));if(!name||seenSheets.has(name)||!part?.startsWith('xl/worksheets/'))fail('Invalid or unsupported worksheet relationship.');seenSheets.add(name);const doc=xml(await zip.read(part));const seenCells=new Set();
+    for(const sheet of sheets){const name=attr(sheet,'name'),part=map.get(attr(sheet,'id'));if(!name||seenSheets.has(name)||!part?.startsWith('xl/worksheets/'))fail('Invalid or unsupported worksheet relationship.');seenSheets.add(name);const doc=xml(await zip.read(part));const seenCells=new Set(),tableLayoutProfile=descendants(doc,'mergeCell').length?'merged-sheet-v1':'unmerged-sheet-v1';
       for(const cell of descendants(doc,'c')){const address=attr(cell,'r');if(!/^[A-Z]{1,3}[1-9][0-9]{0,6}$/.test(address||'')||Number(address?.replace(/^[A-Z]+/,''))>1048576||[...(address?.match(/^[A-Z]+/)?.[0]||'')].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0)>16384||seenCells.has(address))fail('Missing or duplicate worksheet cell locator.');seenCells.add(address);const formula=children(cell,'f')[0],value=children(cell,'v')[0],kind=attr(cell,'t');let text=value?textOf(value):'';
         if(kind==='s'){if(!/^[0-9]+$/.test(text)||Number(text)>=shared.length)fail('Invalid shared-string index.');text=shared[Number(text)];}else if(kind==='inlineStr')text=descendants(cell,'t').map(textOf).join('');
-        const extra={};if(formula){extra.formula=textOf(formula);extra.formulaAttributes={...formula.attrs};extra.cachedValue=text;}
+        const extra={tableLayoutProfile};if(formula){extra.formula=textOf(formula);extra.formulaAttributes={...formula.attrs};extra.cachedValue=text;}
         out.add(text,{type:'excel-cell',sheet:name,cell:address,part},extra);
       }
     }
-    return{parserVersion:'office-1',format:macro?'xlsm':'xlsx',records:out.records,warnings:['Cell text and cached values only. Formulas are preserved as metadata and never calculated. Styles, dates, charts, merged-cell display and external links are not interpreted.',...(macro?['Macros are ignored and never executed.']:[])]};
+    return{parserVersion:'office-2',format:macro?'xlsm':'xlsx',records:out.records,warnings:['Cell text and cached values only. Formulas are preserved as metadata and never calculated. Styles, dates, charts, merged-cell display and external links are not interpreted.',...(macro?['Macros are ignored and never executed.']:[])]};
   }
   function markup(text,html){const out=collector();if(html){if(text.length>BUDGET.characters)fail('HTML text budget exceeded.');let offset=0;const hidden=[];let chunks=0;
       // Inert lexical extraction: never creates DOM or resolves an asset. Locators are exact source offsets, not DOM positions.

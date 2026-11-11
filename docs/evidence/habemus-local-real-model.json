@@ -1,0 +1,141 @@
+{
+  "kind": "real-qwen-habemus-selection",
+  "profile": "supplementary HTTP only",
+  "manifestId": "qwen2.5-0.5b-instruct-q4-k-m",
+  "modelSha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+  "realGenerationCalls": 2,
+  "externalRequests": 0,
+  "elapsedMs": 169295,
+  "calls": [
+    {
+      "responseFormat": "source-selection-v1",
+      "promptCharacters": 473,
+      "maxTokens": 64,
+      "raw": "S1,S2",
+      "elapsedMs": 55209
+    },
+    {
+      "responseFormat": "source-selection-v1",
+      "promptCharacters": 383,
+      "maxTokens": 64,
+      "raw": "S1",
+      "elapsedMs": 104057
+    }
+  ],
+  "results": [
+    {
+      "status": "answered",
+      "answer": "Case files are kept for seven years. [C1]\n\nNormal retirement age is 65. [C2]",
+      "citations": [
+        {
+          "sourceName": "synthetic-retention.txt",
+          "locators": [
+            {
+              "length": 36,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "quotes": [
+            "Case files are kept for seven years."
+          ]
+        },
+        {
+          "sourceName": "synthetic-retirement.txt",
+          "locators": [
+            {
+              "length": 28,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "quotes": [
+            "Normal retirement age is 65."
+          ]
+        }
+      ],
+      "answerProfile": {
+        "format": "source-selection-v1",
+        "partCount": 2,
+        "choiceCount": 2,
+        "completeCoverage": true,
+        "modelEmittedClaims": false,
+        "modelEmittedCitations": false,
+        "selectedCount": 2
+      }
+    },
+    {
+      "status": "answered",
+      "answer": "\"Property\": \"Normal retirement age\"\n\"Value\": \"65\" [C1]",
+      "citations": [
+        {
+          "sourceName": "synthetic-property-values.csv",
+          "locators": [
+            {
+              "column": 2,
+              "length": 2,
+              "line": 150,
+              "offset": 333,
+              "offsetUnit": "UTF-16 code units",
+              "row": 150,
+              "type": "delimited-cell"
+            },
+            {
+              "column": 1,
+              "length": 21,
+              "line": 150,
+              "offset": 311,
+              "offsetUnit": "UTF-16 code units",
+              "row": 150,
+              "type": "delimited-cell"
+            },
+            {
+              "column": 2,
+              "length": 5,
+              "line": 1,
+              "offset": 9,
+              "offsetUnit": "UTF-16 code units",
+              "row": 1,
+              "type": "delimited-cell"
+            },
+            {
+              "column": 1,
+              "length": 8,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "row": 1,
+              "type": "delimited-cell"
+            }
+          ],
+          "quotes": [
+            "\"Property\": \"Normal retirement age\"\n\"Value\": \"65\""
+          ],
+          "primaryLocator": {
+            "column": 2,
+            "length": 2,
+            "line": 150,
+            "offset": 333,
+            "offsetUnit": "UTF-16 code units",
+            "row": 150,
+            "type": "delimited-cell"
+          }
+        }
+      ],
+      "answerProfile": {
+        "format": "source-selection-v1",
+        "partCount": 1,
+        "choiceCount": 1,
+        "completeCoverage": true,
+        "modelEmittedClaims": false,
+        "modelEmittedCitations": false,
+        "selectedCount": 1
+      }
+    }
+  ],
+  "limitations": "Two fixed synthetic questions test independent documentary combination and literal table reading. This is not general synthesis, table calculation or an authority decision. Uses the manually selected stable 0.5B compatibility model. The candidate bundled 1.5B model still requires its separate complete-package Windows/Ubuntu checks."
+}

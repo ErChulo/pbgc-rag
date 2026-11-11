@@ -1,0 +1,175 @@
+name: Verify complete Habemus office candidate
+
+on:
+  push:
+    branches: ['codex/rag-habemus-1.0']
+  workflow_dispatch:
+
+# Acceptance only: this workflow cannot create releases, tags or deployments.
+permissions:
+  contents: read
+
+concurrency:
+  group: rag-habemus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  office-candidate:
+    if: github.ref == 'refs/heads/codex/rag-habemus-1.0'
+    name: complete office candidate (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      PBGC_OFFICE_ZIP: dist/PBGC-RAG-1.0-rc1-office.zip
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned development browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-habemus" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-habemus/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-habemus/node_modules" >> "$GITHUB_ENV"
+          CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-habemus/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Check generated assets and prepare the exact pinned local model
+        run: |
+          python tools/build-ingest-worker.py --check
+          python tools/build-model-profile.py --check
+          python tools/prepare-models.py
+      - name: Build the complete candidate ZIP
+        id: package
+        run: |
+          mkdir -p test-results
+          python tools/package.py --office --out "$PBGC_OFFICE_ZIP" | tee test-results/habemus-package.json
+      - name: Verify the same ZIP offline with real Qwen, OCR and original-page reading
+        id: office
+        env:
+          PBGC_REQUIRE_OFFICE: '1'
+          PBGC_OFFICE_FILE: '1'
+        run: node tests/office-package.test.js 2>&1 | tee test-results/habemus-office-file.log
+      - name: Extract the checked candidate to a path with spaces
+        id: extract
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import stat
+          import zipfile
+
+          source = Path(os.environ['PBGC_OFFICE_ZIP'])
+          destination = Path(os.environ['RUNNER_TEMP']) / 'Habemus complete office app with spaces'
+          with zipfile.ZipFile(source) as package:
+              for entry in package.infolist():
+                  path = PurePosixPath(entry.filename)
+                  if (path.is_absolute() or '..' in path.parts or '\\' in entry.filename
+                          or ':' in entry.filename or stat.S_ISLNK(entry.external_attr >> 16)):
+                      raise SystemExit('Unsafe office ZIP path')
+              if package.testzip() is not None:
+                  raise SystemExit('Office ZIP CRC validation failed')
+              package.extractall(destination)
+          manifest = json.loads((destination / 'build-manifest.json').read_text(encoding='utf-8'))
+          required = {
+              'assets/answer-selection.js', 'assets/table-evidence.js',
+              'assets/table-guide.js', 'assets/rag-corpus.js',
+              'assets/pdf-ocr.js', 'assets/pdf-preview.js',
+              'assets/rag.js', 'assets/rag-questions.js', 'OFFICE-START.md',
+          }
+          entries = {entry['path']: entry for entry in manifest['files']}
+          if not required <= entries.keys():
+              raise SystemExit('Office ZIP lacks required candidate assets')
+          for name in sorted(required):
+              data = (destination / name).read_bytes()
+              if (len(data) != entries[name]['bytes']
+                      or hashlib.sha256(data).hexdigest() != entries[name]['sha256']):
+                  raise SystemExit('Candidate asset integrity mismatch: ' + name)
+          digest = hashlib.sha256()
+          with source.open('rb') as package:
+              for block in iter(lambda: package.read(1024 * 1024), b''):
+                  digest.update(block)
+          report = {
+              'schemaVersion': 1, 'commit': os.environ['GITHUB_SHA'],
+              'zip': source.name, 'bytes': source.stat().st_size,
+              'sha256': digest.hexdigest(), 'requiredAssetsVerified': sorted(required),
+              'browserProfile': 'actual offline file://', 'publication': False,
+          }
+          Path('test-results/habemus-candidate.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as output:
+              output.write('PBGC_TEST_URL=' + (destination / 'index.html').resolve().as_uri() + '\n')
+              for variable in ['PBGC_QUESTIONS_ROOT', 'PBGC_SCOPE_ROOT', 'PBGC_HABEMUS_ROOT']:
+                  output.write(variable + '=' + str(destination.resolve()) + '\n')
+          PY
+      - name: Check the previous separate-question flow in the extracted candidate
+        id: questions
+        if: ${{ !cancelled() && steps.extract.outcome == 'success' }}
+        # Scoped answers below own the legacy flow's two actual model inferences.
+        run: node tests/rag-questions-browser.test.js 2>&1 | tee test-results/habemus-questions-file.log
+      - name: Check actual scoped Qwen answers in the extracted candidate
+        id: scope
+        if: ${{ !cancelled() && steps.extract.outcome == 'success' }}
+        env:
+          PBGC_REQUIRE_SCOPE_MODEL: '1'
+        run: node tests/rag-source-scope-browser.test.js 2>&1 | tee test-results/habemus-scope-file.log
+      - name: Check table setup, original evidence and save/reopen
+        id: guide
+        if: ${{ !cancelled() && steps.extract.outcome == 'success' }}
+        run: node tests/table-guide-browser.test.js 2>&1 | tee test-results/habemus-table-guide-file.log
+      - name: Check real mixed-page OCR and unchanged review bindings
+        id: ocr
+        if: ${{ !cancelled() && steps.extract.outcome == 'success' }}
+        run: node tests/ocr-selected-workflow.test.js 2>&1 | tee test-results/habemus-selected-ocr-file.log
+      - name: Check actual combined and table answers from bundled Qwen
+        id: answers
+        if: ${{ !cancelled() && steps.extract.outcome == 'success' }}
+        env:
+          PBGC_REQUIRE_HABEMUS_MODEL: '1'
+        run: node tests/rag-habemus-browser.test.js 2>&1 | tee test-results/habemus-answers-file.log
+      - name: Annotate bounded synthetic failures
+        if: ${{ failure() }}
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          const {extractFailureNames,workflowEscape}=require('./tools/ci-summary.js');
+          const directory=path.resolve('test-results');
+          for(const name of ['habemus-office-file.log','habemus-questions-file.log','habemus-scope-file.log','habemus-table-guide-file.log','habemus-selected-ocr-file.log','habemus-answers-file.log']){
+            const file=path.join(directory,name);if(!fs.existsSync(file))continue;
+            const info=fs.lstatSync(file);if(!info.isFile()||info.isSymbolicLink()||info.size>1024*1024)continue;
+            const text=fs.readFileSync(file,'utf8'),failures=extractFailureNames(text);
+            for(const failure of failures.slice(0,8))console.log('::error title=Failed synthetic candidate check::'+workflowEscape(name+': '+failure));
+            const locations=[...new Set(text.match(/(?:[a-z0-9-]+\.test\.js):\d+:\d+/g)||[])].slice(0,8);
+            if(locations.length)console.log('::notice title=Synthetic candidate failure locations::'+workflowEscape(JSON.stringify({log:name,locations})));
+          }
+          JS
+      - name: Upload exact candidate and test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: habemus-office-evidence-${{ matrix.os }}
+          path: |
+            test-results/habemus*.log
+            test-results/habemus*.json
+            test-results/habemus*.png
+            test-results/rag-source-scope*.json
+            test-results/rag-source-scope*.png
+            test-results/rag-questions*.png
+            test-results/office-resources-file.json
+            test-results/office-package-file.png
+            test-results/office-original-page-file.png
+            dist/PBGC-RAG-1.0-rc1-office.zip
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0

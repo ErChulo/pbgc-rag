@@ -34,3 +34,6 @@ button{transition:transform .16s ease,box-shadow .16s ease}
 
 /* Optional document choices stay next to their question; scope remains visible in results. */
 .question-documents{margin:8px 0 14px;padding:0;overflow-wrap:anywhere}.question-documents>summary{margin-top:8px;font-size:13px;color:var(--action)}.question-documents select{width:100%;min-width:0}.question-documents p{font-size:12px}.question-source-scope{font-size:13px;overflow-wrap:anywhere;color:var(--muted)}
+#rag-answer .answer-table,.rag-citation .answer-table{white-space:normal;width:100%;table-layout:fixed;margin:16px 0}
+.answer-table caption{text-align:left;font-weight:bold;margin-bottom:8px}
+.answer-table th,.answer-table td{white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;vertical-align:top}

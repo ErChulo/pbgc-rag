@@ -14,7 +14,7 @@ const {chromium}=require('playwright');
 const {monitorResources,DEFAULT_BUDGET}=require('../tools/measure-resources.js');
 const {syntheticImagePdf}=require('./helpers/ocr-fixture.js');
 const ROOT=path.resolve(__dirname,'..');
-const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-0.8-larger-model-office.zip');
+const ZIP=process.env.PBGC_OFFICE_ZIP||path.join(ROOT,'dist/PBGC-RAG-1.0-rc1-office.zip');
 const FILE=process.env.PBGC_OFFICE_FILE==='1';
 const MODEL_MANIFEST=require('../vendor/local-llm/bundled.manifest.json');
 const MODEL_SPEC=MODEL_MANIFEST.files[0];

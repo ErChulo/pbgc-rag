@@ -1,6 +1,6 @@
 # PBGC-RAG
 
-> **Document-selection development branch.** This work adds document choice to the completed guided-question increment. It does not change `main`, the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0), or the delivered [larger-model 0.8 package](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0). These new controls are not in a published office release. See [document selection](docs/ux/DOCUMENT-SCOPE-0.10.md) and the [guided-question increment](docs/ux/RAG-0.9.md).
+> **1.0 release candidate — separate development branch.** Adds combined factual answers, explicit table column names and reading selected PDF pages. `main` and the published 0.8 packages stay intact. This candidate needs its own complete-ZIP Windows and Ubuntu checks. See the [user guide](docs/USER-GUIDE.md) and [test status](docs/HABEMUS-ACCEPTANCE.md).
 
 
 Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
@@ -41,6 +41,8 @@ Imports use dedicated local workers with cancellation and 15-second hard deadlin
 Limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; eight cases and 80 MB per recovery catalog. Text extraction is bounded at 2,000,000 UTF-16 code units per source. Archives and each parser have additional limits. Browser workers have no hard OS memory quota; elapsed-time and output limits do not certify hostile-document safety.
 
 ## Ask your documents
+
+The [step-by-step user guide](docs/USER-GUIDE.md) covers assistant startup, document import, column names, questions, exact sources, scanned pages and saving. This branch can combine up to three independently supported factual questions in one result. It copies complete source statements or literal table fields. It does not infer new relationships or calculate values.
 
 Choose the task you need:
 
@@ -106,7 +108,7 @@ python tools/package.py --office
 
 Development tests need Node, Playwright, Chromium and Python's standard library for generated SQLite/package fixtures. They are not workplace runtime dependencies. `node tools/verify-browser.js` owns the test server, full Playwright run and cleanup; no manual browser walkthrough or separately managed server is needed. It labels HTTP evidence as supplementary. `--file` uses actual local file URLs without modifying browser policy; the managed Chromium here still blocks that entry. GitHub CI runs both profiles on its test browser. See docs/AUTOMATION.md. Reviewed process-sandbox escalation is needed in this coding environment.
 
-`tools/package.py` creates `dist/PBGC-RAG-0.8-larger-model.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The default core ZIP includes the sentence encoder and generation runtime but excludes GGUF weights. Developers prepare the model outside the office, then run `python tools/package.py --office` to produce the complete `dist/PBGC-RAG-0.8-larger-model-office.zip`. That profile fails unless the exact pinned model size and SHA-256 pass, includes model/manifest/license assets, and verifies ZIP CRC plus every packaged file hash. Transfer that complete ZIP to the office. No preparation command is a workplace runtime step.
+`tools/package.py` creates `dist/PBGC-RAG-1.0-rc1-core.zip`, validates local assets/ZIP CRC/SHA-256, and includes a build manifest. Rebuild the generated ingest worker after changing parsers. Pinned PDF.js is Apache-2.0; license, hashes and build instructions are included. No Python RAG-Anything code or runtime dependencies were imported. The default core ZIP includes the sentence encoder and generation runtime but excludes GGUF weights. Developers prepare the model outside the office, then run `python tools/package.py --office` to produce the complete `dist/PBGC-RAG-1.0-rc1-office.zip`. That profile fails unless the exact pinned model size and SHA-256 pass, includes model/manifest/license assets, and verifies ZIP CRC plus every packaged file hash. Transfer that complete ZIP to the office. No preparation command is a workplace runtime step.
 
 ## Current limits and next development
 

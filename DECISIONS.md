@@ -84,3 +84,11 @@ Keep the verified guided-question branch intact and develop document selection o
 Filter before dense scoring and BM25. A global top-K followed by filtering can hide the requested file and is not acceptable. Snapshot selected IDs, source metadata and validated vector values before awaiting embeddings. Retain index issuance/provenance checks and all existing answer guards, deadlines, quality and resource thresholds. Input signatures are checked after preparation and before publication; a changed choice never converts an old selected-file request into an all-file request.
 
 This is documentary comparison through separate statements, not unrestricted synthesis or legal authority resolution. Explicit selected-page OCR is a later increment: preserve legacy record positions, persist ordered page processing, and include processing identity in retrieval invalidation before implementing it. It is not part of the current document-selection change.
+
+## Bounded combined facts and field transcriptions — 1.0 candidate
+
+Keep the existing plain single-fact path. For explicit independent question parts and authenticated table units, the model selects bounded source IDs rather than writing claims/citations. Recheck complete coverage per person/property both before and after generation; reject unsupported decomposition, partial output and union-only subject matching. Preserve all existing conflict, instruction quarantine, applicability, timeout and source-corpus checks.
+
+CSV/Excel headings require user confirmation. Rebuild table evidence from exact original record indices, focus/identity/header cells and verified source metadata; exclude unsafe or unknown layouts and all flattened table cells from answer prose. Keep keyword/source viewing available. Table values are literal transcriptions, not fabricated source sentences, date conversions or formula evaluations.
+
+Explicit selected-page OCR uses an ordered versioned processing profile. Append new OCR after the immutable existing prefix so graph record IDs and reviewed evidence remain exact. Restore reprocesses original bytes; cancellation or invalid prefix/profile leaves previous sources intact. No case schema increment beyond version3 is required.
