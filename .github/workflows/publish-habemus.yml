@@ -1,0 +1,559 @@
+name: Publish reviewed Habemus office package
+
+on:
+  workflow_dispatch:
+  # Commit this file only after review and exact-head acceptance. Other source
+  # edits cannot trigger publication. Pins below intentionally fail closed.
+  push:
+    branches: ['codex/rag-habemus-1.0']
+    paths: ['.github/workflows/publish-habemus.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: habemus-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'ErChulo/pbgc-rag' && github.ref == 'refs/heads/codex/rag-habemus-1.0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    env:
+      # Root reviewer replaces ALL THREE values only after the corrected final
+      # application passes both source and complete-package jobs on both OSes.
+      # The superseded candidate is deliberately not a publication target.
+      ACCEPTED_SHA: REVIEW_REQUIRED
+      ACCEPTED_SOURCE_RUN: REVIEW_REQUIRED
+      ACCEPTED_PACKAGE_RUN: REVIEW_REQUIRED
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Verify reviewed evidence, stage draft assets and publish a separate prerelease
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import datetime
+          import hashlib
+          import json
+          import math
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import select
+          import stat
+          import subprocess
+          import tempfile
+          import time
+          import unicodedata
+          from urllib.parse import quote
+          import zipfile
+
+          REPO = 'ErChulo/pbgc-rag'
+          BRANCH = 'codex/rag-habemus-1.0'
+          TAG = 'habemus-v1.0.0-rc1'
+          ZIP_NAME = 'PBGC-RAG-1.0-rc1-office.zip'
+          SELF = '.github/workflows/publish-habemus.yml'
+          SHA = os.environ['ACCEPTED_SHA']
+          SOURCE_RUN = os.environ['ACCEPTED_SOURCE_RUN']
+          PACKAGE_RUN = os.environ['ACCEPTED_PACKAGE_RUN']
+          GIB = 1024 ** 3
+          MAX_ARCHIVE = 1500 * 1024 ** 2
+          MAX_UNPACKED = 3 * GIB
+          MAX_ENTRIES = 4096
+          SOURCE_STEPS = [
+              'Verify bundled model profile',
+              'Verify model recovery integrity guards',
+              'Prepare hash-verified local model for actual CPU inference',
+              'Verify source and supplementary HTTP browser workflow',
+              'Verify actual file browser workflow',
+              'Verify independent real-model question relevance and answer quality offline',
+              'Measure whole-process resource budget on actual offline file profile',
+              'Package synthetic source build',
+              'Upload scoped development evidence',
+          ]
+          PACKAGE_STEPS = [
+              'Check generated assets and prepare the exact pinned local model',
+              'Build the complete candidate ZIP',
+              'Verify the same ZIP offline with real Qwen, OCR and original-page reading',
+              'Extract the checked candidate to a path with spaces',
+              'Check the previous separate-question flow in the extracted candidate',
+              'Check actual scoped Qwen answers in the extracted candidate',
+              'Check table setup, original evidence and save/reopen',
+              'Check real mixed-page OCR and unchanged review bindings',
+              'Check actual combined and table answers from bundled Qwen',
+              'Upload exact candidate and test evidence',
+          ]
+
+          def fail(message):
+              raise SystemExit('Publication blocked: ' + message)
+
+          def require(condition, message):
+              if not condition:
+                  fail(message)
+
+          require(re.fullmatch(r'[0-9a-f]{40}', SHA) is not None,
+                  'reviewed application SHA has not been set')
+          require(SOURCE_RUN.isdecimal() and PACKAGE_RUN.isdecimal()
+                  and SOURCE_RUN != PACKAGE_RUN, 'reviewed acceptance run IDs have not been set')
+          require(os.environ.get('GITHUB_REPOSITORY') == REPO
+                  and os.environ.get('GITHUB_REF') == 'refs/heads/' + BRANCH,
+                  'unexpected repository or branch')
+
+          def api(path, method='GET', value=None, missing_ok=False):
+              command = ['gh', 'api', '--method', method, 'repos/' + REPO + '/' + path,
+                         '-H', 'Accept: application/vnd.github+json',
+                         '-H', 'X-GitHub-Api-Version: 2022-11-28']
+              if value is not None:
+                  command += ['--input', '-']
+              result = subprocess.run(command, input=None if value is None else json.dumps(value).encode(),
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
+              if result.returncode:
+                  if missing_ok and b'HTTP 404' in result.stderr:
+                      return None
+                  # Credentials, headers and account diagnostics are never printed.
+                  fail('GitHub API request failed for ' + path.split('?')[0])
+              try:
+                  return json.loads(result.stdout)
+              except (ValueError, UnicodeError):
+                  fail('GitHub returned invalid JSON')
+
+          def paged(path, field=None):
+              values = []
+              for page in range(1, 21):
+                  result = api(path + ('&' if '?' in path else '?') + 'per_page=100&page=' + str(page))
+                  entries = result[field] if field else result
+                  require(isinstance(entries, list), 'invalid paginated GitHub response')
+                  values.extend(entries)
+                  if len(entries) < 100:
+                      return values
+              fail('GitHub listing exceeds the bounded review limit')
+
+          def git_bytes(path):
+              result = subprocess.run(['git', 'show', SHA + ':' + path], stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, timeout=30)
+              require(result.returncode == 0, 'required asset is absent from reviewed source: ' + path)
+              require(len(result.stdout) <= 64 * 1024 ** 2, 'reviewed source asset exceeds bound')
+              return result.stdout
+
+          def current_branch():
+              ref = api('git/ref/heads/' + quote(BRANCH, safe=''))
+              require(ref['object']['sha'] == os.environ['GITHUB_SHA'],
+                      'branch moved after publication was scheduled')
+
+          ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', SHA, os.environ['GITHUB_SHA']],
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+          require(ancestry.returncode == 0, 'publication commit is not based on reviewed application')
+          changed = subprocess.check_output(['git', 'diff', '--name-only', '--no-renames', SHA,
+                                             os.environ['GITHUB_SHA']], text=True).splitlines()
+          require(set(changed) == {SELF}, 'untested application changes follow the accepted commit')
+          current_branch()
+
+          def check_run(run_id, workflow_path, job_prefix, required_steps):
+              run = api('actions/runs/' + run_id)
+              require(run.get('repository', {}).get('full_name') == REPO
+                      and run.get('head_sha') == SHA and run.get('head_branch') == BRANCH
+                      and run.get('path') == workflow_path and run.get('status') == 'completed'
+                      and run.get('conclusion') == 'success', 'acceptance run is incomplete or differs from reviewed head')
+              jobs = paged('actions/runs/' + run_id + '/jobs?filter=latest', 'jobs')
+              names = [job_prefix + ' (' + os_name + ')' for os_name in ['ubuntu-latest', 'windows-latest']]
+              require(len(jobs) == 2 and {job['name'] for job in jobs} == set(names),
+                      'both exact Windows and Ubuntu acceptance jobs are required')
+              checked = []
+              for name in names:
+                  job = next(job for job in jobs if job['name'] == name)
+                  require(job.get('status') == 'completed' and job.get('conclusion') == 'success',
+                          'a required platform job did not pass')
+                  steps = job.get('steps', [])
+                  require(all(step.get('conclusion') in ['success', 'skipped'] for step in steps),
+                          'a platform step failed or remains incomplete')
+                  for expected in required_steps:
+                      matches = [step for step in steps if step.get('name') == expected]
+                      require(len(matches) == 1 and matches[0].get('conclusion') == 'success',
+                              'required acceptance step did not pass: ' + expected)
+                  checked.append({'name': name, 'id': job['id'], 'url': job['html_url'],
+                                  'requiredSteps': required_steps, 'conclusion': 'success'})
+              return {'id': int(run_id), 'url': run['html_url'], 'headSha': SHA,
+                      'attempt': run.get('run_attempt'), 'jobs': checked}
+
+          def gates():
+              return [check_run(SOURCE_RUN, '.github/workflows/verify.yml', 'verification', SOURCE_STEPS),
+                      check_run(PACKAGE_RUN, '.github/workflows/rag-habemus.yml', 'complete office candidate', PACKAGE_STEPS)]
+
+          proof = gates()
+          model = json.loads(git_bytes('vendor/local-llm/bundled.manifest.json'))
+          require(model.get('schemaVersion') == 1 and len(model.get('files', [])) == 1,
+                  'reviewed model manifest is invalid')
+          model_file = model['files'][0]
+          require(type(model_file.get('bytes')) is int and 1 <= model_file['bytes'] <= GIB
+                  and re.fullmatch(r'[a-f0-9]{64}', model_file.get('sha256', '')),
+                  'reviewed model identity exceeds publication bounds')
+          generation = json.loads(git_bytes('fixtures/rag-challenges.json'))['generation']
+
+          def digest_file(path):
+              with path.open('rb') as content:
+                  return hashlib.file_digest(content, 'sha256').hexdigest()
+
+          def download(command, destination, maximum, expected=None):
+              # Stream with a byte cap and deadline. Do not buffer a model archive
+              # or print stderr/HTTP headers that could include credentials.
+              total = 0
+              deadline = time.monotonic() + 300
+              with tempfile.TemporaryFile() as errors, destination.open('wb') as output:
+                  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors)
+                  try:
+                      while True:
+                          require(time.monotonic() < deadline, 'download exceeded its time limit')
+                          readable, _, _ = select.select([process.stdout], [], [], 1)
+                          if not readable:
+                              continue
+                          block = os.read(process.stdout.fileno(), 1024 * 1024)
+                          if not block:
+                              break
+                          total += len(block)
+                          require(total <= maximum, 'download exceeded its byte limit')
+                          output.write(block)
+                      require(process.wait(timeout=15) == 0, 'asset download failed')
+                  finally:
+                      if process.poll() is None:
+                          process.kill()
+                          process.wait()
+              if expected is not None:
+                  require(total == expected, 'download byte count differs from the accepted asset')
+
+          def artifact(run_id, name, folder, maximum=MAX_ARCHIVE):
+              matches = [item for item in paged('actions/runs/' + run_id + '/artifacts', 'artifacts')
+                         if item.get('name') == name]
+              require(len(matches) == 1, 'required acceptance artifact is absent or ambiguous')
+              item = matches[0]
+              require(not item.get('expired') and 0 < item.get('size_in_bytes', 0) <= maximum
+                      and item.get('workflow_run', {}).get('head_sha') == SHA,
+                      'acceptance artifact is expired, oversized or from another head')
+              destination = folder / (str(item['id']) + '.zip')
+              download(['gh', 'api', 'repos/' + REPO + '/actions/artifacts/' + str(item['id']) + '/zip'],
+                       destination, maximum)
+              return item, destination
+
+          def safe_name(name):
+              require(isinstance(name, str) and name and '\\' not in name and ':' not in name
+                      and '\x00' not in name and not name.startswith('/'), 'unsafe archive path')
+              parts = name.rstrip('/').split('/')
+              require(all(part not in ['', '.', '..'] and not part.endswith((' ', '.'))
+                          and not any(ord(char) < 32 for char in part)
+                          and re.fullmatch(r'(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?', part, re.I) is None
+                          for part in parts), 'unsafe archive path component')
+              return name.rstrip('/')
+
+          def inspect_zip(path, max_total=MAX_UNPACKED, max_entry=MAX_ARCHIVE):
+              require(0 < path.stat().st_size <= MAX_ARCHIVE, 'archive exceeds byte limit')
+              archive = zipfile.ZipFile(path)
+              entries = archive.infolist()
+              require(0 < len(entries) <= MAX_ENTRIES, 'archive entry count is outside bounds')
+              seen = set()
+              total = 0
+              for entry in entries:
+                  name = safe_name(entry.filename)
+                  folded = unicodedata.normalize('NFKC', name).casefold()
+                  require(folded not in seen, 'duplicate or platform-ambiguous archive path')
+                  seen.add(folded)
+                  mode = entry.external_attr >> 16
+                  require(not stat.S_ISLNK(mode) and stat.S_IFMT(mode) in [0, stat.S_IFREG, stat.S_IFDIR]
+                          and not entry.flag_bits & 1, 'archive contains links, special or encrypted entries')
+                  require(0 <= entry.file_size <= max_entry, 'archive entry exceeds byte limit')
+                  total += entry.file_size
+                  require(total <= max_total, 'archive exceeds unpacked byte limit')
+                  require(entry.file_size <= max(1024 * 1024, entry.compress_size * 1000),
+                          'archive compression ratio exceeds bound')
+              require(archive.testzip() is None, 'archive CRC validation failed')
+              return archive
+
+          def bounded_json(archive, name, maximum=1024 * 1024):
+              info = archive.getinfo(name)
+              require(info.file_size <= maximum, 'JSON evidence exceeds byte limit')
+              return json.loads(archive.read(info))
+
+          directory = Path(tempfile.mkdtemp(prefix='habemus-publication-', dir=os.environ['RUNNER_TEMP']))
+          quality = []
+          for os_name in ['ubuntu-latest', 'windows-latest']:
+              item, path = artifact(SOURCE_RUN, 'synthetic-verification-evidence-' + os_name,
+                                    directory, 200 * 1024 ** 2)
+              with inspect_zip(path, max_total=500 * 1024 ** 2, max_entry=200 * 1024 ** 2) as archive:
+                  factual = bounded_json(archive, 'test-results/rag-challenge-qwen-file.json')
+                  resource = bounded_json(archive, 'test-results/resources-file.json')
+              positives, negatives = factual.get('positives', []), factual.get('negatives', [])
+              require({row['id'] for row in positives} == {row['id'] for row in generation['positiveQueries']}
+                      and len(positives) == len(generation['positiveQueries']) >= 4
+                      and {row['id'] for row in negatives} == set(generation['negativeCaseIds'])
+                      and len(negatives) == len(generation['negativeCaseIds']) >= 4,
+                      'fixed model-quality cases are missing or duplicated')
+              coverage = sum(row.get('status') == 'answered' for row in positives) / len(positives)
+              require(generation['minimumAnswerCoverage'] >= 0.75
+                      and factual.get('minimumAnswerCoverage') == generation['minimumAnswerCoverage']
+                      and factual.get('answerCoverage') == coverage
+                      and coverage >= generation['minimumAnswerCoverage']
+                      and all(row.get('status') in ['abstained', 'conflict'] for row in negatives)
+                      and factual.get('externalRequests') == 0
+                      and factual.get('profile', '').startswith('actual file://')
+                      and factual.get('provider', {}).get('sha256') == model_file['sha256'],
+                      'fixed offline factual/safety quality gate did not pass')
+              peak = resource.get('resources', {}).get('peak', {}).get('budgetMetricBytes')
+              require(resource.get('status') == 'PASS' and resource.get('profile') == 'actual offline file://'
+                      and resource.get('errors') == [] and resource.get('resources', {}).get('errors') == []
+                      and resource.get('resources', {}).get('samples', 0) >= 2
+                      and resource.get('resources', {}).get('exceeded') is False
+                      and resource.get('budgets', {}).get('workloadMemoryBytes') == 12_000_000_000
+                      and resource.get('budgets', {}).get('totalTimeMs') == 300000
+                      and type(peak) is int and 0 < peak <= 12_000_000_000
+                      and 0 < resource.get('totalMs', 0) <= 300000
+                      and resource.get('model', {}).get('sha256') == model_file['sha256']
+                      and resource.get('model', {}).get('cpuOnly') is True,
+                      'whole-process resource gate did not pass at the original limits')
+              quality.append({'os': os_name, 'artifactId': item['id'], 'answerCoverage': coverage,
+                              'minimumAnswerCoverage': generation['minimumAnswerCoverage'],
+                              'unsafeCasesBlocked': len(negatives), 'totalMs': resource['totalMs'],
+                              'peakWorkloadBytes': peak})
+
+          accepted_artifact, outer = artifact(PACKAGE_RUN, 'habemus-office-evidence-ubuntu-latest', directory)
+          with inspect_zip(outer) as archive:
+              candidate = bounded_json(archive, 'test-results/habemus-candidate.json')
+              packaged = bounded_json(archive, 'test-results/habemus-package.json')
+              require(candidate.get('schemaVersion') == 1 and candidate.get('commit') == SHA
+                      and candidate.get('zip') == ZIP_NAME and candidate.get('publication') is False
+                      and candidate.get('browserProfile') == 'actual offline file://'
+                      and type(candidate.get('bytes')) is int and 0 < candidate['bytes'] <= MAX_ARCHIVE
+                      and re.fullmatch(r'[a-f0-9]{64}', candidate.get('sha256', '')),
+                      'candidate evidence differs from the accepted application')
+              require(packaged.get('bytes') == candidate['bytes'] and packaged.get('sha256') == candidate['sha256']
+                      and packaged.get('distribution') == 'complete-offline-office',
+                      'package build and accepted candidate identity disagree')
+              info = archive.getinfo('dist/' + ZIP_NAME)
+              require(info.file_size == candidate['bytes'], 'candidate ZIP size differs from its evidence')
+              office_zip = directory / ZIP_NAME
+              with archive.open(info) as content, office_zip.open('wb') as output:
+                  for block in iter(lambda: content.read(1024 * 1024), b''):
+                      output.write(block)
+          require(digest_file(office_zip) == candidate['sha256'], 'candidate ZIP SHA-256 differs from accepted evidence')
+          required = {'index.html', 'assets/answer-selection.js', 'assets/table-evidence.js',
+                      'assets/table-guide.js', 'assets/rag-corpus.js', 'assets/pdf-ocr.js',
+                      'assets/pdf-preview.js', 'assets/rag.js', 'assets/rag-questions.js',
+                      'OFFICE-START.md', 'models/qwen-pack.js', 'models/bundled.manifest.json',
+                      'models/LICENSE.Qwen2.5'}
+          with inspect_zip(office_zip, max_entry=64 * 1024 ** 2) as archive:
+              manifest = bounded_json(archive, 'build-manifest.json', 2 * 1024 ** 2)
+              entries = manifest.get('files', [])
+              require(manifest.get('schemaVersion') == 1 and manifest.get('version') == '1.0-rc1'
+                      and manifest.get('kind') == 'pbgc-rag-workplace-build'
+                      and manifest.get('distribution') == 'complete-offline-office'
+                      and manifest.get('official') is False
+                      and manifest.get('includedGenerationModel') == model
+                      and manifest.get('generationModelEncoding') == 'classic-base64-chunks-v1'
+                      and isinstance(entries, list) and 1 <= len(entries) <= MAX_ENTRIES
+                      and len(entries) == packaged.get('files'), 'invalid complete-office manifest or asset count')
+              names = [safe_name(entry['path']) for entry in entries]
+              require(len(names) == len(set(names)) and required <= set(names)
+                      and set(archive.namelist()) == set(names) | {'build-manifest.json'},
+                      'office ZIP contains missing, duplicate or unlisted assets')
+              def script_json(name, prefix, maximum):
+                  info = archive.getinfo(name)
+                  require(info.file_size <= maximum, 'model script exceeds byte limit')
+                  value = archive.read(info).decode('ascii')
+                  require(value.startswith(prefix) and value.endswith(';\n'), 'invalid inert model-script wrapper')
+                  return json.loads(value[len(prefix):-2])
+              pack = script_json('models/qwen-pack.js', 'globalThis.PBGCQwenPack=', 256 * 1024)
+              chunks = pack.get('chunks', [])
+              require(pack.get('schemaVersion') == 1 and pack.get('model') == model
+                      and pack.get('totalBytes') == model_file['bytes']
+                      and isinstance(chunks, list) and len(chunks) == math.ceil(model_file['bytes'] / 8388608),
+                      'model pack is not bound to the reviewed model')
+              packed_names = set()
+              decoded_hash, decoded_bytes = hashlib.sha256(), 0
+              for index, part in enumerate(chunks):
+                  name = 'models/qwen-part-' + str(index).zfill(3) + '.js'
+                  require(set(part) == {'path', 'bytes', 'sha256'} and part['path'] == name
+                          and part['bytes'] == min(8388608, model_file['bytes'] - decoded_bytes),
+                          'model chunk ordering or byte count differs')
+                  value = script_json(name, 'globalThis.PBGCQwenPart=', 12 * 1024 ** 2)
+                  require(set(value) == {'index', 'data'} and value['index'] == index,
+                          'model script contains unexpected content')
+                  data = base64.b64decode(value['data'], validate=True)
+                  require(len(data) == part['bytes'] and hashlib.sha256(data).hexdigest() == part['sha256'],
+                          'model chunk integrity check failed')
+                  decoded_hash.update(data)
+                  decoded_bytes += len(data)
+                  packed_names.add(name)
+              require(decoded_bytes == model_file['bytes'] and decoded_hash.hexdigest() == model_file['sha256'],
+                      'model scripts do not reconstruct the exact accepted GGUF')
+              generated = packed_names | {'models/qwen-pack.js'}
+              for entry in entries:
+                  name = entry['path']
+                  require(type(entry.get('bytes')) is int and 0 <= entry['bytes'] <= 64 * 1024 ** 2
+                          and re.fullmatch(r'[a-f0-9]{64}', entry.get('sha256', '')),
+                          'invalid manifest asset identity')
+                  info = archive.getinfo(name)
+                  with archive.open(info) as content:
+                      actual_hash = hashlib.file_digest(content, 'sha256').hexdigest()
+                  require(info.file_size == entry['bytes'] and actual_hash == entry['sha256'],
+                          'office asset integrity mismatch: ' + name)
+                  if name not in generated:
+                      original = {'OFFICE-START.md': 'docs/OFFICE-START.md',
+                                  'models/bundled.manifest.json': 'vendor/local-llm/bundled.manifest.json',
+                                  'models/LICENSE.Qwen2.5': 'vendor/local-llm/LICENSE.Qwen2.5'}.get(name, name)
+                      reviewed = git_bytes(original)
+                      require(len(reviewed) == entry['bytes'] and hashlib.sha256(reviewed).hexdigest() == actual_hash,
+                              'office asset differs from reviewed source: ' + name)
+
+          def legacy_state(exclude_release=None):
+              tags = paged('git/matching-refs/tags/')
+              tag_state = sorted((item['ref'], item['object']['sha'], item['object']['type'])
+                                 for item in tags if item['ref'] != 'refs/tags/' + TAG)
+              releases = paged('releases')
+              release_state = []
+              for item in releases:
+                  if item['id'] == exclude_release:
+                      continue
+                  assets = sorted((asset['id'], asset['name'], asset['size'], asset.get('digest'), asset['state'])
+                                  for asset in item['assets'])
+                  release_state.append((item['id'], item['tag_name'], item['target_commitish'], item['draft'],
+                                        item['prerelease'], item['name'], item['body'], assets))
+              main = api('git/ref/heads/main')['object']['sha']
+              latest = api('releases/latest')['id']
+              return {'tags': tag_state, 'releases': sorted(release_state), 'main': main, 'latest': latest}
+
+          require(api('git/ref/tags/' + TAG, missing_ok=True) is None,
+                  'new release tag already exists; automatic replacement is forbidden')
+          require(api('releases/tags/' + TAG, missing_ok=True) is None,
+                  'new release already exists; automatic replacement is forbidden')
+          before = legacy_state()
+          quickstart = directory / 'START-HERE.txt'
+          quickstart.write_text(
+              'PBGC-RAG 1.0 RC1 — start here\n\n'
+              '1. Download ' + ZIP_NAME + '. Extract the whole ZIP to a local folder.\n'
+              '2. Keep index.html, assets, vendor and models together.\n'
+              '3. Double-click index.html. Select Get started, then Start Qwen.\n'
+              '4. Wait for Qwen is ready. Continue to documents and add your files.\n'
+              '5. For CSV or Excel, confirm the row with column names in Documents.\n'
+              '6. Ask a short question. For two independent facts, write each question in full.\n'
+              '7. Open View evidence to check each answer. For a PDF, check Original PDF page.\n'
+              '8. Choose Save & reopen, then Save case to a file before you close the app.\n\n'
+              'The complete ZIP includes Qwen. No account, installation or server is needed.\n'
+              'Documents and questions stay on this computer. No model download is needed.\n'
+              'For an image area on a PDF page, choose Read text from this page. Check machine-read numbers.\n'
+              'If an answer is unsupported or sources disagree, read the sources or refine the question.\n'
+              'This is an independent test candidate. It does not approve benefits or make official decisions.\n'
+              'Keep this candidate in its own folder. Your existing stable app remains separate.\n', encoding='utf-8')
+          evidence = {'schemaVersion': 1, 'testedCommit': SHA, 'tag': TAG, 'zip': ZIP_NAME,
+                      'zipBytes': candidate['bytes'], 'zipSha256': candidate['sha256'],
+                      'officeArtifact': {'runId': int(PACKAGE_RUN), 'id': accepted_artifact['id'],
+                                         'name': accepted_artifact['name'], 'platform': 'ubuntu-latest'},
+                      'assetCount': len(entries), 'modelId': model['id'], 'modelBytes': model_file['bytes'],
+                      'modelSha256': model_file['sha256'], 'acceptanceRuns': proof,
+                      'fixedQualityAndWholeProcessResources': quality,
+                      'packagePlatformEvidence': 'Ubuntu and Windows each built and tested complete packages from this exact commit. The download is the unchanged Ubuntu artifact.',
+                      'limitations': 'Synthetic offline tests do not establish acceptance for every private document, workstation or actuarial interpretation.',
+                      'mainAndPriorReleaseStateVerified': True}
+          evidence_file = directory / 'ACCEPTANCE-EVIDENCE.json'
+          evidence_file.write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
+          sums = directory / 'SHA256SUMS.txt'
+          sums.write_text(''.join(digest_file(path) + '  ' + path.name + '\n'
+                                  for path in [office_zip, quickstart, evidence_file]), encoding='ascii')
+          files = [office_zip, sums, quickstart, evidence_file]
+          expected = {path.name: {'bytes': path.stat().st_size, 'sha256': digest_file(path)} for path in files}
+          require(gates() == proof and legacy_state() == before, 'acceptance or preserved repository state changed')
+          current_branch()
+
+          # From here, every mutation names only the brand-new tag/release.
+          # On interruption, fail safely. Never delete, move or overwrite assets.
+          tagged = api('git/tags', 'POST', {'tag': TAG, 'message': 'Accepted PBGC-RAG 1.0 RC1 office package\nTested commit: ' + SHA,
+                       'object': SHA, 'type': 'commit', 'tagger': {'name': 'github-actions[bot]',
+                       'email': '41898282+github-actions[bot]@users.noreply.github.com',
+                       'date': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}})
+          require(tagged.get('object', {}).get('sha') == SHA and tagged.get('object', {}).get('type') == 'commit',
+                  'annotated tag object differs from accepted commit')
+          api('git/refs', 'POST', {'ref': 'refs/tags/' + TAG, 'sha': tagged['sha']})
+          body = ('Download **' + ZIP_NAME + '** and extract the whole ZIP. Double-click **index.html**, '
+                  'then choose **Get started → Start Qwen**. The complete package includes the offline model. '
+                  'Use **START-HERE.txt** for the short guide.\n\n'
+                  'This candidate adds independent combined facts, explicit spreadsheet column setup and selected-page PDF text reading. '
+                  'Source answers, original documents and saved cases remain local.\n\n'
+                  'Exact tested commit: `' + SHA + '`. ZIP SHA-256: `' + candidate['sha256'] + '`. '
+                  'Both source and complete-package checks passed on Ubuntu and Windows. '
+                  'See **ACCEPTANCE-EVIDENCE.json** for the exact artifact and test limits.\n\n'
+                  'This is a separate prerelease. The existing stable app and main branch are preserved.')
+          release = api('releases', 'POST', {'tag_name': TAG, 'target_commitish': SHA,
+                        'name': 'PBGC-RAG 1.0 RC1 — complete offline office package', 'body': body,
+                        'draft': True, 'prerelease': True, 'make_latest': 'false'})
+          release_id = release['id']
+          upload = subprocess.run(['gh', 'release', 'upload', TAG, *[str(path) for path in files], '--repo', REPO],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600)
+          require(upload.returncode == 0, 'draft upload failed; existing assets were not overwritten')
+
+          def checked_release(draft):
+              value = api('releases/' + str(release_id))
+              require(value['id'] == release_id and value.get('tag_name') == TAG
+                      and value.get('target_commitish') == SHA and value.get('draft') is draft
+                      and value.get('prerelease') is True, 'release identity or publication state changed')
+              assets = value.get('assets', [])
+              require(len(assets) == len(expected) and {asset['name'] for asset in assets} == set(expected),
+                      'release assets are missing, duplicated or unexpected')
+              for asset in assets:
+                  spec = expected[asset['name']]
+                  require(asset.get('state') == 'uploaded' and asset['size'] == spec['bytes']
+                          and asset.get('digest') in [None, 'sha256:' + spec['sha256']],
+                          'release asset identity differs from staged bytes')
+              ref = api('git/ref/tags/' + TAG)
+              require(ref['object']['type'] == 'tag' and ref['object']['sha'] == tagged['sha'],
+                      'new annotated tag moved')
+              annotation = api('git/tags/' + tagged['sha'])
+              require(annotation['object']['type'] == 'commit' and annotation['object']['sha'] == SHA,
+                      'new tag no longer identifies the accepted application')
+              return value, assets
+
+          staged, assets = checked_release(True)
+          staged_ids = sorted((asset['id'], asset['name'], asset['size']) for asset in assets)
+          for asset in assets:
+              destination = directory / ('draft-verified-' + asset['name'])
+              spec = expected[asset['name']]
+              download(['gh', 'api', 'repos/' + REPO + '/releases/assets/' + str(asset['id']),
+                        '-H', 'Accept: application/octet-stream'], destination, spec['bytes'], spec['bytes'])
+              require(digest_file(destination) == spec['sha256'], 'draft asset download failed SHA-256 verification')
+              destination.unlink()
+          require(gates() == proof and legacy_state(release_id) == before,
+                  'acceptance or a preserved tag/release changed before publication')
+          current_branch()
+          _, assets_now = checked_release(True)
+          require(sorted((asset['id'], asset['name'], asset['size']) for asset in assets_now) == staged_ids,
+                  'staged assets changed after download verification')
+          api('releases/' + str(release_id), 'PATCH', {'draft': False, 'prerelease': True, 'make_latest': 'false'})
+          published, public_assets = checked_release(False)
+          for asset in public_assets:
+              spec = expected[asset['name']]
+              expected_url = 'https://github.com/' + REPO + '/releases/download/' + TAG + '/' + asset['name']
+              require(asset['browser_download_url'] == expected_url, 'unexpected public download URL')
+              destination = directory / ('public-verified-' + asset['name'])
+              # This public check sends no Authorization header or account token.
+              download(['curl', '--fail', '--silent', '--show-error', '--location', '--proto', '=https',
+                        '--proto-redir', '=https', '--max-time', '280', '--max-filesize', str(spec['bytes']),
+                        '--retry', '3', '--retry-delay', '2', expected_url],
+                       destination, spec['bytes'], spec['bytes'])
+              require(digest_file(destination) == spec['sha256'], 'public download failed SHA-256 verification')
+              destination.unlink()
+          require(legacy_state(release_id) == before, 'main, prior tags/releases or latest release changed')
+          checked_release(False)
+          print('PASS: exact accepted office ZIP published and public downloads verified; prior releases and main preserved.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as output:
+              output.write('Published separate [Habemus RC1](' + published['html_url'] + ').\n\n'
+                           'Accepted commit: `' + SHA + '`. ZIP SHA-256: `' + candidate['sha256'] + '`.\n\n'
+                           'Draft and unauthenticated public downloads passed byte/SHA-256 checks. Main, prior tags, '
+                           'prior release assets and the latest stable release were preserved.\n')
+          PY
