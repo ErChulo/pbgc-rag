@@ -1,0 +1,83 @@
+name: Inspect own synthetic candidate failure
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/rag-ci-diagnostic-1.0']
+    paths: ['.github/workflows/rag-ci-diagnostic.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    if: github.repository == 'ErChulo/pbgc-rag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Read bounded diagnostics from the own failed test artifact
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, re, subprocess
+          repo = 'ErChulo/pbgc-rag'
+          run_id = '43782473284'
+          expected_sha = '3d15767538f0fc8f03e875302c31f67394d4a81c'
+          artifact_name = 'habemus-office-evidence-ubuntu-latest'
+          def api(path):
+              result = subprocess.run(['gh', 'api', 'repos/' + repo + '/' + path],
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+              if result.returncode:
+                  raise SystemExit('Own CI artifact metadata could not be read.')
+              return json.loads(result.stdout)
+          run = api('actions/runs/' + run_id)
+          assert run['repository']['full_name'] == repo
+          assert run['head_sha'] == expected_sha and run['head_branch'] == 'codex/rag-habemus-1.0'
+          assert run['status'] == 'completed' and run['conclusion'] == 'failure'
+          matches = [a for a in api('actions/runs/' + run_id + '/artifacts?per_page=100')['artifacts']
+                     if a['name'] == artifact_name]
+          assert len(matches) == 1 and not matches[0]['expired']
+          assert 0 < matches[0]['size_in_bytes'] <= 1500 * 1024 * 1024
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'own-candidate-diagnostics'
+          result = subprocess.run(['gh', 'run', 'download', run_id, '--repo', repo,
+                                   '--name', artifact_name, '--dir', str(directory)],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=240)
+          if result.returncode:
+              raise SystemExit('Own CI artifact download failed.')
+          logs = list(directory.rglob('habemus-answers-file.log'))
+          assert len(logs) == 1 and not logs[0].is_symlink()
+          assert logs[0].resolve().is_relative_to(directory.resolve())
+          assert logs[0].stat().st_size <= 2 * 1024 * 1024
+          text = logs[0].read_text(encoding='utf-8', errors='replace')
+          marker = '{"kind":"real-qwen-habemus-selection"'
+          start = text.find(marker)
+          if start < 0:
+              raise SystemExit('The expected synthetic failure snapshot is absent.')
+          report, _ = json.JSONDecoder().raw_decode(text[start:])
+          assert report['kind'] == 'real-qwen-habemus-selection' and report['stage'] in ['combined-answer', 'complete', 'failed']
+          def bounded(value):
+              return value[:240] if isinstance(value, str) else value
+          def selected(value, names):
+              return {name: bounded(value[name]) for name in names if name in value}
+          summary = {'commit': expected_sha, 'run': run_id, 'stage': report['stage'],
+                     'elapsedMs': report.get('elapsedMs'), 'externalRequests': report.get('externalRequests'),
+                     'calls': [], 'results': []}
+          for call in report.get('calls', [])[:3]:
+              item = selected(call, ['state', 'promptCharacters', 'maxTokens', 'elapsedMs', 'errorName', 'errorMessage'])
+              raw = call.get('raw', '')
+              item['rawLength'] = len(raw)
+              if raw and len(raw) <= 128 and re.fullmatch(r'[S0-9, \t\r\n]*|NONE', raw):
+                  item['selectedIds'] = raw
+              summary['calls'].append(item)
+          for result in report.get('results', [])[:3]:
+              item = selected(result, ['status'])
+              item['diagnostics'] = selected(result.get('diagnostics', {}),
+                  ['reason', 'validationError', 'generationErrorName', 'generationErrorCode', 'promptCharacters'])
+              summary['results'].append(item)
+          encoded = json.dumps(summary, separators=(',', ':'))
+          escaped = encoded.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::notice title=Own synthetic model failure::' + escaped)
+          pathlib.Path(os.environ['GITHUB_STEP_SUMMARY']).write_text(
+              'Bounded own synthetic test diagnostic. No prompts, model weights or credentials are included.\n\n```json\n'
+              + json.dumps(summary, indent=2) + '\n```\n', encoding='utf-8')
+          PY
