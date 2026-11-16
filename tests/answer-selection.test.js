@@ -36,7 +36,7 @@ test('choices bind complete source statements and preserve full source/context i
  const input=sources(),choices=createAnswerChoices(input,{plan:plan(),bind:propertyBind});
  assert.deepEqual(choices.map(({id,label,text})=>({id,label,text})),[{id:'S1',label:'C1',text:input[0].chunk.text},{id:'S2',label:'C2',text:input[1].chunk.text}]);
  assert.equal(choices[0].context,input[0]);assert.equal(choices[1].context,input[1]);
- const prompt=buildSelectionPrompt(plan(),choices);assert.ok(prompt.length<=2600);assert.match(prompt,/EVERY question part/);assert.match(prompt,/untrusted data/);assert.match(prompt,/"id":"S2"/);assert.match(prompt,/seven years/);
+ const prompt=buildSelectionPrompt(plan(),choices);assert.ok(prompt.length<=2600);assert.match(prompt,/EVERY question part/);assert.match(prompt,/UNTRUSTED DATA JSON/);assert.match(prompt,/"id":"S2"/);assert.match(prompt,/seven years/);
  const body=JSON.parse(prompt.split('UNTRUSTED DATA JSON\n')[1].split('\nEND DATA')[0]);assert.equal(body.question,plan().question);assert.deepEqual(body.parts,plan().parts);assert.deepEqual(body.sources,[{id:'S1',text:input[0].chunk.text},{id:'S2',text:input[1].chunk.text}]);
 });
 test('clipped source conditions and unpunctuated wrapped conditions cannot become new sentences',()=>{
@@ -110,9 +110,9 @@ test('candidate and prompt bounds drop complete choices instead of clipping text
  assert.equal(createAnswerChoices(sources(),{plan:p,bind:()=>{throw Error('No binding.');}}).length,0);
 });
 
-test('the measured two-fact model prompt preserves its question schema within 430 characters',()=>{
+test('the measured two-fact model prompt preserves its question schema within 380 characters',()=>{
  const p=planFactualQuestion('What is the normal retirement age? How long are case files kept?'),input=[context('Case files are kept for seven years.','C1'),context('Normal retirement age is 65.','C2')];
  const choices=createAnswerChoices(input,{plan:p,bind:(part,choice)=>part.includes('retirement')?choice.text.includes('retirement'):choice.text.includes('files')});
  const prompt=buildSelectionPrompt(p,choices),body=JSON.parse(prompt.split('UNTRUSTED DATA JSON\n')[1].split('\nEND DATA')[0]);
- assert.ok(prompt.length<=430,'Reduce the 473-character prompt without changing the supported question schema.');assert.equal(body.question,p.question);assert.deepEqual(body.parts,p.parts);assert.deepEqual(body.sources,[{id:'S1',text:input[0].chunk.text},{id:'S2',text:input[1].chunk.text}]);assert.equal(validateChoiceCoverage(p,choices,(part,choice)=>part.includes('retirement')?choice.text.includes('retirement'):choice.text.includes('files')).complete,true);
+ assert.ok(prompt.length<=380,'Keep complete question/source data while eliminating redundant instructions.');assert.equal(body.question,p.question);assert.deepEqual(body.parts,p.parts);assert.deepEqual(body.sources,[{id:'S1',text:input[0].chunk.text},{id:'S2',text:input[1].chunk.text}]);assert.equal(validateChoiceCoverage(p,choices,(part,choice)=>part.includes('retirement')?choice.text.includes('retirement'):choice.text.includes('files')).complete,true);
 });

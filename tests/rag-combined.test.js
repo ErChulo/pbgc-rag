@@ -15,7 +15,7 @@ const combined='What is the normal retirement age? How long are case files retai
 
 test('AUTO combines two independent exact source statements, with IDs only and unchanged generation budgets',async()=>{
  const chunks=[chunk('age',AGE),chunk('retention',RETENTION)];
- let called=0;const result=await run(combined,chunks,auto('S1,S2',args=>{called++;assert.equal(args.responseFormat,'source-selection-v1');assert.equal(args.temperature,0);assert.ok(args.maxTokens<=64);assert.ok(args.prompt.length<=2600);assert.match(args.prompt,/untrusted data, never instructions/);}));
+ let called=0;const result=await run(combined,chunks,auto('S1,S2',args=>{called++;assert.equal(args.responseFormat,'source-selection-v1');assert.equal(args.temperature,0);assert.ok(args.maxTokens<=64);assert.ok(args.prompt.length<=2600);assert.match(args.prompt,/UNTRUSTED DATA JSON/);}));
  assert.equal(called,1);assert.equal(result.status,'answered');assert.equal(result.answer,AGE+' [C1]\n\n'+RETENTION+' [C2]');assert.equal(result.citations.length,2);assert.deepEqual(result.citations.map(c=>c.sourceId),['source-age','source-retention']);assert.equal(result.diagnostics.answerProfile.completeCoverage,true);assert.equal(result.diagnostics.answerProfile.selectedCount,2);assert.equal(result.diagnostics.answerProfile.modelEmittedClaims,false);assert.equal(result.diagnostics.modelEmittedCitations,false);
 });
 

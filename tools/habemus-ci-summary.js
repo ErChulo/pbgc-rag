@@ -26,7 +26,7 @@ function summarizeHabemusReport(report){
   externalRequests:count(report.externalRequests,1000000),
   calls:(Array.isArray(report.calls)?report.calls:[]).slice(0,MAX_CALLS).map(call=>{
    call=object(call)?call:{};
-   return{state:enumValue(call.state,['running','completed','failed']),elapsedMs:count(call.elapsedMs,MAX_ELAPSED_MS),promptCharacters:count(call.promptCharacters,2600),rawLength:typeof call.raw==='string'?Math.min(call.raw.length,MAX_REPORT_BYTES):0,errorName:enumValue(call.errorName,ERROR_NAMES)};
+   return{state:enumValue(call.state,['running','completed','failed']),elapsedMs:count(call.elapsedMs,MAX_ELAPSED_MS),firstTokenMs:count(call.firstTokenMs,MAX_ELAPSED_MS),emittedCharacters:count(call.emittedCharacters,65536),formattedPromptTokens:count(call.formattedPromptTokens,4096),prefillBatchSize:count(call.prefillBatchSize,4096),promptCharacters:count(call.promptCharacters,2600),rawLength:typeof call.raw==='string'?Math.min(call.raw.length,MAX_REPORT_BYTES):0,errorName:enumValue(call.errorName,ERROR_NAMES)};
   }),
   results:(Array.isArray(report.results)?report.results:[]).slice(0,MAX_CALLS).map(result=>{
    result=object(result)?result:{};const diagnostics=object(result.diagnostics)?result.diagnostics:{};
