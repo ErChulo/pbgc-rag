@@ -154,6 +154,9 @@ jobs:
             if(locations.length)console.log('::notice title=Synthetic candidate failure locations::'+workflowEscape(JSON.stringify({log:name,locations})));
           }
           JS
+      - name: Summarize bounded real source-selection diagnostics
+        if: ${{ failure() && steps.answers.outcome == 'failure' }}
+        run: node tools/habemus-ci-summary.js
       - name: Upload exact candidate and test evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -165,6 +168,7 @@ jobs:
             test-results/habemus*.png
             test-results/rag-source-scope*.json
             test-results/rag-source-scope*.png
+            test-results/rag-habemus*.json
             test-results/rag-questions*.png
             test-results/office-resources-file.json
             test-results/office-package-file.png

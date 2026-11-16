@@ -17,4 +17,6 @@ The extracted app is supplied through `PBGC_TEST_URL` as a file URI. `PBGC_QUEST
 
 `test-results/habemus-candidate.json` records the commit, ZIP byte count, ZIP SHA-256 and verified asset names. The candidate ZIP and bounded synthetic test evidence are retained as workflow artifacts for seven days. A passing result applies only to the exact tested commit and ZIP. A later edit requires fresh checks.
 
-Status: workflow prepared. Platform acceptance remains pending until both source jobs and both complete-package jobs pass on the final commit. This document does not claim those results or establish acceptance for private workplace documents.
+Previous commit `3d15767` passed both source jobs and the Windows package job. The Ubuntu package job reached the two-minute combined-answer deadline. The revised prompt retains the measured question schema with fewer instructions; real local1.5B combined and table checks pass. CI now retains `rag-habemus*.json` and emits bounded failure diagnostics to distinguish deadline failures from model abstention without exposing source text in annotations.
+
+Status: final-commit platform checks required. Both source jobs and both complete-package jobs must pass for the revised candidate. Earlier results do not establish acceptance of the changed runtime or private workplace documents.

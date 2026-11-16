@@ -96,3 +96,7 @@ Explicit selected-page OCR uses an ordered versioned processing profile. Append 
 ## Source-ID delimiter formatting
 
 Real bundled Qwen can select the correct evidence with a comma-space list. Delimiter whitespace is not a source claim. Accept only bounded ASCII spaces/tabs/CR/LF beside commas in an otherwise fully validated known-ID list. Do not repair prose, unknown IDs, duplicate IDs, missing question parts, changed quotes or fabricated citations. This preserves every source and coverage guard and does not increase token, memory, prompt or generation-time budgets.
+
+## Preserve the measured model question schema
+
+The bundled1.5B model correctly selected combined evidence with both the original question and complete question parts present. Removing either repetition or moving questions outside the JSON caused real supported questions to abstain. Retain that measured schema and reduce redundant instructions instead. Keep the unchanged two-minute generation deadline and all pre/post-generation checks. Shorter text is accepted only after real inference succeeds; passing helper tests alone do not establish answer quality or latency.

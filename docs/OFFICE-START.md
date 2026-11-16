@@ -6,7 +6,7 @@ PBGC-RAG helps you find information in documents and check the source of an answ
 
 ## Open the app
 
-1. Download a complete office ZIP from the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) or the separate [larger-model test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0).
+1. Use the complete `PBGC-RAG-1.0-rc1-office.zip` supplied for this candidate after its checks pass. It has not been published as a release. The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and separate [larger-model 0.8 test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older downloads without the new controls.
 2. Extract the ZIP to a local folder. Keep **index.html**, **assets**, **vendor** and **models** together.
 3. Double-click **index.html**.
 4. Choose **Get started**, then **Start Qwen**.
@@ -30,11 +30,11 @@ Each written answer must pass source checks. If the app cannot support an answer
 
 ## Ask separate questions in this development branch
 
-These controls belong to development branches. They are not in the published 0.8 packages. Current document-selection work is recorded in `docs/ux/DOCUMENT-SCOPE-0.10.md` in the package.
+These controls are in the 1.0 candidate. They are not in the published 0.8 packages. See [candidate test status](HABEMUS-ACCEPTANCE.md) for the tested version.
 
 1. In **Ask your documents**, write the first question.
 2. Choose **Add another question**. Enter **Question 2**. You can add **Question 3**. Use different questions when you search the same documents.
-3. Ask one thing in each question. For example, ask about the retirement age in one field and the case file retention period in another.
+3. For separate results, ask one fact in each box. For example, ask about the retirement age in one box and the case file retention period in another.
 4. Choose **Ask questions**. The app checks the questions one at a time.
 5. Read the result and sources for each question. Some questions can have supported answers while others need more evidence or source review.
 

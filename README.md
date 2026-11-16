@@ -9,13 +9,15 @@ PBGC-RAG runs on your computer without sending documents or questions to a servi
 
 ## Start here
 
-1. Download a complete office ZIP from the [stable release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) or the separate [larger-model test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0).
+1. Use the complete office ZIP for the version you want to test. The published downloads are the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and separate [larger-model 0.8 test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0).
 2. Extract the ZIP. Keep `index.html` and its `assets`, `vendor` and `models` folders together.
 3. Double-click `index.html`.
 4. Choose **Get started**, then **Start Qwen**. Follow the guide to add documents and ask your first question.
 5. Open the cited source. Check the words and numbers. Use **Save & reopen** to save a case file before closing the app.
 
 Qwen is included. You do not need to choose a model file, install software or run a server. The GitHub source-code ZIP and small core developer ZIP are not complete office packages. See the [plain-language office guide](docs/OFFICE-START.md).
+
+The published 0.8 downloads do not include this branch's new controls. The 1.0 candidate uses `PBGC-RAG-1.0-rc1-office.zip` after its candidate checks pass. It has not been published as a release.
 
 The delivered 0.8 packages passed actual offline file-URL tests on Windows and Ubuntu. Those results apply to their tested versions. This development branch requires its own tests before a new release. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports.
 
@@ -50,16 +52,17 @@ Choose the task you need:
 | --- | --- | --- |
 | Read source passages | Finds and shows the document text | No |
 | Ask one question | Writes one short answer and links its supporting source | Yes |
+| Combine independent facts — development branch | Checks up to three full questions and copies their supporting facts into one result | Yes |
 | Ask separate questions — development branch | Checks up to three questions one at a time and shows a result for each | Yes |
 | Ask about one document — development branch | Searches the document selected for that question | Only for a written answer |
 
-Ask for one fact in each question. For example: **What is the normal retirement age?** To check another fact, add a separate question such as **How long are case files retained?** Each answer must have its own support. A supported answer to one question does not make the other answers valid.
+Ask for one fact in each full question. For example: **What is the normal retirement age?** To check another fact in the same result, add a second full question in that box: **How long are case files retained?** Use **Add another question** for separate results. Each fact must have its own support. A supported fact does not make the other facts valid.
 
 To ask about one file, open **Documents: All documents** below the question. Use **Documents for this question** to select the file. Keep **All documents** to search the case. With two question boxes, you can ask the same question about two different files. Select a different file in each box.
 
 Each result states what was searched: **Searched: filename** or **Searched: all N documents**. Read that line before comparing answers. A result from one file says nothing about an excluded file. Selecting one file does not decide which document governs. If a selected file is unavailable or has no readable passages, the app shows a message; it does not switch to all documents.
 
-The local Qwen profile returns one supported statement per question. It does not write an unrestricted report that combines facts across documents. Separate questions can find facts in different documents, with separate source checks. A result can say that no supported answer was found or that sources need review. Keep those results visible when you compare answers.
+For one fact, Qwen returns a source-supported statement. For supported combined questions, Qwen selects existing statements or literal table fields. The app checks every requested fact before it shows the combined result. It does not write an unrestricted report or infer relationships between facts. A result can say that no supported answer was found or that sources need review. Keep those results visible when you compare answers.
 
 Open each citation before using an answer. For a PDF, choose **Original PDF page** to check the source page. Scan recognition can misread words and numbers. Source details holds optional technical verification data; you do not need hashes to read a citation.
 
@@ -112,15 +115,17 @@ Development tests need Node, Playwright, Chromium and Python's standard library 
 
 ## Current limits and next development
 
-The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. The guided-question increment passed its Windows and Ubuntu checks at `2c4786b`. This branch adds document selection while keeping those source checks. The new selection controls need their own actual-model, browser and complete-package results before delivery. See [current verification](docs/ux/DOCUMENT-SCOPE-0.10.md).
+The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. This 1.0 candidate adds combined facts, confirmed table column names and selected-page PDF reading to the earlier document-selection flow. Its final commit needs its own source and complete-package checks on Windows and Ubuntu. See [candidate verification](docs/HABEMUS-ACCEPTANCE.md).
 
-Mixed image/text-page OCR, other OCR languages, full PDF table reconstruction, broader format/query support and complete assistive-technology/performance evaluation remain unfinished. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for test scope.
+Other OCR languages, full PDF table reconstruction, broader format/query support and complete assistive-technology/performance evaluation remain unfinished. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for test scope.
 
 Official actuarial calculations and template outputs are outside the current RAG milestone. Their missing source contracts do not block document search or question answering. No official output approval is enabled.
 
 ## Optional scanned-PDF reading
 
 The first-run guide enables scanned-page reading. In the document workspace, enable **Read text from scanned PDF pages** before importing a scan if it is off. All English recognition assets are included in the office ZIP. Only pages with no native text are recognized; mixed pages with a native text layer retain that layer without OCR. Limits: 20 image-only pages per PDF, 8 million pixels per rendered page and 180 seconds total. Machine-read text, numbers and line regions can be wrong: check the original page before using them. OCR confidence is not factual confidence. Source bytes are preserved; version 3 exports re-run the pinned processing profile on restore. See docs/OCR.md and docs/PDF-OCR.md.
+
+To read an image area on a page that already has selectable text, open **Original PDF page**, go to that page and choose **Read text from this page**. **Cancel reading** keeps the earlier text. This selected-page tool preserves earlier source links and notes.
 
 ## Original PDF pages
 
