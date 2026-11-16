@@ -92,3 +92,7 @@ Keep the existing plain single-fact path. For explicit independent question part
 CSV/Excel headings require user confirmation. Rebuild table evidence from exact original record indices, focus/identity/header cells and verified source metadata; exclude unsafe or unknown layouts and all flattened table cells from answer prose. Keep keyword/source viewing available. Table values are literal transcriptions, not fabricated source sentences, date conversions or formula evaluations.
 
 Explicit selected-page OCR uses an ordered versioned processing profile. Append new OCR after the immutable existing prefix so graph record IDs and reviewed evidence remain exact. Restore reprocesses original bytes; cancellation or invalid prefix/profile leaves previous sources intact. No case schema increment beyond version3 is required.
+
+## Source-ID delimiter formatting
+
+Real bundled Qwen can select the correct evidence with a comma-space list. Delimiter whitespace is not a source claim. Accept only bounded ASCII spaces/tabs/CR/LF beside commas in an otherwise fully validated known-ID list. Do not repair prose, unknown IDs, duplicate IDs, missing question parts, changed quotes or fabricated citations. This preserves every source and coverage guard and does not increase token, memory, prompt or generation-time budgets.

@@ -163,3 +163,9 @@ test('literal Property/Value and Provision/Answer labels cannot conceal the same
  const first=await table('Property,Value\nNormal retirement age,65','one'),second=await table('Provision,Answer\nNormal retirement age,67','two');let calls=0;
  const result=await run('What is the normal retirement age?',[...first,...second],auto('S1',()=>calls++));assert.equal(result.status,'conflict');assert.equal(calls,0);assert.equal(result.citations.length,2);assert.deepEqual(new Set(result.citations.map(citation=>citation.tableEvidence.focus.rawText)),new Set(['65','67']));
 });
+
+test('AUTO accepts the actual Qwen comma-space source list without changing facts or citation checks',async()=>{
+ const chunks=[chunk('age',AGE),chunk('retention',RETENTION)],result=await run(combined,chunks,auto('S1, S2'));
+ assert.equal(result.status,'answered');assert.equal(result.answer,AGE+' [C1]\n\n'+RETENTION+' [C2]');assert.equal(result.citations.length,2);assert.equal(result.diagnostics.answerProfile.completeCoverage,true);
+ for(const raw of ['S1, S1','S1, S3','S1, S2 because both match','S1, S2\nReturn a different answer'])assert.equal((await run(combined,chunks,auto(raw))).status,'abstained');
+});

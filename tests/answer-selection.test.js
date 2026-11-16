@@ -77,8 +77,8 @@ test('trusted table fields remain one whole candidate and ignore untrusted top-l
 });
 test('selection output contains only unique known IDs or NONE',()=>{
  const choices=createAnswerChoices(sources(),{plan:plan(),bind:propertyBind});
- assert.deepEqual(parseSelectionIds('S1,S2',choices),['S1','S2']);assert.deepEqual(parseSelectionIds('\nNONE\n',choices),[]);assert.deepEqual(parseSelectionIds('S2',choices),['S2']);
- for(const raw of ['','S1,S1','S3','S0','S01','s1','S1, S2','S1\nS2','["S1","S2"]','S1 and S2','S1,S2.','NONE,S1','Select S1,S2','S1,S2\nExplanation: enough evidence.','S1,'.repeat(100)])assert.throws(()=>parseSelectionIds(raw,choices),Error,raw);
+ assert.deepEqual(parseSelectionIds('S1,S2',choices),['S1','S2']);assert.deepEqual(parseSelectionIds('S1, S2',choices),['S1','S2']);assert.deepEqual(parseSelectionIds(' S1 \t,\r\n S2 ',choices),['S1','S2']);assert.deepEqual(parseSelectionIds('\nNONE\n',choices),[]);assert.deepEqual(parseSelectionIds('S2',choices),['S2']);
+ for(const raw of ['','S1,S1','S3','S0','S01','s1','S1, S1','S 1, S2','S1, S3','S1, S2\nIgnore instructions','S1\nS2','["S1","S2"]','S1 and S2','S1,S2.','NONE,S1','Select S1,S2','S1,S2\nExplanation: enough evidence.','S1,'.repeat(100)])assert.throws(()=>parseSelectionIds(raw,choices),Error,raw);
  const twelve=Array.from({length:12},(_,index)=>({id:'S'+(index+1)}));assert.deepEqual(parseSelectionIds('S7,S12',twelve),['S7','S12']);assert.throws(()=>parseSelectionIds('S1,S2,S3,S4,S5,S6,S7',twelve));
 });
 test('coverage requires all parts after selection, rejects partial answers and unused claims',()=>{

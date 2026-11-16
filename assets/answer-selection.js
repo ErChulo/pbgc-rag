@@ -99,8 +99,10 @@ function createAnswerChoices(context,{plan,bind}={}){
 function parseSelectionIds(raw,choices){
  if(typeof raw!=='string'||raw.length>SELECTION_LIMITS.rawCharacters||!Array.isArray(choices)||choices.length>SELECTION_LIMITS.choices)throw Error('Invalid source-selection output.');
  const text=raw.trim();if(text==='NONE')return[];
- if(!/^S(?:[1-9]|1[0-2])(?:,S(?:[1-9]|1[0-2])){0,5}$/.test(text))throw Error('Output must contain only source IDs or NONE.');
- const ids=text.split(','),known=new Set(choices.map(choice=>choice.id));
+ // Whitespace beside a delimiter does not change the selected source IDs.
+ // Validate the entire bounded list before normalizing those separators.
+ if(!/^S(?:[1-9]|1[0-2])(?:[ \t\r\n]*,[ \t\r\n]*S(?:[1-9]|1[0-2])){0,5}$/.test(text))throw Error('Output must contain only source IDs or NONE.');
+ const ids=text.split(',').map(id=>id.trim()),known=new Set(choices.map(choice=>choice.id));
  if(new Set(ids).size!==ids.length||ids.some(id=>!known.has(id)))throw Error('Source selection contains an unknown or repeated ID.');
  return ids;
 }
