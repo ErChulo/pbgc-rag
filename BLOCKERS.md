@@ -4,6 +4,8 @@
 
 Document retrieval, source-supported answers and evidence reading do not require official dictionaries, templates or actuarial rules. Those optional legacy workflows are outside the active RAG increment. The stable `office-v0.8.0` and experimental `larger-model-v0.8.0` office packages were delivered; their checks do not automatically establish acceptance of new development commits. New branch code requires fresh tests.
 
+The 1.0 RC1 runtime `d3ce073` has now passed all four source/complete-ZIP Windows/Ubuntu gates. It is ready for office pilot testing of the documentary RAG workflow. See [verified candidate evidence](docs/evidence/habemus-1.0-rc1-verified.json). Representative real-plan evaluation follows this engineering milestone; the deferred official-output inputs below do not block the pilot.
+
 ## Authoritative inputs and approvals
 
 The approved field dictionary, original official templates/mappings, authoritative BSRS grammar/validator, reference specifications/factors and approved legal/actuarial interpretations are not available to this session. The user's Google Drive source directory has not been accessed. A folder URL and a proposed network allowlist change do not establish authenticated Drive access or source authority. These gaps block authoritative validation and official output approval; independent engineering continues with synthetic fixtures.
@@ -20,7 +22,7 @@ Approved logo masters are absent. The required labeled placeholder and documente
 
 The tested 0.7 release includes native bounded document parsing, typed source-table queries, source-bound proposed observations and dictionary mappings, generic mapped Office test outputs, case/review persistence, learned local retrieval, source-guarded real Qwen, English scanned-PDF OCR and the first-run wizard. The complete office package starts its pinned local model without a model-file picker. These capabilities are implemented; they are not outstanding semantic/OCR asset integration tasks.
 
-Build 0.8 adds a bounded read-only original-PDF page view, with exact original downloads and cancellation/source-isolation guards. Release of this new head still requires its exact-commit regression and extracted-package offline platform gates. Its page view excludes interactive content, annotations and attachments and does not create new textual evidence or change citations.
+Delivered build 0.8 added a bounded read-only original-PDF page view, with exact original downloads and cancellation/source-isolation guards. The verified 1.0 candidate retains it and adds combined facts, confirmed table headings and selected-page mixed OCR. The original-page view excludes interactive content, annotations and attachments and does not create new textual evidence or change citations.
 
 ## Remaining engineering and validation
 

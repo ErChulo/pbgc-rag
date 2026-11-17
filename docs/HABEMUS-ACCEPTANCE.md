@@ -21,4 +21,19 @@ Previous commit `3d15767` passed both source jobs and the Windows package job; U
 
 The current revision keeps the proven full question/source schema and uses a compact source-selection system policy. Its fixed combined fixture has118 actual formatted tokens, within one128-token prefill batch. Local1.5B combined/table checks pass in about82/64seconds. The generic answer policy, source guards, output budget and two-minute deadline remain unchanged. CI retains `rag-habemus*.json` and emits bounded counts for input tokens, first-text timing and partial output length. Public summaries do not expose source or partial-output text.
 
-Status: final-commit platform checks required. Both source jobs and both complete-package jobs must pass for the revised candidate. Earlier results do not establish acceptance of the changed runtime or private workplace documents.
+## Verified runtime and maturity
+
+**Status: PASS — 1.0 RC1, ready for office pilot testing.** Runtime commit [`d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89) completed all four required gates:
+
+| Gate | Result | Job |
+| --- | --- | --- |
+| Source, Windows | PASS | [133694663979](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663979) |
+| Source, Ubuntu | PASS | [133694663857](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663857) |
+| Complete office ZIP, Windows | PASS | [133694663540](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663540) |
+| Complete office ZIP, Ubuntu | PASS | [133694663958](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663958) |
+
+Both source jobs passed actual offline file entry, the fixed real-model quality corpus and whole-process resource checks. Both complete-package jobs passed the previously failing combined/table inference, together with bundled-model startup, OCR, source integrity, original PDF pages, selected documents, table setup and save/reopen. No deadline, memory, model-size, output or quality threshold was relaxed.
+
+The fixed factual corpus had three correct cited answers and one abstention on both platforms; all four unsafe cases were blocked or returned conflict. That is a small synthetic supported-answer-coverage result, not a general accuracy estimate or a production certification. Representative real-plan and manual assistive-technology validation remain pilot work.
+
+The [versioned verification record](evidence/habemus-1.0-rc1-verified.json) retains bounded results and immutable run/job links. Badges refer to this tested runtime and its existing ZIP. This documentation-only follow-up does not rebuild that ZIP or claim that a new application commit passed old runs. A changed runtime or new archive requires its own checks. No release, tag, `main` merge or environment publication is performed by recording these results.

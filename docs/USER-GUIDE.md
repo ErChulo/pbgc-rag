@@ -2,6 +2,8 @@
 
 Use the complete office ZIP. Extract it. Keep all folders beside `index.html`. Open `index.html` to start.
 
+For a GitHub artifact download, first follow the [download and extraction steps](OFFICE-START.md#open-the-app). GitHub supplies an outer ZIP around the app ZIP.
+
 ## 1. Start the assistant
 
 Choose **Get started**, then **Start Qwen**. Wait for the ready message. The model files are included. You do not need to select a model file or install software.

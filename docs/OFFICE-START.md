@@ -6,15 +6,21 @@ PBGC-RAG helps you find information in documents and check the source of an answ
 
 ## Open the app
 
-1. Use the complete `PBGC-RAG-1.0-rc1-office.zip` supplied for this candidate after its checks pass. It has not been published as a release. The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and separate [larger-model 0.8 test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older downloads without the new controls.
-2. Extract the ZIP to a local folder. Keep **index.html**, **assets**, **vendor** and **models** together.
-3. Double-click **index.html**.
+1. Open the [passed 1.0 package run](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100#artifacts). Sign in to GitHub if asked. Under **Artifacts**, choose **habemus-office-evidence-windows-latest** for the office desktop.
+2. Extract that artifact ZIP. Open **dist**. Find **PBGC-RAG-1.0-rc1-office.zip** and extract this ZIP too. If you already have the app ZIP directly, extract it once.
+3. Open the extracted app folder. Keep **index.html**, **assets**, **vendor** and **models** together. Double-click **index.html** from that folder.
 4. Choose **Get started**, then **Start Qwen**.
 5. Wait for the ready message. Follow the guide to add documents.
 
+GitHub wraps the app ZIP in an outer artifact ZIP. Extract both before opening the app. The app download is about 777 MB; allow 4 GB of free disk space while extracting and saving work. The target computer has 16 GB of RAM. The tested matrix used Chromium on Windows and Ubuntu.
+
+This is the verified 1.0 release candidate for an office pilot. Its runtime is `d3ce073`; all four source/package Windows/Ubuntu jobs passed. The existing tested ZIP remains unchanged by this guide update. See the [verification record](evidence/habemus-1.0-rc1-verified.json).
+
+Artifacts are retained for seven days after the run. If expired, request a fresh verified candidate package. The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and [larger-model 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older permanent downloads without the new controls. No 1.0 release tag has replaced them.
+
 Qwen is the included local assistant. You do not need to find a model file, install software, open a terminal or run a server. Model startup can take time on the local CPU. The app shows progress and lets you cancel.
 
-The GitHub source-code ZIP and small core developer ZIP are not complete office packages. Keep the stable and larger-model packages in separate folders. The larger-model package uses Qwen2.5 1.5B Instruct Q3_K_S; it is an experiment, not a promise of better answers.
+The GitHub source-code ZIP and small core developer ZIP are not complete office packages. This 1.0 candidate includes Qwen2.5 1.5B Instruct Q3_K_S. Broader real-plan answer quality remains pilot work. Keep older packages in separate folders.
 
 ## Ask your first question
 

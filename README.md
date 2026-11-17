@@ -1,27 +1,80 @@
 # PBGC-RAG
 
-> **1.0 release candidate — separate development branch.** Adds combined factual answers, explicit table column names and reading selected PDF pages. `main` and the published 0.8 packages stay intact. This candidate needs its own complete-ZIP Windows and Ubuntu checks. See the [user guide](docs/USER-GUIDE.md) and [test status](docs/HABEMUS-ACCEPTANCE.md).
-
+[![Maturity: 1.0 RC1, office pilot](https://img.shields.io/badge/maturity-1.0%20RC1%20%7C%20office%20pilot-002D72)](docs/HABEMUS-ACCEPTANCE.md)
+[![Source checks: Windows and Ubuntu passed](https://img.shields.io/badge/source%20checks-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
+[![Complete office ZIP: Windows and Ubuntu passed](https://img.shields.io/badge/office%20ZIP-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
+[![Offline file entry tested](https://img.shields.io/badge/offline%20file%20entry-tested-008065)](docs/evidence/habemus-1.0-rc1-verified.json)
+[![Qwen2.5 1.5B included and tested](https://img.shields.io/badge/Qwen2.5-1.5B%20included%20%26%20tested-002D72)](docs/evidence/habemus-1.0-rc1-verified.json)
+[![English OCR tested offline](https://img.shields.io/badge/English%20OCR-offline%20tested-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
+[![Source citations and save/reopen tested](https://img.shields.io/badge/sources%20%26%20save%2Freopen-tested-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
+[![Accessibility: automated checks passed](https://img.shields.io/badge/accessibility-automated%20checks%20passed-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
 
 Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
 
 PBGC-RAG runs on your computer without sending documents or questions to a service. It is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its current purpose is document search and supported answers. Official templates, actuarial rules and field dictionaries are not required for that workflow.
 
-## Start here
+**Maturity: 1.0 release candidate, ready for office pilot testing.** The complete import → ask → inspect sources → save → reopen flow passed on Windows and Ubuntu. Qwen2.5 1.5B, English scan reading and all required local assets are included. The next validation step is use with representative plan documents on your computer.
 
-1. Use the complete office ZIP for the version you want to test. The published downloads are the [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and separate [larger-model 0.8 test release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0).
-2. Extract the ZIP. Keep `index.html` and its `assets`, `vendor` and `models` folders together.
-3. Double-click `index.html`.
-4. Choose **Get started**, then **Start Qwen**. Follow the guide to add documents and ask your first question.
-5. Open the cited source. Check the words and numbers. Use **Save & reopen** to save a case file before closing the app.
+The badges record tests for runtime commit [`d3ce073`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89) and its complete office ZIP. This documentation update keeps that tested package unchanged. See [verified evidence](#verified-rc1-evidence), the [full user guide](docs/USER-GUIDE.md) and the [machine-readable verification record](docs/evidence/habemus-1.0-rc1-verified.json).
 
-Qwen is included. You do not need to choose a model file, install software or run a server. The GitHub source-code ZIP and small core developer ZIP are not complete office packages. See the [plain-language office guide](docs/OFFICE-START.md).
+## Download the complete office package
 
-The published 0.8 downloads do not include this branch's new controls. The 1.0 candidate uses `PBGC-RAG-1.0-rc1-office.zip` after its candidate checks pass. It has not been published as a release.
+1. Open the [passed 1.0 candidate download run](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100#artifacts). Sign in to GitHub if asked.
+2. Under **Artifacts**, select **habemus-office-evidence-windows-latest** for your office desktop. Choose that one item. The Ubuntu item contains the other tested package copy.
+3. Extract the downloaded artifact ZIP. Open its **dist** folder.
+4. Find **PBGC-RAG-1.0-rc1-office.zip**. Extract this ZIP into its own folder too.
+5. Open the extracted app folder. Double-click **index.html**.
 
-The delivered 0.8 packages passed actual offline file-URL tests on Windows and Ubuntu. Those results apply to their tested versions. This development branch requires its own tests before a new release. Modern browser Blob workers, local cryptography and native decompression support are needed for binary imports.
+**GitHub adds an outer ZIP around the app ZIP. Extract both.** If you already have `PBGC-RAG-1.0-rc1-office.zip` directly, start at step 4.
 
-Create a case or load the synthetic example. The workspace selector keeps up to eight cases and a separate reference library. Search uses only the selected workspace. Original files remain unchanged. Save original downloads the exact bytes. Reading views show clear source locations; Source details holds optional verification metadata. View evidence opens nearby parsed records with precise locators; PDF sources also offer Original PDF page, with page navigation and zoom.
+The app folder should contain these items:
+
+```text
+PBGC-RAG-1.0-rc1-office/
+  index.html                 Open this file.
+  OFFICE-START.md             Plain-language guide.
+  assets/
+  vendor/
+  models/                    Included Qwen files.
+  docs/
+```
+
+Keep the folders beside `index.html`. Open the extracted file, rather than the copy shown inside a ZIP viewer. The complete app ZIP is about **777 MB**, and the extracted files use about **1.05 GB**. Allow **4 GB of free disk space** for the two downloads, extraction and saved work.
+
+The target computer has **16 GB of RAM** and a current browser with local WebAssembly and worker support. The automated matrix used Chromium on Windows and Ubuntu. Browser compatibility is verified for those matrix versions. The app uses the CPU; a GPU is not required.
+
+**No software installation is needed at the office.** No terminal, Python, Node.js, server, account or separate model download is needed to run the app. Internet access is needed to download the package from GitHub; the extracted app runs offline.
+
+Use the complete office ZIP. GitHub’s **Code → Download ZIP** and the small core developer ZIP contain developer files without the included Qwen package.
+
+The candidate is available as a workflow artifact, with **seven-day retention after the run**. If it has expired, request a fresh verified candidate package. Developers can use the [build instructions](#development-checks-and-portable-build). The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and [larger-model 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older permanent downloads; they do not contain the 1.0 controls. The 1.0 candidate has not replaced those releases or `main`.
+
+## Your first case
+
+1. **Start Qwen.** Choose **Get started**, then **Start Qwen**. Wait for the ready message. The model is included; you do not need to choose a model file. Choose **Use source passages instead** if you only want to find and read text.
+2. **Add documents for one case.** Follow the guide and choose your files. You can use the supplied synthetic example to learn the controls. The app keeps original files unchanged.
+3. **Confirm table column names when needed.** For CSV or Excel, open **Check column names** in **Documents**. Preview the row that contains the column names. Choose **Use this row as column names**. SQLite already has stored column names.
+4. **Ask one question.** Choose **Continue to questions**. Enter a short question, such as **What is the normal retirement age?** Use words from the document. For a table, include the person and field, such as **What is Alice’s age?** Include an ID if several rows have that name.
+5. **Check the cited source.** Open **Sources for this question** or **View evidence**. Read the nearby text or value cell. For PDFs, choose **Original PDF page**. **Save original** downloads the unchanged source file. You do not need to read file hashes; those stay under **Source details**.
+6. **Save your case.** Choose **Save & reopen**, then **Save case to a file**. Keep the saved case file. To return later, open the app, use **Save & reopen** to select that case file, and check its filename and document count in the restore summary. Start Qwen again for written answers.
+
+Local answers can take more than a minute. The app shows progress and offers cancellation. If you cancel a model operation, start Qwen again when prompted. Source passages remain available without Qwen.
+
+Use a different case for a different set of documents. The workspace selector holds up to eight cases and a separate reference library. Each question searches the selected workspace. Save a portable case file before closing; browser recovery can be cleared or unavailable.
+
+## If you get stuck
+
+| What you see | What to do |
+| --- | --- |
+| `index.html` opens without the full app, or files seem missing | Extract both ZIPs. Open `index.html` from the folder that also contains `assets`, `vendor` and `models` |
+| Qwen is not ready | Choose **Start Qwen**. Check that you downloaded the complete office ZIP. Follow any browser capability message, or use source passages |
+| A question was cancelled or timed out | Start Qwen again when prompted. Ask for one fact, or use source passages |
+| No supported answer | Check the selected case and **Searched:** line. Ask one complete question. Add the missing source or use **Search** to find its words |
+| A table answer is unavailable | Confirm the column-name row. Include the person’s name and ID when needed. Formulas and unclear table layouts do not supply answer values |
+| A PDF image has missing text | Open **Original PDF page**, go to the page and choose **Read text from this page**. English scan reading is included |
+| Saved work is missing after reopening | Use **Save & reopen** to open the case file you saved. Read the restore summary; browser recovery is best effort |
+
+For a longer walkthrough, read the [office guide](docs/OFFICE-START.md) and [first-case tutorial](docs/USER-GUIDE.md).
 
 ## Supported extraction
 
@@ -98,7 +151,28 @@ IndexedDB, then localStorage, then memory are capability-selected. Recovery reta
 
 Exports and recovery are plaintext. SHA-256 detects inconsistent content; it does not authenticate authorship. Original bytes may be sensitive. Only synthetic fixtures belong in this public repository or remote development environment.
 
+## Verified RC1 evidence
+
+The verified application runtime is commit [`d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89). All four required platform jobs passed for that commit:
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Windows source workflow | PASS | [Offline file entry, full regressions, actual-model quality and whole-process resource checks](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663979) |
+| Ubuntu source workflow | PASS | [Same source workflow on Ubuntu](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663857) |
+| Windows complete office ZIP | PASS | [Included-model startup, sources, scans, PDF pages, document selection, table setup, save/reopen and combined/table answers](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663540) |
+| Ubuntu complete office ZIP | PASS | [Same extracted-package workflow on Ubuntu](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663958) |
+
+The package checks opened the extracted `index.html` through actual offline `file://` URLs, including a folder path with spaces. Qwen ran locally without a model picker. Network isolation, source hashes, exact citations, cancellation, English OCR and original-page reading were checked. Automated accessibility checks cover the implemented controls, layouts and theme contrast; they are not a Section 508 or WCAG certification.
+
+**Maturity limits:** This is an integrated release candidate for an office pilot. In the small fixed factual evaluation, three of four questions produced correct cited answers and one declined to answer. This is **75% supported-answer coverage on four synthetic questions**, not a general accuracy or code-coverage score. All four unsafe test cases were blocked or reported as conflicts. Representative real-plan quality, broader browser coverage and manual assistive-technology acceptance remain to be evaluated.
+
+The sampled source workloads peaked at about 2.49 GB on Ubuntu and 2.55 GB on Windows, within the unchanged 12 GB test budget. The local complete-ZIP startup/answer/OCR test peaked at about 4.53 GB. These measurements apply to the tested workloads. Detailed values, model identity and links are in the [verification record](docs/evidence/habemus-1.0-rc1-verified.json).
+
+The badges above are evidence snapshots for the verified runtime and ZIP. A documentation-only follow-up does not create a new tested binary, change the office ZIP or imply that a new application commit passed these old runs. `main` and the published 0.8 packages remain intact. Each GitHub artifact includes `test-results/habemus-candidate.json` with the digest of its own inner office ZIP; an outer artifact digest identifies a different file.
+
 ## Development checks and portable build
+
+These commands are for development, outside the office. Tool setup is described in [automation instructions](docs/AUTOMATION.md). To reproduce the verified runtime, first check out commit `d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89`. Prepare its pinned local model with `python tools/prepare-models.py` before building the complete office package.
 
 ```sh
 node tools/check.js
@@ -115,7 +189,7 @@ Development tests need Node, Playwright, Chromium and Python's standard library 
 
 ## Current limits and next development
 
-The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. This 1.0 candidate adds combined facts, confirmed table column names and selected-page PDF reading to the earlier document-selection flow. Its final commit needs its own source and complete-package checks on Windows and Ubuntu. See [candidate verification](docs/HABEMUS-ACCEPTANCE.md).
+The current model is conservative and can decline a valid question. The larger model has not been shown to be more accurate on real plan documents. The fixed synthetic evaluation is small; broader question coverage remains to be measured. This verified 1.0 candidate adds combined facts, confirmed table column names and selected-page PDF reading to the earlier document-selection flow. Its four source/package Windows/Ubuntu gates passed for runtime `d3ce073`. See [candidate verification](docs/HABEMUS-ACCEPTANCE.md).
 
 Other OCR languages, full PDF table reconstruction, broader format/query support and complete assistive-technology/performance evaluation remain unfinished. See PROGRESS.md, ACCEPTANCE.md and BLOCKERS.md for test scope.
 

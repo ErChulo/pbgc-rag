@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "application": "PBGC-RAG",
+  "version": "1.0-rc1",
+  "verifiedRuntimeCommit": "d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89",
+  "maturity": "Release candidate; ready for office pilot testing",
+  "scope": "Offline documentary RAG: import, retrieve, answer with sources, read original evidence, save and reopen.",
+  "allFourPlatformGatesPassed": true,
+  "observedAt": "2026-11-17T20:40:03.336848+00:00",
+  "documentationRecordedAt": "2026-11-17T21:06:01.430277+00:00",
+  "verificationMethod": "Successful exact-commit source and complete-package jobs, actual offline file URLs, real bundled model; local archive read-back and asset checks.",
+  "jobs": [
+    {
+      "key": "source-ubuntu",
+      "id": "133694663857",
+      "runId": "43980279082",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663857",
+      "status": "PASS",
+      "requiredStepsVerified": [
+        "Verify source and supplementary HTTP browser workflow",
+        "Verify actual file browser workflow",
+        "Verify independent real-model question relevance and answer quality offline",
+        "Measure whole-process resource budget on actual offline file profile",
+        "Package synthetic source build",
+        "Upload scoped development evidence"
+      ],
+      "resources": {
+        "file": "resources-file.json",
+        "status": "PASS",
+        "totalMs": 180707,
+        "peakWorkloadBytes": 2490001408,
+        "sourceBytes": 1048805
+      },
+      "quality": {
+        "file": "rag-challenge-qwen-file.json",
+        "answerCoverage": 0.75,
+        "positives": [
+          {
+            "id": "normal-age-paraphrase",
+            "status": "answered"
+          },
+          {
+            "id": "address-recipient",
+            "status": "abstained"
+          },
+          {
+            "id": "bank-document",
+            "status": "answered"
+          },
+          {
+            "id": "retention-period",
+            "status": "answered"
+          }
+        ],
+        "negatives": [
+          {
+            "id": "same-chunk-contradiction",
+            "status": "conflict"
+          },
+          {
+            "id": "document-instruction",
+            "status": "abstained"
+          },
+          {
+            "id": "unavailable-question",
+            "status": "abstained"
+          },
+          {
+            "id": "partial-answer-multiple-properties",
+            "status": "abstained"
+          }
+        ]
+      }
+    },
+    {
+      "key": "source-windows",
+      "id": "133694663979",
+      "runId": "43980279082",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082/job/133694663979",
+      "status": "PASS",
+      "requiredStepsVerified": [
+        "Verify source and supplementary HTTP browser workflow",
+        "Verify actual file browser workflow",
+        "Verify independent real-model question relevance and answer quality offline",
+        "Measure whole-process resource budget on actual offline file profile",
+        "Package synthetic source build",
+        "Upload scoped development evidence"
+      ],
+      "resources": {
+        "file": "resources-file.json",
+        "status": "PASS",
+        "totalMs": 239179,
+        "peakWorkloadBytes": 2553614336,
+        "sourceBytes": 1048805
+      },
+      "quality": {
+        "file": "rag-challenge-qwen-file.json",
+        "answerCoverage": 0.75,
+        "positives": [
+          {
+            "id": "normal-age-paraphrase",
+            "status": "answered"
+          },
+          {
+            "id": "address-recipient",
+            "status": "abstained"
+          },
+          {
+            "id": "bank-document",
+            "status": "answered"
+          },
+          {
+            "id": "retention-period",
+            "status": "answered"
+          }
+        ],
+        "negatives": [
+          {
+            "id": "same-chunk-contradiction",
+            "status": "conflict"
+          },
+          {
+            "id": "document-instruction",
+            "status": "abstained"
+          },
+          {
+            "id": "unavailable-question",
+            "status": "abstained"
+          },
+          {
+            "id": "partial-answer-multiple-properties",
+            "status": "abstained"
+          }
+        ]
+      }
+    },
+    {
+      "key": "package-ubuntu",
+      "id": "133694663958",
+      "runId": "43980279100",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663958",
+      "status": "PASS",
+      "requiredStepsVerified": [
+        "Build the complete candidate ZIP",
+        "Verify the same ZIP offline with real Qwen, OCR and original-page reading",
+        "Extract the checked candidate to a path with spaces",
+        "Check the previous separate-question flow in the extracted candidate",
+        "Check actual scoped Qwen answers in the extracted candidate",
+        "Check table setup, original evidence and save/reopen",
+        "Check real mixed-page OCR and unchanged review bindings",
+        "Check actual combined and table answers from bundled Qwen",
+        "Upload exact candidate and test evidence"
+      ]
+    },
+    {
+      "key": "package-windows",
+      "id": "133694663540",
+      "runId": "43980279100",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100/job/133694663540",
+      "status": "PASS",
+      "requiredStepsVerified": [
+        "Build the complete candidate ZIP",
+        "Verify the same ZIP offline with real Qwen, OCR and original-page reading",
+        "Extract the checked candidate to a path with spaces",
+        "Check the previous separate-question flow in the extracted candidate",
+        "Check actual scoped Qwen answers in the extracted candidate",
+        "Check table setup, original evidence and save/reopen",
+        "Check real mixed-page OCR and unchanged review bindings",
+        "Check actual combined and table answers from bundled Qwen",
+        "Upload exact candidate and test evidence"
+      ]
+    }
+  ],
+  "model": {
+    "schemaVersion": 1,
+    "id": "qwen2.5-1.5b-instruct-q3-k-s",
+    "name": "Qwen2.5 1.5B Instruct Q3_K_S",
+    "license": "Apache-2.0",
+    "source": "https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-weights-v1",
+    "chatTemplate": "chatml",
+    "files": [
+      {
+        "name": "qwen2.5-1.5b-instruct-q3_k_s.gguf",
+        "bytes": 760944640,
+        "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d"
+      }
+    ]
+  },
+  "localOfficeZip": {
+    "name": "PBGC-RAG-1.0-rc1-office.zip",
+    "bytes": 777191282,
+    "sha256": "6b00e3d71d0cb3d4359db14b5f2743cc6bf38f14e777bac85e76263526d89ecd",
+    "expandedBytes": 1049602035,
+    "verifiedManifestAssets": 247,
+    "gitSourceFilesMatched": 152,
+    "CRC": "PASS",
+    "digestScope": "This identifies the preserved locally supplied ZIP. GitHub OS builds have their own inner-ZIP digest in test-results/habemus-candidate.json; the outer artifact is a different file."
+  },
+  "localPackagedModelCheck": {
+    "profile": "supplementary HTTP only",
+    "stage": "complete",
+    "packagedBundledStartup": true,
+    "modelSha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+    "elapsedMs": 160030,
+    "calls": [
+      {
+        "state": "completed",
+        "promptCharacters": 374,
+        "formattedPromptTokens": 118,
+        "prefillBatchSize": 128,
+        "firstTokenMs": 77280,
+        "emittedCharacters": 6,
+        "elapsedMs": 81233
+      },
+      {
+        "state": "completed",
+        "promptCharacters": 284,
+        "formattedPromptTokens": 95,
+        "prefillBatchSize": 128,
+        "firstTokenMs": 61633,
+        "emittedCharacters": 2,
+        "elapsedMs": 63159
+      }
+    ],
+    "statuses": [
+      "answered",
+      "answered"
+    ],
+    "externalRequests": 0
+  },
+  "localPackagedMemory": {
+    "peakWorkloadBytes": 4529041408,
+    "budgetBytes": 12000000000,
+    "samples": 556
+  },
+  "distribution": {
+    "kind": "Verified workflow artifact; existing 1.0 candidate ZIP; no new release publication",
+    "run": "https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100#artifacts",
+    "retentionDays": 7,
+    "mayRequireGitHubSignIn": true,
+    "windowsArtifact": "habemus-office-evidence-windows-latest",
+    "windowsArtifactId": "14282394591",
+    "ubuntuArtifactId": "14283118396",
+    "innerZipPath": "dist/PBGC-RAG-1.0-rc1-office.zip"
+  },
+  "limits": {
+    "factualEvaluation": "Three correct cited answers and one abstention on four fixed synthetic questions; supported-answer coverage is not general accuracy or code coverage.",
+    "unsafeEvaluation": "All four fixed unsafe cases blocked or returned conflict.",
+    "accessibility": "Automated interface/contrast checks; no manual Section 508 or WCAG certification.",
+    "pilot": "Broader real-plan quality and representative workplace workloads remain to be evaluated.",
+    "officialOutputs": "Official actuarial calculations, rules and template generation remain outside this RAG milestone."
+  },
+  "documentationFollowup": {
+    "applicationFilesChanged": false,
+    "existingTestedZipChanged": false,
+    "newBinaryClaimedTested": false,
+    "mainChanged": false,
+    "publishedPackagesChanged": false,
+    "environmentPublished": false
+  }
+}
