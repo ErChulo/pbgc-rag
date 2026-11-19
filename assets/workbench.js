@@ -12,9 +12,9 @@
     if(!Array.isArray(state.annotations)||state.annotations.length>1000)throw Error('Case review supports at most 1,000 annotations.');
     if(state.annotations.length){const result=API.validateEvidenceAnnotations(state.annotations,sources);if(!result.valid)throw Error(result.errors.join(' '));}
     if(state.dictionary!==null){const source=sources.find(s=>s.hash===state.dictionary?.source?.hash);if(!source)throw Error('Dictionary source is missing from this case.');state.dictionary=API.validateDictionary(state.dictionary,source);}
-    if(state.reportLayout!==null)API.buildReport(caseForReview(workspace),state.reportLayout);
+    if(state.reportLayout!==null)API.validateReportBindings(caseForReview(workspace),state.reportLayout);
     if(!Array.isArray(state.graphAssertions)||state.graphAssertions.length>2000||state.graphAssertions.some(edge=>edge.type!=='user-link'))throw Error('Invalid proposed graph links.');
-    const graph=API.buildGraph(sources);graph.edges.push(...state.graphAssertions);API.validateGraph(graph,sources);
+    API.validateGraphAssertions(state.graphAssertions,sources);
     if(!Array.isArray(state.tableHeaders)||state.tableHeaders.length>200)throw Error('Invalid table header mappings.');
     const seen=new Set();for(const header of state.tableHeaders){
       if(!plain(header)||Object.keys(header).some(k=>!['sourceId','tableName','headerRow'].includes(k))||typeof header.sourceId!=='string'||typeof header.tableName!=='string'||header.tableName.length>255||!Number.isInteger(header.headerRow)||header.headerRow<1||header.headerRow>1048576)throw Error('Invalid explicit table header mapping.');

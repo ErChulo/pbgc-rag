@@ -1,5 +1,13 @@
 # Progress
 
+## 1.1 audit remediation — November 18, 2026
+
+**Current branch: `codex/rag-audit-remediation-1.1`; development, not a new release candidate.** The audit used `main` at `c429b8f`. This increment starts from the later documented candidate `d28733f` / tested runtime `d3ce073`, preserving `main` and the prior office ZIP. Earlier pilot claims covered bounded workloads and were too broad for the user's clarified hundreds-of-documents, approximately 1 GB case requirement.
+
+Saved fixes cover property/unit/scope-aware conflicts, plural/acronym topics, single-source attribution, mixed-PDF coverage, unclosed hidden HTML elements, independent recovery snapshots, source/table chunk metadata and retrieval deduplication. A separate IndexedDB Blob/shard store, collection controller, portable original-document archive and large-case UI are being integrated. The 1 GiB limit is configured capacity, not passing workload evidence. See [audit dispositions and exact verification](docs/AUDIT-REMEDIATION-1.1.md).
+
+Independent targeted module rerun: **12** realistic multiparagraph RAG checks, **13** recovery checks, **7** OCR/coverage checks and **5** native-PDF protocol checks PASS. These are synthetic module results, not real-Qwen quality or actual-file browser acceptance for this branch. Full integration, 1 GiB resource/backup/reopen measurement, exact-head Windows/Ubuntu actual-file checks and a fresh independent review remain open. No release or environment publication is part of this increment.
+
 ## Increment 0.5: local integration verified
 
 Implemented real offline English OCR, bounded PDF rasterization and case schema 3 processing profiles. Original scans are preserved; derived text and estimated regions are labelled. Unknown engines and profiles hidden in older schemas reject. Versions 1 and 2 remain readable. The complete office ZIP includes all models, runtimes, licenses and offline audit evidence.

@@ -12,6 +12,15 @@ function mockProvider(generate){return{id:'MOCK-question-set-orchestration-not-m
 const answerFromPrompt=({prompt})=>prompt.includes(JSON.stringify(retentionQuestion))?'Case files are retained for seven years.':'Normal retirement age is 65.';
 const nextTurn=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('MOCK question-set snapshots retain actual chunker provenance and reject changed cut flags',async()=>{
+ const {chunkSources}=require('../assets/chunking.js');
+ const source={id:'source-age',name:'synthetic-age.txt',hash:'a'.repeat(64),parserVersion:'audit-v1',records:[{text:'Normal retirement age is 65.',locator:{type:'text-line',line:1,offset:0},ocr:{engineId:'synthetic-ocr',confidence:55,verification:'unverified-machine-text'},sourceFragment:{startsMidSentence:false,endsMidSentence:false}}]};
+ const chunks=chunkSources([source]).chunks,provider=mockProvider(async()=>source.records[0].text);
+ const result=await answerQuestions({questions:[ageQuestion],chunks,provider,retrieve:async request=>{assert.deepEqual(request.chunks[0].segments,chunks[0].segments);assert.equal(request.chunks[0].minimumOcrConfidence,55);assert.equal(Object.isFrozen(request.chunks[0].segments),true);return chunks;}});
+ assert.equal(result.status,'answered');assert.equal(result.results[0].result.citations[0].hasMachineText,true);
+ await assert.rejects(answerQuestions({questions:[ageQuestion],chunks,provider,retrieve:async()=>chunks.map(c=>({...c,segments:c.segments.map(s=>({...s,startsMidSentence:true}))}))}),/does not bind/);
+});
+
 test('MOCK explicit questions receive separate retrieval and source-bound answers in user order',async()=>{
  const calls=[],progress=[],chunks=[age(),retention()];let active=0,maxActive=0;
  const result=await answerQuestions({questions:['  '+ageQuestion+'  ',retentionQuestion],chunks,provider:mockProvider(async args=>{active++;maxActive=Math.max(maxActive,active);await nextTurn();const answer=answerFromPrompt(args);active--;return answer;}),retrieve:async request=>{calls.push(request.question);assert.equal(request.index,calls.length-1);assert.ok(Object.isFrozen(request.chunks));return request.chunks.filter(value=>request.index===0?value.id==='age':value.id==='retention');},onProgress:event=>{progress.push(event);assert.deepEqual(Object.keys(event).sort(),['index','phase','total']);}});

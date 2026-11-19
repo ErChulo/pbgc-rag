@@ -1,0 +1,704 @@
+{
+  "schemaVersion": 1,
+  "evaluationId": "synthetic-pbgc-retrieval-domain-v1",
+  "fixtureSha256": "a3d1c0cae8e105df51c791897e0923a72a7bade14babc27049ecdd271d839c58",
+  "providerId": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+  "modelSha256": "27819b70b83fb24a493792db7bdf6b9cae4a1531df408809d1e57d580a3e9087",
+  "documents": 6,
+  "paragraphs": 35,
+  "positiveQuestions": 22,
+  "unanswerableQuestions": 12,
+  "profiles": [
+    {
+      "maxChars": 1800,
+      "maxTokens": 400,
+      "overlapChars": 257,
+      "chunks": 7,
+      "recallAt1": 1,
+      "recallAt3": 1,
+      "elapsedMs": 1217,
+      "thresholds": [
+        {
+          "minScore": 0.25,
+          "relevantTargetRetained": 22,
+          "relevantQuestionsWithAnyHit": 22,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.3,
+          "relevantTargetRetained": 22,
+          "relevantQuestionsWithAnyHit": 22,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.35,
+          "relevantTargetRetained": 20,
+          "relevantQuestionsWithAnyHit": 20,
+          "unanswerableQuestionsWithHit": 11
+        },
+        {
+          "minScore": 0.4,
+          "relevantTargetRetained": 19,
+          "relevantQuestionsWithAnyHit": 19,
+          "unanswerableQuestionsWithHit": 11
+        },
+        {
+          "minScore": 0.45,
+          "relevantTargetRetained": 16,
+          "relevantQuestionsWithAnyHit": 16,
+          "unanswerableQuestionsWithHit": 9
+        },
+        {
+          "minScore": 0.5,
+          "relevantTargetRetained": 12,
+          "relevantQuestionsWithAnyHit": 12,
+          "unanswerableQuestionsWithHit": 6
+        },
+        {
+          "minScore": 0.55,
+          "relevantTargetRetained": 9,
+          "relevantQuestionsWithAnyHit": 9,
+          "unanswerableQuestionsWithHit": 5
+        },
+        {
+          "minScore": 0.6,
+          "relevantTargetRetained": 8,
+          "relevantQuestionsWithAnyHit": 8,
+          "unanswerableQuestionsWithHit": 3
+        },
+        {
+          "minScore": 0.65,
+          "relevantTargetRetained": 7,
+          "relevantQuestionsWithAnyHit": 7,
+          "unanswerableQuestionsWithHit": 3
+        },
+        {
+          "minScore": 0.7,
+          "relevantTargetRetained": 6,
+          "relevantQuestionsWithAnyHit": 6,
+          "unanswerableQuestionsWithHit": 3
+        },
+        {
+          "minScore": 0.75,
+          "relevantTargetRetained": 1,
+          "relevantQuestionsWithAnyHit": 1,
+          "unanswerableQuestionsWithHit": 1
+        },
+        {
+          "minScore": 0.8,
+          "relevantTargetRetained": 0,
+          "relevantQuestionsWithAnyHit": 0,
+          "unanswerableQuestionsWithHit": 0
+        }
+      ],
+      "positive": [
+        {
+          "question": "What is the normal retirement age for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, normal retirement age is 65.",
+          "targetRank": 1,
+          "targetScore": 0.721503,
+          "topScore": 0.721503,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the normal retirement age for Birch participants?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, normal retirement age is 67.",
+          "targetRank": 1,
+          "targetScore": 0.710439,
+          "topScore": 0.710439,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "The early retirement factor at age 60 is 0.80.",
+          "targetRank": 1,
+          "targetScore": 0.735936,
+          "topScore": 0.735936,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the ERF at 60 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "The early retirement factor at age 60 is 0.80.",
+          "targetRank": 1,
+          "targetScore": 0.518009,
+          "topScore": 0.518009,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Birch participants?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the early retirement factor at age 60 is 0.75.",
+          "targetRank": 1,
+          "targetScore": 0.714379,
+          "topScore": 0.714379,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the late retirement factor at age 70 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the late retirement factor at age 70 is 1.30.",
+          "targetRank": 1,
+          "targetScore": 0.723969,
+          "topScore": 0.723969,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the LRF at 70 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the late retirement factor at age 70 is 1.30.",
+          "targetRank": 1,
+          "targetScore": 0.423831,
+          "topScore": 0.423831,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the benefit form conversion factor for Birch?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the benefit form conversion factor for a joint and survivor payment is 0.92.",
+          "targetRank": 1,
+          "targetScore": 0.546916,
+          "topScore": 0.546916,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the BFCF for Birch?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the benefit form conversion factor for a joint and survivor payment is 0.92.",
+          "targetRank": 1,
+          "targetScore": 0.484264,
+          "topScore": 0.484264,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the disability benefit percentage for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the disability benefit is 60 percent of the accrued monthly benefit.",
+          "targetRank": 1,
+          "targetScore": 0.508607,
+          "topScore": 0.508607,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What money is available to an Atlas widow?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the surviving spouse receives monthly income after the participant dies.",
+          "targetRank": 1,
+          "targetScore": 0.342899,
+          "topScore": 0.342899,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "Can a Birch participant cash out everything at once?",
+          "sourceId": "birch-plan",
+          "quote": "The Birch plan permits a single lump sum instead of a series of monthly installments.",
+          "targetRank": 1,
+          "targetScore": 0.464169,
+          "topScore": 0.464169,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the adjusted funding target attainment percentage for Cedar in 2024?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2024, the adjusted funding target attainment percentage is 82 percent.",
+          "targetRank": 1,
+          "targetScore": 0.799263,
+          "topScore": 0.799263,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the AFTAP for Cedar in 2024?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2024, the adjusted funding target attainment percentage is 82 percent.",
+          "targetRank": 1,
+          "targetScore": 0.487767,
+          "topScore": 0.487767,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the AFTAP for Cedar in 2023?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2023, the adjusted funding target attainment percentage is 79 percent.",
+          "targetRank": 1,
+          "targetScore": 0.483146,
+          "topScore": 0.483146,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "How does a Delta participant report a residential relocation?",
+          "sourceId": "delta-admin",
+          "quote": "A participant who moves to a new residence must report the new mailing address in writing.",
+          "targetRank": 1,
+          "targetScore": 0.437912,
+          "topScore": 0.437912,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "What happens to a Delta application received after June 30?",
+          "sourceId": "delta-admin",
+          "quote": "An application received after June 30 is returned for additional review.",
+          "targetRank": 1,
+          "targetScore": 0.417808,
+          "topScore": 0.417808,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "Where are the signed Delta election forms kept?",
+          "sourceId": "delta-admin",
+          "quote": "Signed election forms are stored in locked cabinets.",
+          "targetRank": 1,
+          "targetScore": 0.385802,
+          "topScore": 0.385802,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "Which Delta form lists the bank account number?",
+          "sourceId": "delta-admin",
+          "quote": "The direct deposit form lists the bank account number.",
+          "targetRank": 1,
+          "targetScore": 0.348073,
+          "topScore": 0.348073,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "When was the Elm amendment signed?",
+          "sourceId": "elm-events",
+          "quote": "The Elm plan amendment was signed on March 15, 2019.",
+          "targetRank": 1,
+          "targetScore": 0.56395,
+          "topScore": 0.56395,
+          "topSourceId": "elm-events"
+        },
+        {
+          "question": "Does a Fir applicant need a doctor to verify an illness?",
+          "sourceId": "fir-medical",
+          "quote": "A physician must certify the medical condition before Fir disability payments begin.",
+          "targetRank": 1,
+          "targetScore": 0.644757,
+          "topScore": 0.644757,
+          "topSourceId": "fir-medical"
+        },
+        {
+          "question": "What happens to a Fir medical certification with a missing signature?",
+          "sourceId": "fir-medical",
+          "quote": "A missing signature causes the medical certification to be returned for completion.",
+          "targetRank": 1,
+          "targetScore": 0.682217,
+          "topScore": 0.682217,
+          "topSourceId": "fir-medical"
+        }
+      ],
+      "negative": [
+        {
+          "question": "Which mortality table applies to Atlas benefits?",
+          "topScore": 0.496353,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the Atlas cash balance interest crediting rate for 2024?",
+          "topScore": 0.459436,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the Birch maximum cash-out amount?",
+          "topScore": 0.452798,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the normal retirement age for Cedar participants?",
+          "topScore": 0.50988,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 55 for Atlas participants?",
+          "topScore": 0.729627,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Delta participants?",
+          "topScore": 0.583709,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the adjusted funding target attainment percentage for Cedar in 2025?",
+          "topScore": 0.777418,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the survivor benefit percentage for Fir participants?",
+          "topScore": 0.320772,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the Elm plan termination date?",
+          "topScore": 0.569567,
+          "topSourceId": "elm-events"
+        },
+        {
+          "question": "What is the pension benefit formula for Delta?",
+          "topScore": 0.425693,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the Birch late retirement factor at age 70?",
+          "topScore": 0.73028,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the Atlas joint and survivor benefit form conversion factor?",
+          "topScore": 0.428403,
+          "topSourceId": "atlas-plan"
+        }
+      ]
+    },
+    {
+      "maxChars": 800,
+      "maxTokens": 400,
+      "overlapChars": 114,
+      "chunks": 15,
+      "recallAt1": 0.772727,
+      "recallAt3": 1,
+      "elapsedMs": 1169,
+      "thresholds": [
+        {
+          "minScore": 0.25,
+          "relevantTargetRetained": 22,
+          "relevantQuestionsWithAnyHit": 22,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.3,
+          "relevantTargetRetained": 22,
+          "relevantQuestionsWithAnyHit": 22,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.35,
+          "relevantTargetRetained": 21,
+          "relevantQuestionsWithAnyHit": 21,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.4,
+          "relevantTargetRetained": 19,
+          "relevantQuestionsWithAnyHit": 21,
+          "unanswerableQuestionsWithHit": 12
+        },
+        {
+          "minScore": 0.45,
+          "relevantTargetRetained": 15,
+          "relevantQuestionsWithAnyHit": 17,
+          "unanswerableQuestionsWithHit": 10
+        },
+        {
+          "minScore": 0.5,
+          "relevantTargetRetained": 12,
+          "relevantQuestionsWithAnyHit": 12,
+          "unanswerableQuestionsWithHit": 8
+        },
+        {
+          "minScore": 0.55,
+          "relevantTargetRetained": 10,
+          "relevantQuestionsWithAnyHit": 10,
+          "unanswerableQuestionsWithHit": 4
+        },
+        {
+          "minScore": 0.6,
+          "relevantTargetRetained": 8,
+          "relevantQuestionsWithAnyHit": 8,
+          "unanswerableQuestionsWithHit": 4
+        },
+        {
+          "minScore": 0.65,
+          "relevantTargetRetained": 7,
+          "relevantQuestionsWithAnyHit": 7,
+          "unanswerableQuestionsWithHit": 3
+        },
+        {
+          "minScore": 0.7,
+          "relevantTargetRetained": 6,
+          "relevantQuestionsWithAnyHit": 6,
+          "unanswerableQuestionsWithHit": 3
+        },
+        {
+          "minScore": 0.75,
+          "relevantTargetRetained": 1,
+          "relevantQuestionsWithAnyHit": 1,
+          "unanswerableQuestionsWithHit": 1
+        },
+        {
+          "minScore": 0.8,
+          "relevantTargetRetained": 0,
+          "relevantQuestionsWithAnyHit": 0,
+          "unanswerableQuestionsWithHit": 0
+        }
+      ],
+      "positive": [
+        {
+          "question": "What is the normal retirement age for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, normal retirement age is 65.",
+          "targetRank": 1,
+          "targetScore": 0.721503,
+          "topScore": 0.721503,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the normal retirement age for Birch participants?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, normal retirement age is 67.",
+          "targetRank": 1,
+          "targetScore": 0.710439,
+          "topScore": 0.710439,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "The early retirement factor at age 60 is 0.80.",
+          "targetRank": 1,
+          "targetScore": 0.735936,
+          "topScore": 0.735936,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the ERF at 60 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "The early retirement factor at age 60 is 0.80.",
+          "targetRank": 1,
+          "targetScore": 0.518009,
+          "topScore": 0.518009,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Birch participants?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the early retirement factor at age 60 is 0.75.",
+          "targetRank": 1,
+          "targetScore": 0.714379,
+          "topScore": 0.714379,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the late retirement factor at age 70 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the late retirement factor at age 70 is 1.30.",
+          "targetRank": 2,
+          "targetScore": 0.721347,
+          "topScore": 0.723969,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the LRF at 70 for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the late retirement factor at age 70 is 1.30.",
+          "targetRank": 2,
+          "targetScore": 0.356148,
+          "topScore": 0.423831,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the benefit form conversion factor for Birch?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the benefit form conversion factor for a joint and survivor payment is 0.92.",
+          "targetRank": 1,
+          "targetScore": 0.590088,
+          "topScore": 0.590088,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the BFCF for Birch?",
+          "sourceId": "birch-plan",
+          "quote": "For Birch participants, the benefit form conversion factor for a joint and survivor payment is 0.92.",
+          "targetRank": 2,
+          "targetScore": 0.392032,
+          "topScore": 0.484264,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the disability benefit percentage for Atlas participants?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the disability benefit is 60 percent of the accrued monthly benefit.",
+          "targetRank": 1,
+          "targetScore": 0.587357,
+          "topScore": 0.587357,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What money is available to an Atlas widow?",
+          "sourceId": "atlas-plan",
+          "quote": "For Atlas participants, the surviving spouse receives monthly income after the participant dies.",
+          "targetRank": 2,
+          "targetScore": 0.341994,
+          "topScore": 0.342899,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "Can a Birch participant cash out everything at once?",
+          "sourceId": "birch-plan",
+          "quote": "The Birch plan permits a single lump sum instead of a series of monthly installments.",
+          "targetRank": 3,
+          "targetScore": 0.424025,
+          "topScore": 0.464169,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the adjusted funding target attainment percentage for Cedar in 2024?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2024, the adjusted funding target attainment percentage is 82 percent.",
+          "targetRank": 1,
+          "targetScore": 0.799263,
+          "topScore": 0.799263,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the AFTAP for Cedar in 2024?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2024, the adjusted funding target attainment percentage is 82 percent.",
+          "targetRank": 1,
+          "targetScore": 0.487767,
+          "topScore": 0.487767,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the AFTAP for Cedar in 2023?",
+          "sourceId": "cedar-funding",
+          "quote": "For Cedar in 2023, the adjusted funding target attainment percentage is 79 percent.",
+          "targetRank": 1,
+          "targetScore": 0.483146,
+          "topScore": 0.483146,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "How does a Delta participant report a residential relocation?",
+          "sourceId": "delta-admin",
+          "quote": "A participant who moves to a new residence must report the new mailing address in writing.",
+          "targetRank": 1,
+          "targetScore": 0.436389,
+          "topScore": 0.436389,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "What happens to a Delta application received after June 30?",
+          "sourceId": "delta-admin",
+          "quote": "An application received after June 30 is returned for additional review.",
+          "targetRank": 1,
+          "targetScore": 0.415648,
+          "topScore": 0.415648,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "Where are the signed Delta election forms kept?",
+          "sourceId": "delta-admin",
+          "quote": "Signed election forms are stored in locked cabinets.",
+          "targetRank": 1,
+          "targetScore": 0.420861,
+          "topScore": 0.420861,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "Which Delta form lists the bank account number?",
+          "sourceId": "delta-admin",
+          "quote": "The direct deposit form lists the bank account number.",
+          "targetRank": 1,
+          "targetScore": 0.498796,
+          "topScore": 0.498796,
+          "topSourceId": "delta-admin"
+        },
+        {
+          "question": "When was the Elm amendment signed?",
+          "sourceId": "elm-events",
+          "quote": "The Elm plan amendment was signed on March 15, 2019.",
+          "targetRank": 1,
+          "targetScore": 0.531294,
+          "topScore": 0.531294,
+          "topSourceId": "elm-events"
+        },
+        {
+          "question": "Does a Fir applicant need a doctor to verify an illness?",
+          "sourceId": "fir-medical",
+          "quote": "A physician must certify the medical condition before Fir disability payments begin.",
+          "targetRank": 1,
+          "targetScore": 0.639971,
+          "topScore": 0.639971,
+          "topSourceId": "fir-medical"
+        },
+        {
+          "question": "What happens to a Fir medical certification with a missing signature?",
+          "sourceId": "fir-medical",
+          "quote": "A missing signature causes the medical certification to be returned for completion.",
+          "targetRank": 1,
+          "targetScore": 0.682607,
+          "topScore": 0.682607,
+          "topSourceId": "fir-medical"
+        }
+      ],
+      "negative": [
+        {
+          "question": "Which mortality table applies to Atlas benefits?",
+          "topScore": 0.508594,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the Atlas cash balance interest crediting rate for 2024?",
+          "topScore": 0.461678,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the Birch maximum cash-out amount?",
+          "topScore": 0.505956,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the normal retirement age for Cedar participants?",
+          "topScore": 0.50988,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 55 for Atlas participants?",
+          "topScore": 0.729627,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the early retirement factor at age 60 for Delta participants?",
+          "topScore": 0.614876,
+          "topSourceId": "atlas-plan"
+        },
+        {
+          "question": "What is the adjusted funding target attainment percentage for Cedar in 2025?",
+          "topScore": 0.777418,
+          "topSourceId": "cedar-funding"
+        },
+        {
+          "question": "What is the survivor benefit percentage for Fir participants?",
+          "topScore": 0.407667,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the Elm plan termination date?",
+          "topScore": 0.548554,
+          "topSourceId": "elm-events"
+        },
+        {
+          "question": "What is the pension benefit formula for Delta?",
+          "topScore": 0.462058,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the Birch late retirement factor at age 70?",
+          "topScore": 0.73028,
+          "topSourceId": "birch-plan"
+        },
+        {
+          "question": "What is the Atlas joint and survivor benefit form conversion factor?",
+          "topScore": 0.444061,
+          "topSourceId": "birch-plan"
+        }
+      ]
+    }
+  ],
+  "notice": "Synthetic retrieval screening evaluation only. Questions and invented provisions do not certify factual truth, general PBGC accuracy, model answer quality, or office scale."
+}

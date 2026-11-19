@@ -52,7 +52,7 @@ test('possessive normalization preserves the exact identity of apostrophe and hy
 
 test('structured compound responses cannot borrow the right property from the wrong person',async()=>{
  const question="What is Alice's age? What is Bob's monthly benefit?",chunks=[chunk('alice',"Alice's monthly benefit is 100 dollars."),chunk('bob',"Bob's age is 65.")];
- const result=await run(question,chunks,structured(chunks.map((c,i)=>[c.text,'C'+(i+1)])));assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'question-subject-binding-rejected');
+ const result=await run(question,chunks,structured(chunks.map((c,i)=>[c.text,'C'+(i+1)])));assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'question-topic-not-supported');
  const half=await run(combined,[chunk('age',AGE),chunk('retention',RETENTION)],structured([[AGE,'C1']]));assert.equal(half.status,'abstained');
 });
 

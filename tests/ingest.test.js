@@ -4,8 +4,10 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
+const {webcrypto}=require('node:crypto');
 const root=path.resolve(__dirname,'..');
 const moduleSource=fs.readFileSync(path.join(root,'assets/ingest.js'),'utf8');
+const generated={};vm.runInNewContext(fs.readFileSync(path.join(root,'vendor/ingest-worker-source.js'),'utf8'),generated);
 const result=text=>({parserVersion:'test-1',records:[{text,locator:{type:'test'}}],warnings:[]});
 function environment(options={}){
   const workers=[],revoked=[];
@@ -15,35 +17,36 @@ function environment(options={}){
     terminate(){this.terminated=true;}
     reply(payload){this.onmessage({data:{type:'result',requestId:this.message.requestId,result:payload}});}
   }
-  const sandbox={module:{exports:{}},Uint8Array,ArrayBuffer,Blob,setTimeout,clearTimeout,Worker:options.noWorker?undefined:MockWorker,URL:{createObjectURL:()=> 'blob:test-'+workers.length,revokeObjectURL:url=>revoked.push(url)},PBGCRagIngestWorkerSource:'trusted generated code',PBGCRag:{parseBytes:async(name,bytes)=>result(new TextDecoder().decode(bytes))}};
+  const sandbox={module:{exports:{}},Uint8Array,ArrayBuffer,TextEncoder,Blob,setTimeout,clearTimeout,crypto:options.crypto||webcrypto,Worker:options.noWorker?undefined:MockWorker,URL:{createObjectURL:()=> 'blob:test-'+workers.length,revokeObjectURL:url=>revoked.push(url)},PBGCRagIngestWorkerSource:generated.PBGCRagIngestWorkerSource,PBGCRag:{parseBytes:async(name,bytes)=>result(new TextDecoder().decode(bytes))}};
   vm.runInNewContext(moduleSource,sandbox);
-  return {api:sandbox.module.exports,workers,revoked,sandbox};
+  async function ready(count=1){for(let i=0;i<1000&&workers.length<count;i++)await new Promise(resolve=>setTimeout(resolve,1));assert.equal(workers.length,count);}
+  return {api:sandbox.module.exports,workers,revoked,sandbox,ready};
 }
 test('isolated parser serializes workers, copies inputs and releases each worker URL',async()=>{
   const env=environment(),bytes=new Uint8Array([65]),first=env.api.parseIsolatedBytes('first.docx',bytes),second=env.api.parseIsolatedBytes('second.docx',bytes);
-  assert.equal(env.workers.length,1);assert.notEqual(env.workers[0].message.bytes,bytes.buffer);assert.equal(bytes[0],65);
+  await env.ready();assert.notEqual(env.workers[0].message.bytes,bytes.buffer);assert.equal(bytes[0],65);
   env.workers[0].reply(result('one'));assert.equal((await first).records[0].text,'one');
-  assert.equal(env.workers[0].terminated,true);assert.equal(env.workers.length,2);
+  assert.equal(env.workers[0].terminated,true);await env.ready(2);
   env.workers[1].reply(result('two'));assert.equal((await second).records[0].text,'two');
   assert.equal(env.workers[1].terminated,true);assert.equal(env.revoked.length,2);
 });
 test('active and queued cancellation reject without running cancelled queue entries',async()=>{
   const env=environment(),active=new AbortController(),queued=new AbortController();
   const first=env.api.parseIsolatedBytes('a.docx',new Uint8Array([1]),{signal:active.signal});
-  const second=env.api.parseIsolatedBytes('b.docx',new Uint8Array([1]),{signal:queued.signal});
+  const second=env.api.parseIsolatedBytes('b.docx',new Uint8Array([1]),{signal:queued.signal});await env.ready();
   const firstRejected=assert.rejects(first,error=>error.name==='AbortError'),secondRejected=assert.rejects(second,error=>error.name==='AbortError');
   queued.abort();active.abort();await Promise.all([firstRejected,secondRejected]);
   assert.equal(env.workers.length,1);assert.equal(env.workers[0].terminated,true);assert.equal(env.revoked.length,1);
 });
 test('hard timeout terminates stalled workers and later requests can run',async()=>{
-  const env=environment();await assert.rejects(env.api.parseIsolatedBytes('stalled.docx',new Uint8Array([1]),{timeoutMs:5}),/time limit/);
-  assert.equal(env.workers[0].terminated,true);const next=env.api.parseIsolatedBytes('next.docx',new Uint8Array([1]));env.workers[1].reply(result('ok'));assert.equal((await next).records[0].text,'ok');
+  const env=environment();await assert.rejects(env.api.parseIsolatedBytes('stalled.docx',new Uint8Array([1]),{timeoutMs:50}),/time limit/);
+  assert.equal(env.workers[0].terminated,true);const next=env.api.parseIsolatedBytes('next.docx',new Uint8Array([1]));await env.ready(2);env.workers[1].reply(result('ok'));assert.equal((await next).records[0].text,'ok');
 });
 test('worker startup/runtime/message errors reject and release resources',async()=>{
   const blocked=environment({block:true});await assert.rejects(blocked.api.parseIsolatedBytes('x.docx',new Uint8Array([1])),/unavailable/);assert.equal(blocked.revoked.length,1);
-  const env=environment(),first=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));env.workers[0].onerror({preventDefault(){}});await assert.rejects(first,/worker failed/);
-  const second=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));env.workers[1].onmessageerror();await assert.rejects(second,/transferred/);
-  const third=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));env.workers[2].reply({parserVersion:'bad',records:[],warnings:null});await assert.rejects(third,/invalid records/);
+  const env=environment(),first=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));await env.ready();env.workers[0].onerror({preventDefault(){}});await assert.rejects(first,/worker failed/);
+  const second=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));await env.ready(2);env.workers[1].onmessageerror();await assert.rejects(second,/transferred/);
+  const third=env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]));await env.ready(3);env.workers[2].reply({parserVersion:'bad',records:[],warnings:null});await assert.rejects(third,/invalid records/);
   assert.equal(env.revoked.length,3);assert.ok(env.workers.every(worker=>worker.terminated));
 });
 test('bounded text fallback is explicit and binary formats never fall back',async()=>{
@@ -56,17 +59,31 @@ test('queue, byte and timeout limits reject malformed requests before extra allo
   const env=environment(),controller=new AbortController(),pending=[];
   for(let i=0;i<9;i++)pending.push(env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]),{signal:controller.signal}).catch(error=>error));
   await assert.rejects(env.api.parseIsolatedBytes('extra.docx',new Uint8Array([1])),/queue is full/);
-  controller.abort();await Promise.all(pending);assert.equal(env.workers.length,1);
+  controller.abort();await Promise.all(pending);assert.equal(env.workers.length,0);
   for(const timeoutMs of [0,-1,15001,NaN,1.5])await assert.rejects(env.api.parseIsolatedBytes('x.docx',new Uint8Array([1]),{timeoutMs}),/timeout/);
-  await assert.rejects(env.api.parseIsolatedBytes('x.docx',new Uint8Array(5*1024*1024+1)),/5 MB/);
+  await assert.rejects(env.api.parseIsolatedBytes('x.docx',new Uint8Array(5*1024*1024+1)),/selected parser budget/);
 });
-test('generated source is self-contained and current for available parser modules',()=>{
+test('generated source and runtime SHA pin are self-contained and current',()=>{
   const source=fs.readFileSync(path.join(root,'vendor/ingest-worker-source.js'),'utf8');
   assert.doesNotMatch(source,/\bimportScripts\s*\(/);assert.doesNotMatch(source,/\b(?:eval|fetch)\s*\(/);assert.doesNotMatch(source,/new\s+Function\s*\(/);
-  const sandbox={};vm.runInNewContext(source,sandbox);assert.equal(typeof sandbox.PBGCRagIngestWorkerSource,'string');new vm.Script(sandbox.PBGCRagIngestWorkerSource);
-  const check=require('node:child_process').spawnSync('python',['tools/build-ingest-worker.py','--check'],{cwd:root,encoding:'utf8'});assert.equal(check.status,0,check.stderr);
+  new vm.Script(generated.PBGCRagIngestWorkerSource);
+  const {spawnSync}=require('node:child_process');let check=spawnSync('python',['tools/build-ingest-worker.py','--check'],{cwd:root,encoding:'utf8'});if(check.error?.code==='ENOENT')check=spawnSync('python3',['tools/build-ingest-worker.py','--check'],{cwd:root,encoding:'utf8'});assert.equal(check.status,0,check.stderr);
 });
-
+test('mutated workers fail integrity before allocation, including a cached trusted-source mutation',async()=>{
+  const env=environment();await env.api.verifyIngestWorkerSource(generated.PBGCRagIngestWorkerSource);
+  env.sandbox.PBGCRagIngestWorkerSource+='\nself.onmessage = function(){};';
+  await assert.rejects(env.api.parseIsolatedBytes('bad.txt',new Uint8Array([65])),/SHA-256 integrity/);
+  assert.equal(env.workers.length,0);assert.equal(env.revoked.length,0);
+  env.sandbox.PBGCRagIngestWorkerSource=generated.PBGCRagIngestWorkerSource;const next=env.api.parseIsolatedBytes('good.txt',new Uint8Array([65]));await env.ready();env.workers[0].reply(result('A'));await next;
+});
+test('pending integrity verification cannot allocate a worker after cancellation or timeout',async()=>{
+  for(const mode of ['cancel','timeout']){
+    let release;const crypto={subtle:{digest:()=>new Promise(resolve=>{release=()=>webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(generated.PBGCRagIngestWorkerSource)).then(resolve);})}};
+    const env=environment({crypto}),controller=new AbortController(),pending=env.api.parseIsolatedBytes('slow.docx',new Uint8Array([1]),{signal:controller.signal,timeoutMs:mode==='timeout'?5:1000});
+    const rejected=assert.rejects(pending,error=>mode==='timeout'?/time limit/.test(error.message):error.name==='AbortError');if(mode==='cancel')controller.abort();await rejected;await release();await new Promise(resolve=>setTimeout(resolve,10));
+    assert.equal(env.workers.length,0);assert.equal(env.revoked.length,0);
+  }
+});
 
 function syntheticOfficeBytes(){
   const {deflateRawSync}=require('node:zlib'),parts=[['[Content_Types].xml','<Types/>'],['word/document.xml','<w:document xmlns:w="word"><w:body><w:p><w:r><w:t>Synthetic isolated Office evidence</w:t></w:r></w:p></w:body></w:document>']];
@@ -96,14 +113,19 @@ test('real Chromium Blob worker supports strict-CSP parsing, failure, timeout an
       const parsed=await PBGCRag.parseIsolatedBytes('case.txt',input);
       const office=await PBGCRag.parseIsolatedBytes('case.docx',new Uint8Array(officeBytes));
       let invalid='';try{await PBGCRag.parseIsolatedBytes('bad.docx',input);}catch(error){invalid=error.message;}
-      const original=PBGCRagIngestWorkerSource;PBGCRagIngestWorkerSource='self.onmessage = function () { while (true) {} };';
-      let timedOut='';try{await PBGCRag.parseIsolatedBytes('stalled.docx',input,{timeoutMs:30});}catch(error){timedOut=error.message;}
-      const controller=new AbortController();const promise=PBGCRag.parseIsolatedBytes('cancel.docx',input,{signal:controller.signal});controller.abort();let cancelled='';try{await promise;}catch(error){cancelled=error.name;}
-      PBGCRagIngestWorkerSource=original;const recovered=await PBGCRag.parseIsolatedBytes('after.txt',input);
-      return {parsed,office,inputLength:input.length,invalid,timedOut,cancelled,recovered};
+      const original=PBGCRagIngestWorkerSource;PBGCRagIngestWorkerSource+='\nself.onmessage = function () {};';
+      let tampered='';try{await PBGCRag.parseIsolatedBytes('tampered.docx',input);}catch(error){tampered=error.message;}
+      PBGCRagIngestWorkerSource=original;
+      // Leave the verified Blob worker idle by suppressing its message transfer.
+      // The test harness must not replace trusted worker code to test a deadline.
+      const NativeWorker=Worker;globalThis.Worker=class extends NativeWorker{postMessage(){}};
+      let timedOut='',cancelled='';try{await PBGCRag.parseIsolatedBytes('stalled.docx',input,{timeoutMs:30});}catch(error){timedOut=error.message;}
+      const controller=new AbortController();const promise=PBGCRag.parseIsolatedBytes('cancel.docx',input,{signal:controller.signal});controller.abort();try{await promise;}catch(error){cancelled=error.name;}
+      globalThis.Worker=NativeWorker;const recovered=await PBGCRag.parseIsolatedBytes('after.txt',input);
+      return {parsed,office,inputLength:input.length,invalid,tampered,timedOut,cancelled,recovered};
     },syntheticOfficeBytes());
     assert.equal(actual.office.records[0].text,'Synthetic isolated Office evidence');assert.equal(actual.office.records[0].locator.paragraph,1);
-    assert.equal(actual.parsed.records[0].text,'Synthetic worker evidence');assert.equal(actual.parsed.records[1].locator.line,2);assert.ok(actual.inputLength>0);assert.match(actual.invalid,/ZIP/);assert.match(actual.timedOut,/time limit/);assert.equal(actual.cancelled,'AbortError');assert.equal(actual.recovered.records.length,2);
+    assert.equal(actual.parsed.records[0].text,'Synthetic worker evidence');assert.equal(actual.parsed.records[1].locator.line,2);assert.ok(actual.inputLength>0);assert.match(actual.invalid,/ZIP/);assert.match(actual.tampered,/SHA-256 integrity/);assert.match(actual.timedOut,/time limit/);assert.equal(actual.cancelled,'AbortError');assert.equal(actual.recovered.records.length,2);
     assert.ok(requests.every(url=>new URL(url).origin===origin),'No requests leave intercepted local origin');
   }finally{await context.close();await browser.close();}
 });

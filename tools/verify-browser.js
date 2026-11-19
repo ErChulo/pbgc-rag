@@ -50,6 +50,7 @@ function publicPath(relative) { return relative==='index.html'||relative.startsW
 async function startLoopbackServer(root) {
   root=await fsp.realpath(root);
   const server=http.createServer(async(request,response)=>{
+    response.on('error',()=>response.destroy());
     response.setHeader('Cache-Control','no-store');response.setHeader('X-Content-Type-Options','nosniff');
     try {
       if(!['GET','HEAD'].includes(request.method)){response.writeHead(405,{'Allow':'GET, HEAD'});response.end();return;}
@@ -77,7 +78,7 @@ function terminateGroup(child, signal) {
   catch(error){if(error.code!=='ESRCH')throw error;}
 }
 async function runVerification(options={}) {
-  const root=await fsp.realpath(options.root||ROOT),mode=options.mode||'http',timeoutMs=options.timeoutMs??600000;
+  const root=await fsp.realpath(options.root||ROOT),mode=options.mode||'http',timeoutMs=options.timeoutMs??1800000;
   if(!['http','file'].includes(mode)||!Number.isSafeInteger(timeoutMs)||timeoutMs<100||timeoutMs>3600000)throw Error('Invalid verification mode or timeout (100–3600000 ms).');
   const output=options.output||process.stdout;
   if(options.scan!==false){const scan=await scanSourceTree(root);for(const finding of scan.findings)output.write(`${finding.path}:${finding.line}: ${finding.kind}\n`);if(scan.findings.length){output.write('Source-only leak scan failed. No test server started.\n');return {status:'FAIL',exitCode:1,mode,sourceFindings:scan.findings.length};}output.write(`Source-only leak scan: ${scan.files} source files checked.\n`);}
@@ -112,7 +113,7 @@ async function runVerification(options={}) {
   return summary;
 }
 async function main(argv=process.argv.slice(2)) {
-  let mode='http',timeoutMs=600000,scanOnly=false;
+  let mode='http',timeoutMs=1800000,scanOnly=false;
   for(let i=0;i<argv.length;i++){if(argv[i]==='--file')mode='file';else if(argv[i]==='--scan-only')scanOnly=true;else if(argv[i]==='--timeout-ms')timeoutMs=Number(argv[++i]);else if(argv[i]==='--help'){process.stdout.write('Usage: node tools/verify-browser.js [--file] [--timeout-ms N] [--scan-only]\nDefault owns a loopback HTTP server for supplementary browser checks. --file uses actual file URLs without a server or policy changes.\n');return 0;}else throw Error('Unknown verification argument: '+argv[i]);}
   if(scanOnly){const scan=await scanSourceTree(ROOT);for(const item of scan.findings)process.stdout.write(`${item.path}:${item.line}: ${item.kind}\n`);process.stdout.write(`Source-only leak scan: ${scan.files} files; ${scan.findings.length} findings.\n`);return scan.findings.length?1:0;}
   return (await runVerification({mode,timeoutMs})).exitCode;

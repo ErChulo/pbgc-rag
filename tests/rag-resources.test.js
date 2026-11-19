@@ -2,7 +2,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
-const {descendants,parseProcStat,parseSmaps,aggregateRows,createAccumulator,windowsCollectorScript,monitorResources,syntheticCorpus,cgroupLimits,runBenchmark}=require('../tools/measure-resources.js');
+const {descendants,parseProcStat,parseSmaps,aggregateRows,createAccumulator,createSamplerDiagnostics,windowsCollectorScript,monitorResources,syntheticCorpus,cgroupLimits,runBenchmark}=require('../tools/measure-resources.js');
 
 test('process tree includes renderer/worker descendants and excludes unrelated processes and sampler subtree',()=>{
  const rows=[{pid:10,ppid:1},{pid:11,ppid:10},{pid:12,ppid:11},{pid:13,ppid:12},{pid:14,ppid:1},{pid:15,ppid:10},{pid:16,ppid:15}];
@@ -42,6 +42,21 @@ test('resource corpus is bounded actual 1 MiB text across 128 sources with exact
 });
 test('Windows sampler uses persistent process counters without command-line or environment capture',()=>{
  const script=windowsCollectorScript(123,200);assert.match(script,/WorkingSet64/);assert.match(script,/TotalProcessorTime/);assert.match(script,/ParentProcessId/);assert.match(script,/ProgressPreference = 'SilentlyContinue'/);assert.match(script,/UTF8Encoding/);assert.doesNotMatch(script,/CommandLine|Get-ChildItem Env:|Get-Content/);assert.throws(()=>windowsCollectorScript('unsafe',200),/Invalid/);
+});
+test('nonfatal collector stderr stays a bounded warning and repeated failures retain an exact count',()=>{
+ const diagnostics=createSamplerDiagnostics();
+ for(let i=0;i<1000;i++)diagnostics.warning('PowerShell startup diagnostic '+i);
+ assert.deepEqual(diagnostics.summary().errors,[]);assert.equal(diagnostics.summary().errorCount,0);
+ for(let i=0;i<1000;i++)diagnostics.error(Error('Synthetic failed counter sample '+i));
+ const report=diagnostics.summary();assert.equal(report.warningCount,1000);assert.equal(report.warnings.length,50);assert.equal(report.errorCount,1000);assert.equal(report.errors.length,50);assert.equal(report.errors[0],'Synthetic failed counter sample 0');
+ report.errors.length=0;assert.equal(diagnostics.summary().errors.length,50);
+});
+test('independent Windows collector CPU and memory are reported separately from workload counters',()=>{
+ const recorder=createAccumulator({budgetBytes:1000});const row={pid:1,ppid:0,startId:'a',rssBytes:200,pssBytes:null,cpuMs:10};
+ recorder.accept({timestamp:1000,rows:[row],collector:{cpuMs:800,rssBytes:1200,privateBytes:700}});
+ recorder.accept({timestamp:1200,rows:[{...row,cpuMs:30}],collector:{cpuMs:950,rssBytes:1500,privateBytes:650}});
+ const report=recorder.summary();assert.equal(report.cpuMs,20);assert.equal(report.peak.rssBytes,200);assert.equal(report.exceeded,false);assert.deepEqual(report.collector,{samples:2,cpuMs:150,peakRssBytes:1500,peakPrivateBytes:700});
+ assert.throws(()=>recorder.accept({timestamp:1400,rows:[row],collector:{cpuMs:NaN,rssBytes:0,privateBytes:0}}),/collector overhead/);
 });
 test('live whole-process sampler captures this process rather than only V8 heap',{skip:!['linux','win32'].includes(process.platform)},async()=>{
  let monitor;try{monitor=await monitorResources();}catch(error){if(process.env.GITHUB_ACTIONS)console.log('::error title=Process sampler startup::'+(/process-enumeration/.test(error.message)?'CIM enumeration failed':/process-counters/.test(error.message)?'Process counters failed':/wrote an error/.test(error.message)?'PowerShell stderr was reported':/initialize/.test(error.message)?'Sampler initialization timed out':/ENOENT/.test(error.message)?'PowerShell unavailable':'Sampler failed to initialize'));throw error;}const start=Date.now();while(monitor.summary().samples<2&&Date.now()-start<(process.platform==='win32'?15000:5000))await new Promise(resolve=>setTimeout(resolve,50));const report=await monitor.stop();if(process.env.GITHUB_ACTIONS)console.log('::notice title=Live process sampler::'+JSON.stringify({platform:process.platform,samples:report.samples,peakRssBytes:report.peak.rssBytes,errorCount:report.errors.length}));assert.ok(report.samples>=2);assert.ok(report.peak.rssBytes>10*1024*1024);assert.deepEqual(report.errors,[]);

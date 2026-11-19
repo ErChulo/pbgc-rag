@@ -23,6 +23,36 @@ BASE = 'https://github.com/rtynbirf/singulyar-llm/releases/download/weights-v1/'
 RECOVERY_URL = 'https://github.com/ErChulo/pbgc-rag/releases/download/office-v0.7.0/PBGC-RAG-0.7-office.zip'
 RECOVERY_BYTES = 504833381
 RECOVERY_SHA256 = '7b32a3646f481baf225a580325c9b42584aa5509a35184f0d90441288c2de440'
+DOWNLOAD_ERRORS = (urllib.error.URLError, TimeoutError, OSError, ValueError)
+
+def download_pinned(url, output, byte_count, sha256, attempts=2):
+    """Bound every response before writing it; replace only after pinned checks.
+
+    One retry covers transient HTTP errors, timeouts and short responses. A bad
+    response never replaces an existing verified cache or leaves a partial file.
+    This is development tooling; the office application never downloads models.
+    """
+    temporary = output.with_suffix('.download')
+    for attempt in range(attempts):
+        try:
+            actual = hashlib.sha256()
+            total = 0
+            with urllib.request.urlopen(url, timeout=120) as response, temporary.open('wb') as target:
+                while block := response.read(min(1024 * 1024, byte_count - total + 1)):
+                    total += len(block)
+                    if total > byte_count:
+                        raise ValueError('Download exceeds pinned byte count')
+                    actual.update(block)
+                    target.write(block)
+            if total != byte_count or actual.hexdigest() != sha256:
+                raise ValueError('Download integrity check failed')
+            temporary.replace(output)
+            return
+        except DOWNLOAD_ERRORS:
+            if attempt + 1 == attempts:
+                raise
+        finally:
+            temporary.unlink(missing_ok=True)
 
 def digest(path):
     result = hashlib.sha256()
@@ -82,22 +112,9 @@ def restore_office_model(archive_path, output_path, spec, archive_sha256):
 
 def download_recovery(output, spec):
     archive = output.parent / '.office-v0.7.0.zip'
-    temporary = archive.with_suffix('.download')
-    try:
-        if not (archive.is_file() and archive.stat().st_size == RECOVERY_BYTES and digest(archive) == RECOVERY_SHA256):
-            with urllib.request.urlopen(RECOVERY_URL, timeout=120) as response, temporary.open('wb') as target:
-                total = 0
-                while block := response.read(1024 * 1024):
-                    total += len(block)
-                    if total > RECOVERY_BYTES:
-                        raise ValueError('Recovery download exceeds pinned byte count')
-                    target.write(block)
-            if temporary.stat().st_size != RECOVERY_BYTES or digest(temporary) != RECOVERY_SHA256:
-                raise ValueError('Recovery download integrity check failed')
-            temporary.replace(archive)
-        restore_office_model(archive, output, spec, RECOVERY_SHA256)
-    finally:
-        temporary.unlink(missing_ok=True)
+    if not (archive.is_file() and archive.stat().st_size == RECOVERY_BYTES and digest(archive) == RECOVERY_SHA256):
+        download_pinned(RECOVERY_URL, archive, RECOVERY_BYTES, RECOVERY_SHA256)
+    restore_office_model(archive, output, spec, RECOVERY_SHA256)
 
 def download_larger_model(output, spec):
     """Fetch the separate experimental pack during development, never at office runtime."""
@@ -105,27 +122,13 @@ def download_larger_model(output, spec):
             or not 491400032 < spec['bytes'] <= 768 * 1024 * 1024):
         raise ValueError('Experimental model must be larger than stable and within 768 MiB')
     url = 'https://github.com/ErChulo/pbgc-rag/releases/download/larger-model-weights-v1/' + spec['name']
-    temporary = output.with_suffix('.download')
-    try:
-        total = 0
-        actual = hashlib.sha256()
-        with urllib.request.urlopen(url, timeout=120) as response, temporary.open('wb') as target:
-            while block := response.read(1024 * 1024):
-                total += len(block)
-                if total > spec['bytes']:
-                    raise ValueError('Experimental download exceeds pinned model byte count')
-                actual.update(block)
-                target.write(block)
-        if total != spec['bytes'] or actual.hexdigest() != spec['sha256']:
-            raise ValueError('Experimental model integrity check failed')
-        temporary.replace(output)
-    finally:
-        temporary.unlink(missing_ok=True)
+    download_pinned(url, output, spec['bytes'], spec['sha256'])
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, default=ROOT / 'dist' / 'models')
     parser.add_argument('--parts-dir', type=Path, help='Use already downloaded parts; no network.')
+    parser.add_argument('--model-file', type=Path, help='Use a previously saved GGUF matching the pinned manifest; no network.')
     parser.add_argument('--verify-only', action='store_true')
     args = parser.parse_args()
     manifest_path = ROOT / 'vendor/local-llm/bundled.manifest.json'
@@ -136,6 +139,21 @@ def main():
     if not (output.is_file() and output.stat().st_size == spec['bytes'] and digest(output) == spec['sha256']):
         if args.verify_only:
             raise SystemExit('FAIL: prepared model missing or integrity check failed')
+        if args.model_file:
+            if not (args.model_file.is_file() and args.model_file.stat().st_size == spec['bytes'] and digest(args.model_file) == spec['sha256']):
+                raise SystemExit('FAIL: local GGUF does not match the pinned model')
+            temporary = output.with_suffix('.partial')
+            try:
+                shutil.copyfile(args.model_file, temporary)
+                if temporary.stat().st_size != spec['bytes'] or digest(temporary) != spec['sha256']:
+                    raise ValueError('Local GGUF changed during the copy')
+                temporary.replace(output)
+            finally:
+                temporary.unlink(missing_ok=True)
+            shutil.copyfile(manifest_path, args.out / manifest_path.name)
+            shutil.copyfile(ROOT / 'vendor/local-llm/LICENSE.Qwen2.5', args.out / 'LICENSE.Qwen2.5')
+            print(json.dumps({'status':'PASS','path':str(output),'bytes':spec['bytes'],'sha256':spec['sha256']}))
+            return
         if manifest['id'] != 'qwen2.5-0.5b-instruct-q4-k-m':
             if args.parts_dir:
                 raise SystemExit('The larger model uses a separate complete GGUF, not the stable six-part pack.')
@@ -155,15 +173,7 @@ def main():
                     if args.parts_dir:
                         raise SystemExit(f'FAIL: local part {index} integrity')
                     url = BASE + f'qwen2.5-0.5b-instruct-q4_k_m.part-{index:02}-of-06.bin'
-                    temporary = part.with_suffix('.download')
-                    try:
-                        with urllib.request.urlopen(url, timeout=120) as response, temporary.open('wb') as target:
-                            shutil.copyfileobj(response, target)
-                        if temporary.stat().st_size != size or digest(temporary) != expected:
-                            raise ValueError(f'Part {index} integrity check failed')
-                        temporary.replace(part)
-                    finally:
-                        temporary.unlink(missing_ok=True)
+                    download_pinned(url, part, size, expected)
                 paths.append(part)
             temporary = output.with_suffix('.partial')
             try:
@@ -176,8 +186,8 @@ def main():
                 temporary.replace(output)
             finally:
                 temporary.unlink(missing_ok=True)
-        except urllib.error.HTTPError as error:
-            if args.parts_dir or error.code not in {404, 410}:
+        except DOWNLOAD_ERRORS:
+            if args.parts_dir:
                 raise
             print('Pinned external parts are unavailable; recovering identical weights from our verified office release.', flush=True)
             download_recovery(output, spec)

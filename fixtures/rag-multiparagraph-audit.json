@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Synthetic documentary guard regression corpus. These invented provisions are not PBGC rules, model-quality evidence, or real participant data.",
+  "sources": [
+    {
+      "id": "cedar-plan",
+      "name": "synthetic-cedar-plan.txt",
+      "paragraphs": [
+        "SYNTHETIC CEDAR PLAN — TEST DATA ONLY. This invented document has eight paragraphs so that several documentary subjects share a real retrieval chunk.",
+        "Normal retirement age is 65. The application form asks the member to select a payment date and provide a mailing address. The plan administrator records the request in the case file.",
+        "Disability benefits before normal retirement age equal 60 percent of the accrued monthly benefit. A medical review records the disability decision. The review does not change the normal retirement age.",
+        "Early retirement factors at age 60 equal 0.80. Early retirement factors at age 61 equal 0.84. The factor schedule is a separate provision from disability benefits. These invented values are used only in software tests.",
+        "The minimum monthly benefit is 125 dollars. Payment instructions identify the bank account on the direct deposit form. A surviving spouse receives monthly income after the participant dies.",
+        "Case files are retained for seven years. The archive contains 240 boxes on 12 shelves. Storage counts describe the archive and do not establish a pension provision.",
+        "The synthetic service register contains 320 entries. Staff check names and addresses before they issue correspondence. No real person or case is represented in this register.",
+        "The booklet has 48 pages and 6 appendices. Staff use the contents page to find the retirement provisions, factor schedule and payment instructions. The page and appendix counts are administrative details."
+      ]
+    },
+    {"id":"archive","name":"synthetic-archive.txt","paragraphs":["The archive stores 100 boxes in Room 12. Storage cabinet capacity is 100 boxes. Storage cabinet capacity is 200 boxes. These conflicting administrative counts are unrelated to pension retirement ages."]},
+    {"id":"spouse","name":"synthetic-survivor-guide.txt","paragraphs":["A surviving spouse receives monthly income after the participant dies. The guide has 18 pages and 3 examples. The election form records the spouse's mailing address."]},
+    {"id":"medical","name":"synthetic-medical-guide.txt","paragraphs":["The medical checklist has 8 questions. A physician signs the disability certificate. The review team records a 60 percent disability payment in the synthetic worksheet."]},
+    {"id":"bank","name":"synthetic-payment-guide.txt","paragraphs":["The bank account number is listed on the direct deposit form. The example transfer is 125 dollars monthly. The form contains 2 signature boxes."]},
+    {"id":"mail","name":"synthetic-address-guide.txt","paragraphs":["Send an address change to the plan administrator. The mail room processes 50 letters each week. The example address is invented for this test."]},
+    {"id":"records","name":"synthetic-records-guide.txt","paragraphs":["Case files are retained for seven years. Record 24 describes the correspondence log. Record 25 describes the document index."]},
+    {"id":"service","name":"synthetic-service-guide.txt","paragraphs":["The service register contains 320 entries. Each entry has a name and an employment date. The example register contains no actual participant data."]},
+    {"id":"contacts","name":"synthetic-contact-guide.txt","paragraphs":["The contact directory has 20 entries. The administrator reviews the directory every 6 months. The directory does not state pension eligibility or actuarial factors."]}
+  ],
+  "expected": {
+    "retirementAge": "Normal retirement age is 65.",
+    "earlyFactors": "Early retirement factors at age 60 equal 0.80.",
+    "survivor": "A surviving spouse receives monthly income after the participant dies."
+  }
+}

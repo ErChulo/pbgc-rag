@@ -1,0 +1,73 @@
+name: Verify large-case audit workload
+
+on:
+  push:
+    branches: ['codex/rag-audit-remediation-1.1']
+  workflow_dispatch:
+    inputs:
+      case_mib:
+        description: 'Original UTF-8 corpus MiB, a multiple of 4 (1024 is the scale target)'
+        required: true
+        default: '1024'
+        type: string
+
+# This workflow tests source code. It cannot publish packages or environments.
+permissions:
+  contents: read
+
+concurrency:
+  group: large-case-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  large-case:
+    if: github.ref == 'refs/heads/codex/rag-audit-remediation-1.1'
+    name: actual-file large case (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Leave setup, browser shutdown and evidence-upload time beyond the runner's
+    # 116.7-minute workload deadline.
+    timeout-minutes: 130
+    defaults:
+      run:
+        shell: bash
+    env:
+      CASE_MIB: ${{ inputs.case_mib || '1024' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned development Chromium tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbgc-large-case" --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$RUNNER_TEMP/pbgc-large-case/node_modules/playwright/cli.js" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/pbgc-large-case/node_modules" >> "$GITHUB_ENV"
+          CHROMIUM_PATH="$(NODE_PATH="$RUNNER_TEMP/pbgc-large-case/node_modules" node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          echo "CHROMIUM_PATH=$CHROMIUM_PATH" >> "$GITHUB_ENV"
+      - name: Verify generated parser assets are current
+        run: |
+          python tools/build-ingest-worker.py --check
+          python vendor/pdfjs/build-worker-source.py --check
+          python vendor/pdfjs/build-ocr-worker.py --check
+      - name: Measure actual offline file import, search, reopen and backup
+        # No model is downloaded or loaded. Model quality is a separate gate.
+        run: |
+          mkdir -p test-results
+          node tools/measure-large-case.js --file --mib "$CASE_MIB" --timeout-ms 7000000 --out test-results/large-case-file.json 2>&1 | tee test-results/large-case-file.log
+      - name: Preserve exact workload and process-resource evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: large-case-audit-${{ matrix.os }}
+          path: |
+            test-results/large-case*.json
+            test-results/large-case*.log
+          if-no-files-found: warn
+          retention-days: 14

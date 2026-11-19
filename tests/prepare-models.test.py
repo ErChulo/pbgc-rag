@@ -4,10 +4,13 @@ import base64
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
+import urllib.error
 import zipfile
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / 'tools' / 'prepare-models.py'
@@ -114,6 +117,68 @@ class RecoverOfficeModel(unittest.TestCase):
         pack['chunks'][0]['bytes'] += 1
         self.build(pack=pack)
         self.assert_rejected()
+
+
+class BoundedDownloads(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory(prefix='pbgc bounded download ')
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.output = self.root / 'model.gguf'
+        self.data = b'GGUF synthetic pinned bytes'
+
+    def test_oversize_response_stops_before_writing_extra_bytes_and_preserves_cache(self):
+        self.output.write_bytes(b'previous verified bytes')
+        with mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=lambda *_args, **_kwargs: io.BytesIO(self.data + b'x' * 100000)) as opened:
+            with self.assertRaisesRegex(ValueError, 'exceeds pinned'):
+                PREPARE.download_pinned('https://example.invalid/model', self.output, len(self.data), sha(self.data))
+        self.assertEqual(opened.call_count, 2)
+        self.assertEqual(self.output.read_bytes(), b'previous verified bytes')
+        self.assertFalse(self.output.with_suffix('.download').exists())
+
+    def test_transient_http_error_retries_once_then_checks_exact_hash(self):
+        error = urllib.error.HTTPError('https://example.invalid/model', 503, 'unavailable', None, None)
+        with mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=[error, io.BytesIO(self.data)]) as opened:
+            PREPARE.download_pinned('https://example.invalid/model', self.output, len(self.data), sha(self.data))
+        self.assertEqual(opened.call_count, 2)
+        self.assertEqual(self.output.read_bytes(), self.data)
+        self.assertFalse(self.output.with_suffix('.download').exists())
+
+    def test_short_and_hash_mismatched_responses_never_replace_cache(self):
+        for response in [self.data[:-1], self.data[:-1] + b'!']:
+            self.output.write_bytes(b'previous verified bytes')
+            with mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=lambda *_args, **_kwargs: io.BytesIO(response)):
+                with self.assertRaisesRegex(ValueError, 'integrity'):
+                    PREPARE.download_pinned('https://example.invalid/model', self.output, len(self.data), sha(self.data))
+            self.assertEqual(self.output.read_bytes(), b'previous verified bytes')
+
+    def setup_manifest(self):
+        vendor = self.root / 'vendor/local-llm'
+        vendor.mkdir(parents=True)
+        spec = {'name':'synthetic.gguf', 'bytes':len(self.data), 'sha256':sha(self.data)}
+        (vendor / 'bundled.manifest.json').write_text(json.dumps({'id':'qwen2.5-0.5b-instruct-q4-k-m', 'files':[spec]}))
+        (vendor / 'LICENSE.Qwen2.5').write_text('Synthetic license fixture')
+        return spec
+
+    def test_any_primary_network_failure_uses_verified_recovery_after_retry(self):
+        self.setup_manifest()
+        failures = [urllib.error.HTTPError('https://example.invalid', code, 'failed', None, None) for code in [403, 404, 500]] + [TimeoutError('timeout'), urllib.error.URLError('connection reset')]
+        for failure in failures:
+            self.output.unlink(missing_ok=True)
+            with mock.patch.object(PREPARE, 'ROOT', self.root), mock.patch('sys.argv', ['prepare-models', '--out', str(self.root)]), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=failure) as opened, mock.patch.object(PREPARE, 'download_recovery', side_effect=lambda output, _spec: output.write_bytes(self.data)) as recovery:
+                PREPARE.main()
+            self.assertEqual(opened.call_count, 2)
+            recovery.assert_called_once()
+            # The fixture manifest deliberately names synthetic.gguf.
+            (self.root / 'synthetic.gguf').unlink()
+
+    def test_pinned_local_gguf_cache_needs_no_network(self):
+        self.setup_manifest()
+        local = self.root / 'cached.gguf'
+        local.write_bytes(self.data)
+        with mock.patch.object(PREPARE, 'ROOT', self.root), mock.patch('sys.argv', ['prepare-models', '--out', str(self.root), '--model-file', str(local)]), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=AssertionError('No network allowed')):
+            PREPARE.main()
+        self.assertEqual((self.root / 'synthetic.gguf').read_bytes(), self.data)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 /* Nonofficial report layouts and safe portable representations. No inference. */
 (function (root, factory) {
   'use strict';
-  const review = typeof module === 'object' && module.exports ? require('./review.js') : root.PBGCRag;
+  const review = typeof module === 'object' && module.exports ? Object.assign({},require('./review.js'),require('./graph.js')) : root.PBGCRag;
   const api = factory(review);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.PBGCRag = Object.assign(root.PBGCRag || {}, api);
@@ -43,15 +43,14 @@
     return {valid:errors.length === 0,errors};
   }
   function buildReport(workspace, config) {
-    const validation = validateReportLayout(config);
-    if (!validation.valid) fail(validation.errors.join(' '));
+    const bindings = validateReportBindings(workspace,config);
     const base = review.buildReview(workspace);
+    const inventoryByHash = new Map();
+    for (const item of base.inventory) if (!inventoryByHash.has(item.sourceHash)) inventoryByHash.set(item.sourceHash,item);
     const evidenceLimit = config.maxEvidence === undefined ? LIMITS.evidence : config.maxEvidence;
     const timeline = (config.timeline || []).map((event, index) => {
-      const source = workspace.sources.find(item => item.hash === event.sourceHash);
-      const targetLocator = canonical(event.locator);
-      if (!source || !source.records.some(record => canonical(record.locator) === targetLocator)) fail('Timeline entry ' + (index + 1) + ' does not resolve to a source record.');
-      const inventory = base.inventory.find(item => item.sourceHash === event.sourceHash);
+      if (!bindings[index]) fail('Timeline entry ' + (index + 1) + ' does not resolve to a source record.');
+      const inventory = inventoryByHash.get(event.sourceHash);
       return { date:event.date, label:event.label, sourceRef:inventory.sourceRef, sourceHash:event.sourceHash, locator:JSON.parse(JSON.stringify(event.locator)), verification:'unverified user-supplied date', meaning:'No legal effective date or applicability is inferred.' };
     }).sort((a,b) => a.date.localeCompare(b.date) || a.sourceRef.localeCompare(b.sourceRef) || a.label.localeCompare(b.label));
     return { schemaVersion:1, kind:'nonofficial-source-report', official:false, officialReleaseAllowed:false,
@@ -64,6 +63,17 @@
       summary:`${base.inventory.length} source documents; ${base.totalRecords} parsed records. Documentary text is unverified. No legal or actuarial interpretation is generated.`,
       blockers:[...base.blockers],
       warnings:['NONOFFICIAL REPORT — NOT AN OFFICIAL ARTIFACT.','Source integrity must be verified through the case package workflow.','Timeline dates are explicit user assertions linked to source records; they are not automatically verified.','Evidence excerpts may be incomplete. Read original source documents.'] };
+  }
+  // Saving a layout needs only schema and documentary reference validation.
+  // Export still calls buildReport and the full review renderer above.
+  function validateReportBindings(workspace,config) {
+    const validation = validateReportLayout(config);
+    if (!validation.valid) fail(validation.errors.join(' '));
+    if (!object(workspace) || workspace.schemaVersion !== 1 || typeof workspace.name !== 'string' || !workspace.name.trim() || workspace.name.length > 100 || !Array.isArray(workspace.sources)) fail('Invalid workspace for review.');
+    const index = review.buildSourceRecordIndex(workspace.sources);
+    const matches = review.findSourceRecords(index,config.timeline || []);
+    matches.forEach((record,position)=>{if (!record) fail('Timeline entry ' + (position + 1) + ' does not resolve to a source record.');});
+    return matches;
   }
   function checkedReport(report) {
     if (!object(report) || report.schemaVersion !== 1 || report.kind !== 'nonofficial-source-report' || report.official !== false || report.officialReleaseAllowed !== false || typeof report.title !== 'string' || typeof report.caseName !== 'string' || typeof report.summary !== 'string' || !Array.isArray(report.sections) || report.sections.some(section => !TABLES.includes(section)) || !Array.isArray(report.warnings) || !Array.isArray(report.blockers)) fail('Invalid nonofficial report.');
@@ -100,5 +110,5 @@
     }).join('');
     return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'none\'; img-src \'none\'; connect-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'"><title>' + escapeHTML(report.title) + '</title></head><body><main><h1>' + escapeHTML(report.title) + '</h1><p>Case: ' + escapeHTML(report.caseName) + '</p><p><strong>NONOFFICIAL REPORT — NOT AN OFFICIAL ARTIFACT</strong></p><p>' + escapeHTML(report.summary) + '</p><p>Excerpt coverage: ' + escapeHTML(report.coverage.shownEvidence) + ' records shown out of ' + escapeHTML(report.coverage.totalRecords) + ' parsed records. Maximum ' + escapeHTML(report.coverage.maxExcerptCharacters) + ' characters per excerpt.</p><section><h2>Limitations</h2><ul>' + report.warnings.map(item=>'<li>'+escapeHTML(item)+'</li>').join('') + '</ul></section>' + sections + '<section><h2>Release blockers</h2><ul>' + report.blockers.map(item=>'<li>'+escapeHTML(item)+'</li>').join('') + '</ul></section></main></body></html>\n';
   }
-  return {validateReportLayout,buildReport,reportToCSV,renderReportHTML};
+  return {validateReportLayout,validateReportBindings,buildReport,reportToCSV,renderReportHTML};
 });

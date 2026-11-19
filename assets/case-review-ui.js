@@ -2,7 +2,7 @@
 (function(root){'use strict';
   function mountCaseReview(host){
     const API=root.PBGCRag,$=id=>document.getElementById(id),el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
-    let editingId='',tables=[],activeId=null;
+    let editingId='',tables=[],activeId=null,recordIndex=null,recordSources=null,tableCache=null;
     const active=()=>{const value=host.getWorkspace();if(!value)throw Error('Select a workspace first.');return value;};
     const state=()=>host.getWorkspace()?.workbench||API.emptyWorkbench();
     const action=fn=>{
@@ -14,17 +14,23 @@
     };
     const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
     const canonical=value=>JSON.stringify(value,function(key,item){return item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(k=>[k,item[k]])):item;});
+    function sourceRecords(workspace){if(recordSources!==workspace.sources){recordSources=workspace.sources;recordIndex=API.buildSourceRecordIndex(recordSources);}return recordIndex;}
     function setOptions(id,options,empty){const value=$(id).value;$(id).replaceChildren();if(empty!==undefined)$(id).append(new Option(empty,''));for(const [label,key]of options)$(id).append(new Option(label,key));if(options.some(x=>x[1]===value))$(id).value=value;}
     function preview(){const source=host.getWorkspace()?.sources.find(s=>s.id===$('annotation-source').value),index=Number($('annotation-record').value)-1,record=source?.records[index];$('annotation-record').max=source?.records.length||1;$('annotation-preview').textContent=record?`${API.formatLocation(record.locator)}\n${record.text.slice(0,700)}${record.text.length>700?'…':''}`:'Choose a valid source excerpt.';}
     function currentAnnotation(){return state().annotations.find(a=>a.id===editingId);}
     function populateAnnotation(){const annotation=currentAnnotation();$('annotation-select').value=annotation?.id||'';
       if(annotation){
         for(const [id,value]of Object.entries({'annotation-kind':annotation.kind,'annotation-subject':annotation.subject,'annotation-predicate':annotation.predicate,'annotation-value':annotation.value||'','annotation-authority':annotation.authority.label,'annotation-group':annotation.group||'','annotation-applicability':annotation.applicability,'annotation-from':annotation.validity.from||'','annotation-to':annotation.validity.to||''}))$(id).value=value;
-        const ref=annotation.sources[0],source=active().sources.find(s=>s.hash===ref.sourceHash);if(source){$('annotation-source').value=source.id;const key=canonical(ref.locator);const index=source.records.findIndex(r=>canonical(r.locator)===key);if(index>=0)$('annotation-record').value=index+1;}
+        const workspace=active(),ref=annotation.sources[0],source=workspace.sources.find(s=>s.hash===ref.sourceHash);if(source){$('annotation-source').value=source.id;const found=API.findSourceRecord(sourceRecords(workspace),ref.sourceHash,ref.locator);if(found)$('annotation-record').value=found.recordIndex+1;}
       }
       $('annotation-status').textContent=annotation?`Version ${annotation.version} · ${annotation.status==='reviewed'?'Reviewed content claim recorded':'Proposed — not reviewed'}`:'New observation. Save it before recording a review.';preview();
     }
-    function refreshTables(){const workspace=host.getWorkspace();try{tables=workspace?API.buildTables(workspace.sources,{headers:workspace.workbench?.tableHeaders||[]}):[];setOptions('table-select',tables.map(t=>[`${t.sourceName} · ${t.name}`,t.id]));if(!$('table-query').value||activeId!==workspace?.id)setTableQuery();}catch(error){tables=[];$('table-select').replaceChildren();$('table-results').replaceChildren(el('p',error.message));}}
+    function refreshTables(){const workspace=host.getWorkspace();try{
+      if(workspace){const headers=workspace.workbench?.tableHeaders||[],headerKey=canonical(headers),immutable=API.sourceRecordIndexInfo(sourceRecords(workspace)).immutable,reuse=immutable&&tableCache?.headerKey===headerKey&&tableCache.sources.length===workspace.sources.length&&tableCache.sources.every((source,index)=>source===workspace.sources[index]);
+        tables=reuse?tableCache.tables:API.buildTables(workspace.sources,{headers});tableCache=immutable?{sources:workspace.sources.slice(),headerKey,tables}:null;
+      }else{tables=[];tableCache=null;recordSources=null;recordIndex=null;}
+      setOptions('table-select',tables.map(t=>[`${t.sourceName} · ${t.name}`,t.id]));if(!$('table-query').value||activeId!==workspace?.id)setTableQuery();
+    }catch(error){tables=[];tableCache=null;$('table-select').replaceChildren();$('table-results').replaceChildren(el('p',error.message));}}
     function selectedTable(){const table=tables.find(t=>t.id===$('table-select').value);if(!table)throw Error('Choose a supported source table or sheet.');return table;}
     function setTableQuery(){const table=tables.find(t=>t.id===$('table-select').value);if(table)$('table-query').value=`SELECT * FROM "${table.name.replace(/"/g,'""')}" LIMIT 20`;}
     function resetPrivateForm(){

@@ -1,0 +1,53 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
+const {pathToFileURL}=require('node:url'),{chromium}=require('playwright');
+const {showAllTools}=require('./helpers/ui.js');
+const target=process.env.PBGC_TEST_URL||pathToFileURL(path.resolve(__dirname,'../index.html')).href;
+const profile=target.startsWith('file:')?'actual offline file://':'supplementary HTTP only';
+const idle=page=>page.waitForFunction(()=>document.querySelector('#large-progress').hidden&&!document.querySelector('#large-create').disabled);
+
+test(`${profile} large-case controls import, paginate, search, back up and reopen original documents`,{timeout:180000},async t=>{
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+ const context=await browser.newContext({acceptDownloads:true,viewport:{width:1280,height:900}}),page=await context.newPage(),errors=[],external=[];
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'pbgc-collection-ui-'));
+ if(target.startsWith('file:'))await context.setOffline(true);
+ context.on('request',r=>{if(/^(?:https?|wss?):/.test(r.url())&&(!process.env.PBGC_TEST_URL||!r.url().startsWith(process.env.PBGC_TEST_URL)))external.push(r.url());});
+ await context.route(/^https?:\/\//,r=>process.env.PBGC_TEST_URL&&r.request().url().startsWith(process.env.PBGC_TEST_URL)?r.continue():r.abort());
+ page.on('pageerror',e=>errors.push(e.message));
+ try{
+  await page.goto(target);await showAllTools(page);await page.locator('#open-large-case').click();await idle(page);
+  assert.equal(await page.locator('#large-case-dialog').evaluate(e=>e.open),true);
+  assert.match(await page.locator('#large-case-dialog .storage-notice').innerText(),/Stored unencrypted/);
+  await page.locator('#large-case-name').fill('Synthetic UI case');await page.locator('#large-create').click();await idle(page);
+  const first=await page.locator('#large-case-select').inputValue();assert.ok(first);
+  const files=Array.from({length:26},(_,i)=>({name:`synthetic-ui-${String(i).padStart(2,'0')}.txt`,mimeType:'text/plain',buffer:Buffer.from(`MarkerLargeUI${i} is synthetic evidence.\nThe normal retirement age is 65.\n`)}));
+  await page.locator('#large-files').setInputFiles(files);await idle(page);
+  assert.match(await page.locator('#large-status').innerText(),/26 documents imported/);
+  assert.equal(await page.locator('#large-sources > li').count(),25);
+  assert.equal(await page.locator('#large-scope option').count(),27);
+  await page.locator('#large-source-next').click();await idle(page);
+  assert.equal(await page.locator('#large-sources > li').count(),1);assert.match(await page.locator('#large-source-page').innerText(),/26–26 of 26/);
+  await page.locator('#large-scope').selectOption({label:files[25].name});await idle(page);
+  await page.locator('#large-question').fill('MarkerLargeUI25');await page.locator('#large-ask').click();await idle(page);
+  assert.match(await page.locator('#large-citations').innerText(),/MarkerLargeUI25/);
+  assert.doesNotMatch(await page.locator('#large-citations').innerText(),/\b[a-f0-9]{64}\b|UTF-16|"offset"/);
+  assert.equal(await page.locator('#large-citations article').count(),1);
+  await page.locator('#large-question').fill('MarkerLargeUI24');assert.equal(await page.locator('#large-citations article').count(),0,'Editing the question clears old evidence');
+  const saved=page.waitForEvent('download');await page.locator('#large-export').click();const download=await saved;const backup=path.join(directory,'case.zip');await download.saveAs(backup);await idle(page);
+  assert.ok((await fs.stat(backup)).size>0);
+  await page.locator('#large-backup').setInputFiles(backup);await idle(page);
+  assert.match(await page.locator('#large-status').innerText(),/restored from verified originals/);
+  const restored=await page.locator('#large-case-select').inputValue();assert.notEqual(restored,first);
+  assert.equal(await page.locator('#large-scope option').count(),27);assert.equal(await page.locator('#large-case-select option').count(),3);
+  await page.locator('#large-close').click();await page.reload();await showAllTools(page);await page.locator('#open-large-case').click();await idle(page);
+  await page.locator('#large-case-select').selectOption(restored);await idle(page);assert.equal(await page.locator('#large-scope option').count(),27);
+  await page.locator('#large-scope').selectOption({label:files[25].name});await idle(page);
+  await page.locator('#large-question').fill('MarkerLargeUI25');await page.locator('#large-ask').click();await idle(page);assert.match(await page.locator('#large-citations').innerText(),/MarkerLargeUI25/);
+  page.once('dialog',d=>d.accept());await page.locator('#large-remove-case').click();await idle(page);
+  assert.match(await page.locator('#large-summary').innerText(),/Create a large case/);assert.equal(await page.locator('#large-scope option').count(),1);
+  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+  await page.screenshot({path:path.resolve(__dirname,'../test-results/collection-ui-verified.png'),fullPage:true});
+  t.diagnostic(JSON.stringify({profile,documents:26,restoredOriginals:26,externalRequests:external.length}));
+ }finally{await context.close();await browser.close();await fs.rm(directory,{recursive:true,force:true});}
+});

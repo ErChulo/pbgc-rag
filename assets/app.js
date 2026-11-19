@@ -15,6 +15,10 @@
   let reportLayout = {schemaVersion:1,title:'Source-linked case review',sections:['inventory','evidence','timeline'],maxEvidence:200,timeline:[]};
   let selectedEvidence = null, selectedGraphRecordId = null, graphAssertions = [];
   const viewStates = new Map();
+  const sourceMetrics = new WeakMap(), flatCache = new WeakMap(), flatSourceCache = new WeakMap();
+  let sourcesPage = 0, sourcesWorkspace = null, preparedGraph = null;
+  function immutable(value) { if(value&&typeof value==='object'&&!Object.isFrozen(value)){for(const key of Object.keys(value))immutable(value[key]);Object.freeze(value);}return value; }
+  function metrics(source) { let found=sourceMetrics.get(source);if(found&&Object.isFrozen(source))return found;found={bytes:decode(source.bytesBase64).length,records:source.records.length,jsonBytes:new Blob([JSON.stringify(source)]).size};if(Object.isFrozen(source))sourceMetrics.set(source,found);return found; }
   let caseReviewUI, tableGuideUI, ragUI, flowUI, pdfPreview;
   const status = message => { $('status').textContent = message; };
   const el = (tag, text) => { const node = document.createElement(tag); node.textContent = text; return node; };
@@ -54,6 +58,7 @@
     if (busy) return;
     busy = true; abortRequested = false; operationAbort = new AbortController();
     document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = true; });flowUI?.refresh(workspace(),busy);
+    document.querySelectorAll('#theme-toggle,[data-view],#large-close,#large-cancel').forEach(node=>{node.disabled=false;});
     $('cancel-operation').hidden = !cancelable; $('cancel-operation').disabled = false;
     $('progress').hidden = !cancelable;
     try { await fn(); } catch (error) { status(error.message || 'Operation failed.'); }
@@ -61,15 +66,16 @@
       busy = false; operationAbort = null;
       document.querySelectorAll('button,input,select,textarea').forEach(node => { node.disabled = false; });
       $('cancel-operation').hidden = true; $('progress').hidden = true;
-      updateViewerButtons(); pdfPreview?.refreshControls(); renderCheckpoint();flowUI?.refresh(workspace(),busy);
+      updateViewerButtons(); updateSourcePageButtons(); pdfPreview?.refreshControls(); renderCheckpoint();flowUI?.refresh(workspace(),busy);
     }
   }
   $('cancel-operation').addEventListener('click', () => { abortRequested = true; operationAbort?.abort(); status('Cancellation requested. Waiting for the current file check to finish.'); });
   function checkSources(sources) {
     if (sources.length > 200) throw Error('Maximum 200 sources per workspace.');
-    if (sources.reduce((sum, s) => sum + decode(s.bytesBase64).length, 0) > MAX_CASE) throw Error('Workspace exceeds the 20 MB limit.');
-    if (sources.reduce((sum, s) => sum + s.records.length, 0) > 50000) throw Error('Workspace exceeds the 50,000 record limit.');
-    if (new Blob([JSON.stringify(sources)]).size > 39 * 1024 * 1024) throw Error('Parsed workspace exceeds the portable package budget. Use a smaller workspace.');
+    const measures=sources.map(metrics);
+    if (measures.reduce((sum, s) => sum + s.bytes, 0) > MAX_CASE) throw Error('This portable workspace exceeds 20 MB. Use the large case workspace for a larger collection.');
+    if (measures.reduce((sum, s) => sum + s.records, 0) > 50000) throw Error('Workspace exceeds the 50,000 record limit.');
+    if (measures.reduce((sum,s)=>sum+s.jsonBytes+1,2) > 39 * 1024 * 1024) throw Error('Parsed workspace exceeds the portable package budget. Use the large case workspace.');
   }
   function checkCatalog(candidate) {
     if (candidate.cases.length > 8) throw Error('Maximum eight cases in local recovery. Export and close a case first.');
@@ -108,6 +114,7 @@
   async function saveCurrentReviewView(){await updateWorkbench({reportLayout:currentLayout(),graphAssertions});}
   function sourceProcessing(value, name) {
     if (value === undefined) return undefined;
+    if (/\.(png|jpe?g|webp)$/i.test(name) && typeof API.validateImageOcrProfile === 'function') return API.validateImageOcrProfile(value);
     if (!name.toLowerCase().endsWith('.pdf') || typeof API.validatePdfOcrProfile !== 'function') throw Error('Unsupported or changed OCR processing profile. Keep the original package and engine version.');
     return API.validatePdfOcrProfile(value);
   }
@@ -115,10 +122,11 @@
     if (typeof name !== 'string' || !name.trim() || name.length > 255) throw Error('Invalid source name.');
     if (!(bytes instanceof Uint8Array) || bytes.length > MAX_FILE) throw Error('Source exceeds the 5 MB limit.');
     const profile=sourceProcessing(processing,name);
-    const parsed = profile ? await API.parsePdfWithOcr(bytes,{signal:operationAbort?.signal,mode:profile.pdfOcr,...(profile.schemaVersion===2?{base:profile.base,pages:profile.pages}:{}),onProgress:progress=>{const message=`Reading scanned PDF text${progress.page ? ` · page ${progress.page}` : ''}. You can cancel.`;status(message);if(pageReadJob)$('source-read-page-status').textContent=message;}}) : name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
+    const parsed = /\.(png|jpe?g|webp)$/i.test(name) ? await API.parseImageBytes(name,bytes,{signal:operationAbort?.signal}) : profile ? await API.parsePdfWithOcr(bytes,{signal:operationAbort?.signal,mode:profile.pdfOcr,...(profile.schemaVersion===2?{base:profile.base,pages:profile.pages}:profile.schemaVersion===3?{maxPages:profile.maxPages,...(profile.selectedRange?{selectedRange:profile.selectedRange}:{})}:{}),onProgress:progress=>{const message=`Reading scanned PDF text${progress.page ? ` · page ${progress.page}` : ''}. You can cancel.`;status(message);if(pageReadJob)$('source-read-page-status').textContent=message;}}) : name.toLowerCase().endsWith('.pdf') && API.parsePdfBytes ? await API.parsePdfBytes(bytes,{signal:operationAbort?.signal}) : API.parseIsolatedBytes ? await API.parseIsolatedBytes(name,bytes,{signal:operationAbort?.signal}) : await API.parseBytes(name, bytes);
     const {sourceProcessing:parsedProfile,...content}=parsed;
     if(profile && JSON.stringify(sourceProcessing(parsedProfile,name))!==JSON.stringify(profile))throw Error('OCR output does not match the requested processing profile.');
-    return {id: id || crypto.randomUUID(), name, hash: knownHash || await hash(bytes), bytesBase64: base64(bytes), ...content,...(profile?{processing:profile}:{})};
+    const finalProfile=profile||(parsedProfile?sourceProcessing(parsedProfile,name):undefined);
+    return immutable({id: id || crypto.randomUUID(), name, hash: knownHash || await hash(bytes), bytesBase64: base64(bytes), byteLength:bytes.length, ...content,...(finalProfile?{processing:finalProfile}:{})});
   }
   const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) && value !== LIBRARY;
   async function validatePackage(data) {
@@ -198,19 +206,18 @@
       panel.focus({preventScroll:true});panel.scrollIntoView({block:'nearest'});
     }
   }
-  function render() {
-    const active = workspace();
-    $('active-case').textContent = active ? `Active ${catalog.activeId === LIBRARY ? 'library' : 'case'}: ${workspaceLabel(active)}` : 'No active case';
-    $('case-name').value = '';
-    $('workspace-select').replaceChildren(new Option('Select a workspace', ''));
-    for (const c of catalog.cases) $('workspace-select').append(new Option(workspaceLabel(c), c.id));
-    $('workspace-select').append(new Option('Reference library (separate)', LIBRARY));
-    $('workspace-select').value = catalog.activeId || '';
-    $('restore-feedback').hidden=true;$('restore-feedback').replaceChildren();
-    $('sources').replaceChildren(); $('graph-start').replaceChildren(); $('graph-target').replaceChildren();
-    for (const source of active?.sources || []) {
+  function updateSourcePageButtons(){
+    if($('sources-previous'))$('sources-previous').disabled=sourcesPage===0;
+    if($('sources-next'))$('sources-next').disabled=(sourcesPage+1)*25>=(workspace()?.sources.length||0);
+  }
+  function renderSources(active) {
+    const sources=active?.sources||[];
+    if(sourcesWorkspace!==catalog.activeId){sourcesWorkspace=catalog.activeId;sourcesPage=0;}
+    sourcesPage=Math.min(sourcesPage,Math.max(0,Math.ceil(sources.length/25)-1));
+    $('sources').replaceChildren();
+    for (const source of sources.slice(sourcesPage*25,(sourcesPage+1)*25)) {
       const item = el('li', `${source.name} · ${source.records.length} passages`);
-      if(source.records.some(record=>record.locator?.type==='pdf-ocr-line'))item.append(el('p','Contains machine-read text (OCR). Check the original scanned pages, especially numbers.'));
+      if(source.records.some(record=>['pdf-ocr-line','image-ocr-line'].includes(record.locator?.type)))item.append(el('p','Contains machine-read text (OCR). Check the original scanned pages, especially numbers.'));
       const details=sourceDetails(source.hash,null,source.parserVersion);
       for(const warning of source.warnings||[])details.append(el('p',String(warning)));
       item.append(details);
@@ -224,15 +231,40 @@
         const scan=el('button','Read scanned pages');scan.type='button';scan.className='secondary';
         scan.addEventListener('click',()=>operation(async()=>{
           const current=requireCase();if(!current.sources.some(s=>s.id===source.id&&s.hash===source.hash))throw Error('This document is no longer in the active case.');
-          const rebuilt=await sourceFromBytes(source.name,decode(source.bytesBase64),source.id,source.hash,{schemaVersion:1,pdfOcr:'missing-text',engineId:API.OCR_ENGINE.id});
+          const rebuilt=await sourceFromBytes(source.name,decode(source.bytesBase64),source.id,source.hash,{schemaVersion:3,pdfOcr:'bounded-missing-text',engineId:API.OCR_ENGINE.id,maxPages:20});
           checkCancelled();const sources=current.sources.map(s=>s.id===source.id?rebuilt:s);checkSources(sources);const updated={...current,schemaVersion:3,sources};
           await commit(current.id===LIBRARY?{...catalog,library:updated}:{...catalog,cases:catalog.cases.map(c=>c.id===current.id?updated:c)});
           status(rebuilt.records.length?'Scanned pages read. Check machine-read words and numbers against the original.':'No readable text was found in the scanned pages. The original file is unchanged.');
         },true));item.append(scan);
       }
       $('sources').append(item);
-      $('graph-start').append(new Option(source.name, `document:${encodeURIComponent(source.id)}`));
-      $('graph-target').append(new Option(source.name, `document:${encodeURIComponent(source.id)}`));
+    }
+    let pager=$('source-pages');
+    if(!pager){pager=el('nav','');pager.id='source-pages';pager.setAttribute('aria-label','Source document pages');$('sources').after(pager);}
+    pager.hidden=sources.length<=25;pager.replaceChildren();
+    if(!pager.hidden){
+      const previous=el('button','Previous documents'),next=el('button','Next documents'),range=el('span',`Documents ${sourcesPage*25+1}–${Math.min((sourcesPage+1)*25,sources.length)} of ${sources.length}`);
+      previous.type=next.type='button';previous.id='sources-previous';next.id='sources-next';range.id='sources-range';range.setAttribute('role','status');
+      previous.disabled=sourcesPage===0;next.disabled=(sourcesPage+1)*25>=sources.length;
+      previous.addEventListener('click',()=>{if(busy||sourcesPage===0)return;sourcesPage--;renderSources(workspace());$('sources-next').focus();});
+      next.addEventListener('click',()=>{if(busy||(sourcesPage+1)*25>=sources.length)return;sourcesPage++;renderSources(workspace());$('sources-previous').focus();});
+      pager.append(previous,range,next);
+    }
+  }
+  function render() {
+    const active = workspace();
+    $('active-case').textContent = active ? `Active ${catalog.activeId === LIBRARY ? 'library' : 'case'}: ${workspaceLabel(active)}` : 'No active case';
+    $('case-name').value = '';
+    $('workspace-select').replaceChildren(new Option('Select a workspace', ''));
+    for (const c of catalog.cases) $('workspace-select').append(new Option(workspaceLabel(c), c.id));
+    $('workspace-select').append(new Option('Reference library (separate)', LIBRARY));
+    $('workspace-select').value = catalog.activeId || '';
+    $('restore-feedback').hidden=true;$('restore-feedback').replaceChildren();
+    renderSources(active);
+    $('graph-start').replaceChildren();$('graph-target').replaceChildren();
+    for(const source of active?.sources||[]){
+      $('graph-start').append(new Option(source.name,`document:${encodeURIComponent(source.id)}`));
+      $('graph-target').append(new Option(source.name,`document:${encodeURIComponent(source.id)}`));
     }
     lastResults = []; review = null; selectedEvidence = null; selectedGraphRecordId=null;
     const savedView=viewStates.get(catalog.activeId)|| (active?.workbench?{layout:active.workbench.reportLayout,assertions:active.workbench.graphAssertions}:null);
@@ -346,7 +378,7 @@
       if(catalog.pending&&catalog.pending.targetId!==active.id)throw Error('Finish or discard the pending import in its target workspace first.');
       const additions = catalog.pending?.package.sources.slice() || [];
       if (files.length + active.sources.length > 200) throw Error('Maximum 200 sources per workspace.');
-      let total = active.sources.concat(additions).reduce((sum, s) => sum + decode(s.bytesBase64).length, 0);
+      let total = active.sources.concat(additions).reduce((sum, s) => sum + metrics(s).bytes, 0);
       $('progress').max = Math.max(1, files.length); $('progress').value = 0;
       for (let i = 0; i < files.length; i++) {
         checkCancelled(); const file = files[i];
@@ -355,7 +387,7 @@
         const bytes=new Uint8Array(await file.arrayBuffer()), sourceHash=await hash(bytes);checkCancelled();
         if(!active.sources.concat(additions).some(s=>s.hash===sourceHash)){
           if(total+file.size>MAX_CASE)throw Error('Workspace exceeds the 20 MB limit.');
-          const processing=$('pdf-ocr').checked&&file.name.toLowerCase().endsWith('.pdf')?{schemaVersion:1,pdfOcr:'missing-text',engineId:API.OCR_ENGINE?.id}:undefined;
+          const processing=$('pdf-ocr').checked&&file.name.toLowerCase().endsWith('.pdf')?{schemaVersion:3,pdfOcr:'bounded-missing-text',engineId:API.OCR_ENGINE?.id,maxPages:20}:undefined;
           const source=await sourceFromBytes(file.name,bytes,undefined,sourceHash,processing);checkCancelled();total+=file.size;
           checkSources(active.sources.concat(additions,source));additions.push(source);
           const candidate={...catalog,pending:{targetId:active.id,package:{schemaVersion:additions.some(source=>source.processing)?3:1,id:crypto.randomUUID(),name:'Pending checked sources',sources:additions.slice()}}};
@@ -375,7 +407,13 @@
     await commit({...catalog,activeId:c.id,cases:[...catalog.cases,c]}); status('Synthetic example loaded. Search for retirement.');
   }));
   function flatRecords(active) {
-    return active.sources.flatMap(source => source.records.map((record,index) => ({...record,sourceId:source.id,sourceName:source.name,sourceHash:source.hash,recordIndex:index})));
+    const prior=flatCache.get(active);if(prior&&prior.sources.length===active.sources.length&&prior.sources.every((s,i)=>s===active.sources[i]&&Object.isFrozen(s)))return prior.records;
+    const records=active.sources.flatMap(source => {
+      const cached=Object.isFrozen(source)&&flatSourceCache.get(source);if(cached)return cached;
+      const rows=source.records.map((record,index) => Object.freeze({...record,sourceId:source.id,sourceName:source.name,sourceHash:source.hash,recordIndex:index}));
+      if(Object.isFrozen(source))flatSourceCache.set(source,rows);return rows;
+    });
+    if(active.sources.every(Object.isFrozen))flatCache.set(active,{sources:active.sources.slice(),records});return records;
   }
   function resultArticle(record) {
     const article = el('article',''); article.append(el('h3',record.sourceName),el('p',API.formatLocation(record.locator)),el('pre',record.text));
@@ -396,7 +434,7 @@
   }));
   $('query').addEventListener('keydown', event => { if (event.key === 'Enter') $('search').click(); });
   $('graph-search').addEventListener('click', () => operation(async () => {
-    const active = requireCase(), graph = currentGraph(); API.validateGraph(graph,active.sources);
+    const active = requireCase(), graph = currentGraph();
     const result = API.queryGraph(graph,{startId:$('graph-start').value,maxDepth:Number($('graph-depth').value),asOf:$('graph-date').value || undefined,maxNodes:100,direction:$('graph-direction').value});
     $('graph-results').replaceChildren(el('p',`${result.nodes.length} nodes · ${result.edges.length} links${result.truncated ? ' · Result limit reached' : ''}`));
     for (const node of result.nodes) {
@@ -406,7 +444,10 @@
     status('Document graph checked against source records. Effective dates are unknown unless explicitly evidenced.');
   }));
   function currentGraph() {
-    const graph=API.buildGraph(requireCase().sources); graph.edges.push(...graphAssertions); API.validateGraph(graph,requireCase().sources); return graph;
+    const active=requireCase(),signature=JSON.stringify(graphAssertions);
+    if(preparedGraph&&preparedGraph.caseId===active.id&&preparedGraph.signature===signature&&preparedGraph.sources.length===active.sources.length&&preparedGraph.sources.every((s,i)=>s===active.sources[i]&&Object.isFrozen(s)))return preparedGraph.graph;
+    const graph=API.buildGraph(active.sources);graph.edges.push(...graphAssertions);const checked=API.prepareGraph?API.prepareGraph(graph,active.sources):(API.validateGraph(graph,active.sources),graph);
+    preparedGraph={caseId:active.id,signature,sources:active.sources.slice(),graph:checked};return checked;
   }
   $('graph-link').addEventListener('click', () => operation(async () => {
     const graph=currentGraph();
@@ -530,7 +571,7 @@
     if (!recovery) throw Error('Recovery storage is unavailable.');
     const previous = await recovery.load({previous:true}); if (!previous) throw Error('No previous recovery snapshot is available.');
     const checked = await validateCatalog(previous); checkCancelled();
-    await commit(checked); status('Previous recovery snapshot restored and source hashes verified.');
+    recoveryBlocked=false;await commit(checked); status('Previous recovery snapshot restored and source hashes verified.');
   },true));
   $('export-catalog').addEventListener('click',()=>operation(async()=>{
     const checked=await validateCatalog(catalog);checkCancelled();download('pbgc-rag-workspaces-v2.json',JSON.stringify(checked),'application/json');status('All-workspace backup exported after source verification. Keep this plaintext file under approved storage controls.');
@@ -560,6 +601,7 @@
     await operation(async()=>{const c=newCase(sample?'Guided example':'My first case');if(sample)c.sources.push(await sourceFromBytes('synthetic-plan.txt',new TextEncoder().encode('SYNTHETIC PLAN — test data only\nNormal retirement age is 65.\nThis example is not an official plan provision.\n')));await commit({...catalog,activeId:c.id,cases:[...catalog.cases,c]});status(sample?'Example documents are ready.':'Your first case is ready. Add a document to continue.');});
   }});
   ragUI=API.mountRag({getWorkspace:workspace,operation,getSignal:()=>operationAbort.signal,cancel:()=>{abortRequested=true;operationAbort?.abort();},openSource});
+  API.mountCaseCollection({getModel:()=>ragUI.getModel(),getEmbedding:signal=>ragUI.getEmbedding(signal),startModel:signal=>ragUI.startIncluded(signal),refreshModel:()=>ragUI.refresh()});
   tableGuideUI=API.mountTableGuide({getWorkspace:workspace,updateWorkbench,operation,status});
   caseReviewUI=API.mountCaseReview({getWorkspace:workspace,updateWorkbench,operation,status,getStatus:()=>$('status').textContent,openSource});
   addEventListener('hashchange',route); route();

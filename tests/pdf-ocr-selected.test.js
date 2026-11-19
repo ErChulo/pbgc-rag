@@ -52,7 +52,7 @@ function harness(options = {}) {
     setTimeout, clearTimeout,
     Date:class extends Date { static now() { return options.virtualClock ? clock : Date.now(); } },
     PBGCRag:{
-      OCR_ENGINE:{id:engineId}, pdfOcrRenderWorkerSource:'/* mock: no parser or renderer is executed */',
+      OCR_ENGINE:{id:engineId},
       async parsePdfBytes() {
         parserCalls++;
         return {format:'pdf', parserVersion:options.nativeVersion||'synthetic-mocked-native-v1', records:json(records),
@@ -65,6 +65,8 @@ function harness(options = {}) {
       }
     }
   };
+  // Verify the real pinned worker program, but the mock Worker never executes it.
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../vendor/pdfjs/ocr-render-worker-source.js'),'utf8'),sandbox);
   vm.runInNewContext(SCRIPT, sandbox, {filename:'assets/pdf-ocr.js'});
   return {api:sandbox.module.exports, requests, workers, recognitions, revoked,
     get parserCalls() { return parserCalls; }};

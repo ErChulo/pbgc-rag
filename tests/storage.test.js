@@ -67,11 +67,24 @@ test('corrupt recovery is reported and never overwritten until explicit clear',a
   await assert.rejects(store.save(example('A')),error=>error.code==='CORRUPT_RECOVERY');assert.equal(local.data.get(KEY),'{bad');
   await store.clear();await store.save(example('A'));assert.equal((await store.load()).name,'A');
 });
-test('revision corruption is rejected and metadata cannot impersonate a snapshot',async()=>{
+test('a corrupt previous revision cannot block the valid current snapshot',async()=>{
   const local=localFake();const snapshot={revision:1,savedAt:'2026-10-30T00:00:00.000Z',value:example('A')};
   local.data.set(KEY,JSON.stringify({version:1,current:snapshot,previous:snapshot}));
   const store=await createRecoveryStore({indexedDB:null,localStorage:local});
-  await assert.rejects(store.load(),error=>error.code==='CORRUPT_RECOVERY');
+  assert.equal((await store.load()).name,'A');assert.equal(store.info().corruptPrevious,true);
+  await assert.rejects(store.load({previous:true}),error=>error.code==='CORRUPT_RECOVERY');
+});
+test('corrupt current permits explicit intact previous recovery but no silent rollback or overwrite',async()=>{
+  const local=localFake();let store=await createRecoveryStore({indexedDB:null,localStorage:local,maxCaseBytes:1024});await store.save(example('Previous'));await store.save(example('Current'));
+  const envelope=JSON.parse(local.data.get(KEY));envelope.current.value=[];const damaged=JSON.stringify(envelope);local.data.set(KEY,damaged);
+  store=await createRecoveryStore({indexedDB:null,localStorage:local,maxCaseBytes:1024});assert.equal(store.info().corruptCurrent,true);assert.equal(store.info().hasPrevious,true);assert.match(store.info().warnings.join(' '),/current recovery snapshot is corrupt/);
+  await assert.rejects(store.load(),{code:'CORRUPT_RECOVERY'});await assert.rejects(store.save(example('Accidental empty startup')),{code:'CORRUPT_RECOVERY'});assert.equal(local.data.get(KEY),damaged);
+  const previous=await store.load({previous:true});assert.equal(previous.name,'Previous');await store.save(previous);assert.equal((await store.load()).name,'Previous');assert.equal((await store.load({previous:true})).name,'Previous');assert.equal(store.info().revision,3);assert.equal(store.info().corruptCurrent,false);
+});
+test('corrupt previous value does not block current load or the next atomic save',async()=>{
+  const local=localFake();let store=await createRecoveryStore({indexedDB:null,localStorage:local});await store.save(example('Old'));await store.save(example('Good'));
+  const envelope=JSON.parse(local.data.get(KEY));envelope.previous.value=[];local.data.set(KEY,JSON.stringify(envelope));store=await createRecoveryStore({indexedDB:null,localStorage:local});
+  assert.equal((await store.load()).name,'Good');await assert.rejects(store.load({previous:true}),{code:'CORRUPT_RECOVERY'});await store.save(example('New'));assert.equal((await store.load({previous:true})).name,'Good');assert.equal(store.info().corruptPrevious,false);
 });
 test('concurrent saves serialize revisions and stale tabs detect conflicts',async()=>{
   const local=localFake();const first=await createRecoveryStore({indexedDB:null,localStorage:local});

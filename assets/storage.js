@@ -38,9 +38,13 @@
     let data;
     try { data = JSON.parse(raw); } catch (cause) { throw new RecoveryError('CORRUPT_RECOVERY', 'Recovery envelope is invalid JSON.', cause); }
     if (!data || data.version !== 1) throw new RecoveryError('CORRUPT_RECOVERY', 'Unsupported recovery envelope version.');
-    const current = validSnapshot(data.current, maxCase), previous = data.previous === null ? null : validSnapshot(data.previous, maxCase);
-    if (previous && previous.revision >= current.revision) throw new RecoveryError('CORRUPT_RECOVERY', 'Recovery revisions are out of order.');
-    return { version: 1, current, previous };
+    let current=null,previous=null;const snapshotErrors={};
+    try { current=validSnapshot(data.current,maxCase); } catch(cause) { snapshotErrors.current=new RecoveryError('CORRUPT_RECOVERY','The current recovery snapshot is corrupt. Open the previous snapshot explicitly or clear recovery.',cause); }
+    if(data.previous!==null)try { previous=validSnapshot(data.previous,maxCase); } catch(cause) { snapshotErrors.previous=new RecoveryError('CORRUPT_RECOVERY','The previous recovery snapshot is corrupt. The current snapshot remains available.',cause); }
+    if(current&&previous&&previous.revision>=current.revision){previous=null;snapshotErrors.previous=new RecoveryError('CORRUPT_RECOVERY','The previous recovery revision is out of order. The current snapshot remains available.');}
+    if(!current&&!previous)throw snapshotErrors.current||snapshotErrors.previous||new RecoveryError('CORRUPT_RECOVERY','Recovery contains no valid snapshot.');
+    const revisions=[data.current?.revision,data.previous?.revision].filter(value=>Number.isSafeInteger(value)&&value>0);
+    return {version:1,current,previous,snapshotErrors,revisionFloor:Math.max(0,...revisions)};
   }
   function localAdapter(storage) {
     if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function' || typeof storage.removeItem !== 'function') throw Error('Local storage unavailable.');
@@ -115,7 +119,7 @@
     catch (_) { warnings.push('IndexedDB unavailable.'); }
     if (!adapter) { try { adapter = localAdapter(local); } catch (_) { warnings.push('Local storage unavailable.'); } }
     if (!adapter) { let data = null; adapter = {kind:'memory',read:async()=>data,write:async (value,expected)=>{if(data !== expected) throw new RecoveryError('CONFLICT', 'Memory recovery changed.'); data=value;},remove:async()=>{data=null;}}; warnings.push('Memory only. Export a portable case before closing this tab.'); }
-    let state = null, stateRaw = null, migrated = false, initializationError = null;
+    let state = null, stateRaw = null, migrated = false, initializationError = null, previousSelected=false;
     try {
       stateRaw = await adapter.read(); state = decode(stateRaw, maxCase);
       if (!state && local) {
@@ -135,30 +139,31 @@
     // Serialize calls so two concurrent save operations cannot lose a revision.
     let queue = Promise.resolve();
     function serialized(fn) { const next = queue.then(fn, fn); queue = next.catch(() => {}); return next; }
-    const info = () => ({kind:adapter.kind,persistent:adapter.kind !== 'memory',revision:state?.current.revision || 0,hasPrevious:!!state?.previous,migrated,warnings:warnings.slice()});
+    const info = () => ({kind:adapter.kind,persistent:adapter.kind !== 'memory',revision:state?.revisionFloor||state?.current?.revision||0,hasCurrent:!!state?.current,hasPrevious:!!state?.previous,corruptCurrent:!!state?.snapshotErrors?.current,corruptPrevious:!!state?.snapshotErrors?.previous,migrated,warnings:[...warnings,...Object.values(state?.snapshotErrors||{}).map(error=>error.message)]});
     return {
       kind:adapter.kind,
       info,
-      load: (loadOptions) => serialized(async () => { if (initializationError) throw initializationError; const snapshot = loadOptions?.previous ? state?.previous : state?.current; return snapshot ? copyCase(snapshot.value, maxCase) : null; }),
+      load: (loadOptions) => serialized(async () => { if (initializationError) throw initializationError;const key=loadOptions?.previous?'previous':'current';if(state?.snapshotErrors?.[key])throw state.snapshotErrors[key];const snapshot=state?.[key];if(key==='previous'&&snapshot)previousSelected=true;return snapshot?copyCase(snapshot.value,maxCase):null; }),
       save: value => serialized(async () => {
         if (initializationError) throw initializationError;
-        const copied = copyCase(value, maxCase), revision = (state?.current.revision || 0) + 1;
+        if(state?.snapshotErrors?.current&&!previousSelected)throw state.snapshotErrors.current;
+        const copied = copyCase(value, maxCase), revision = (state?.revisionFloor||state?.current?.revision||0) + 1;
         if (!Number.isSafeInteger(revision)) throw new RecoveryError('REVISION_LIMIT', 'Recovery revision limit reached. Export a portable case.');
         const savedAt = now();
         if (typeof savedAt !== 'string' || !Number.isFinite(Date.parse(savedAt))) throw new RecoveryError('INVALID_DATE', 'Recovery timestamp is invalid.');
-        const next = {version:1,current:{revision,savedAt,value:copied},previous:state?.current || null};
+        const next = {version:1,current:{revision,savedAt,value:copied},previous:state?.current || (previousSelected?state?.previous:null) || null};
         const encoded = JSON.stringify(next);
         if (bytes(encoded) > maxCase * 2 + 8192) throw new RecoveryError('SIZE_LIMIT', 'Recovery snapshots exceed the size limit.');
         try { await adapter.write(encoded, stateRaw); }
         catch (cause) { if (cause instanceof RecoveryError && cause.code === 'CONFLICT') throw cause; throw new RecoveryError('WRITE_FAILED', 'Recovery write failed. The previous recovery copy remains. Export your current case.', cause); }
-        state = next; stateRaw = encoded;
+        state = next; stateRaw = encoded;previousSelected=false;
         return {...info(),savedAt};
       }),
       clear: () => serialized(async () => {
         // Legacy first: if removal fails, do not claim that a close erased recovery.
         try { if (local) local.removeItem(LEGACY_KEY); await adapter.remove(); }
         catch (cause) { throw new RecoveryError('CLEAR_FAILED', 'Recovery could not be cleared. A local copy may remain.', cause); }
-        state = null; stateRaw = null; initializationError = null; migrated = false;
+        state = null; stateRaw = null; initializationError = null; migrated = false;previousSelected=false;
         return info();
       })
     };

@@ -1,5 +1,7 @@
 # Use PBGC-RAG
 
+**Current audit branch:** 1.1 development packages are separate from the historical 1.0 package below. They are not yet accepted for a 1 GiB case. Use the [large-case guide](LARGE-CASE-GUIDE.md) and [audit test status](AUDIT-REMEDIATION-1.1.md). Do not replace your earlier app folder.
+
 This is the 1.0 candidate guide. The published 0.8 downloads do not contain its new controls. See the [complete step-by-step guide](USER-GUIDE.md) and [candidate test status](HABEMUS-ACCEPTANCE.md).
 
 PBGC-RAG helps you find information in documents and check the source of an answer. It runs on your computer. It does not send your documents or questions to a service.

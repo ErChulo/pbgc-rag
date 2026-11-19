@@ -2,11 +2,15 @@
 'use strict';
 const RANKING_LIMITS=Object.freeze({records:50000,characters:20000000,recordCharacters:2000000,queryCharacters:500,queryTerms:32,tokens:5000000,limit:50000});
 const K1=1.2,B=0.75;
+const QUERY_FRAMING=new Set('a an the what which who whose when where why how is are was were be been being do does did can could may might would should shall will i me we you your our it its this that these those of to for at in on by from with as and or please tell about'.split(' '));
 function fail(message){throw Error(message);}
 // Versioned lexical tokenizer. Unicode letters/numbers form tokens; punctuation
 // separates tokens. Case is normalized with Unicode lowercase. No stemming,
 // semantic model, stop-word list, synonym expansion or legal inference is used.
 function tokenize(text,visit){const pattern=/[\p{L}\p{N}]+/gu;let match;while((match=pattern.exec(text))!==null)visit(match[0].toLowerCase());}
+// Used only to distinguish full lexical query coverage from an incidental
+// BM25 match. It does not establish relevance, applicability, or factual truth.
+function lexicalContentTerms(text){if(typeof text!=='string'||text.length>RANKING_LIMITS.recordCharacters)fail('Invalid lexical content text.');const result=new Set();tokenize(text,term=>{if(!QUERY_FRAMING.has(term))result.add(term);});return [...result];}
 // Okapi BM25, k1=1.2, b=0.75; IDF = ln(1+(N-df+0.5)/(df+0.5)).
 // Records are the documents (not whole source files); all records, including
 // empty ones, contribute to N and average length. Unique query terms have unit
@@ -36,5 +40,5 @@ function rankRecords(records,query,options={}){
  ranked.sort((a,b)=>b.score-a.score||a.order-b.order);
  return ranked.slice(0,limit).map(item=>({...item.record,score:item.score,explanation:item.explanation}));
 }
-return {rankRecords,RANKING_LIMITS};
+return {rankRecords,lexicalContentTerms,RANKING_LIMITS};
 });

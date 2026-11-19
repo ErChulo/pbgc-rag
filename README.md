@@ -1,23 +1,43 @@
 # PBGC-RAG
 
-[![Maturity: 1.0 RC1, office pilot](https://img.shields.io/badge/maturity-1.0%20RC1%20%7C%20office%20pilot-002D72)](docs/HABEMUS-ACCEPTANCE.md)
-[![Source checks: Windows and Ubuntu passed](https://img.shields.io/badge/source%20checks-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
-[![Complete office ZIP: Windows and Ubuntu passed](https://img.shields.io/badge/office%20ZIP-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
-[![Offline file entry tested](https://img.shields.io/badge/offline%20file%20entry-tested-008065)](docs/evidence/habemus-1.0-rc1-verified.json)
-[![Qwen2.5 1.5B included and tested](https://img.shields.io/badge/Qwen2.5-1.5B%20included%20%26%20tested-002D72)](docs/evidence/habemus-1.0-rc1-verified.json)
-[![English OCR tested offline](https://img.shields.io/badge/English%20OCR-offline%20tested-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
-[![Source citations and save/reopen tested](https://img.shields.io/badge/sources%20%26%20save%2Freopen-tested-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
-[![Accessibility: automated checks passed](https://img.shields.io/badge/accessibility-automated%20checks%20passed-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
+[![Maturity: 1.1 audit remediation, development](https://img.shields.io/badge/maturity-1.1%20audit%20remediation%20%7C%20development-E4002B)](docs/AUDIT-REMEDIATION-1.1.md)
 
 Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
 
 PBGC-RAG runs on your computer without sending documents or questions to a service. It is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its current purpose is document search and supported answers. Official templates, actuarial rules and field dictionaries are not required for that workflow.
 
-**Maturity: 1.0 release candidate, ready for office pilot testing.** The complete import → ask → inspect sources → save → reopen flow passed on Windows and Ubuntu. Qwen2.5 1.5B, English scan reading and all required local assets are included. The next validation step is use with representative plan documents on your computer.
+**This branch is under development. It is not a release candidate for a 1 GB case.** The November audit identified answer-quality, incomplete-extraction, recovery and performance defects. Fixes and a separate large-case storage path are being integrated and tested. Configured limits are not measured capacity. See the [audit remediation record](docs/AUDIT-REMEDIATION-1.1.md) for verified fixes and remaining gates.
 
-The badges record tests for runtime commit [`d3ce073`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89) and its complete office ZIP. This documentation update keeps that tested package unchanged. See [verified evidence](#verified-rc1-evidence), the [full user guide](docs/USER-GUIDE.md) and the [machine-readable verification record](docs/evidence/habemus-1.0-rc1-verified.json).
+The earlier **1.0 RC1** package and `main` are preserved. Its Windows/Ubuntu checks apply to runtime [`d3ce073`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89), the existing complete office ZIP and its bounded test workloads. Those results do not establish readiness for realistic multi-paragraph documents or the newly specified case size. See [historical RC1 evidence](#verified-rc1-evidence) and the [machine-readable record](docs/evidence/habemus-1.0-rc1-verified.json).
 
-## Download the complete office package
+## Large-case development path
+
+Follow the [large-case guide](docs/LARGE-CASE-GUIDE.md) for the current controls, table setup, source checks and backup/reopen steps.
+
+The **Large case workspace** control opens a separate document store. It keeps original files as browser Blobs and records/passages in bounded, authenticated local shards. It does not put a large case into the older JSON recovery catalog.
+
+1. Create a large case and add its original documents. Read any import errors and extraction notes.
+2. Select **Find source passages** and enter a specific question. Select one document when needed.
+3. For CSV or spreadsheets, select the document and confirm its column-name row before requesting written table answers.
+4. For a written answer, start the included Qwen and select **Write an answer with sources**. Check each quoted source. A single cited document is marked for review.
+5. Choose **Save large case backup**. Reopen that ZIP with **Open a large case backup**. Restore verifies original bytes and rebuilds passages; imported derived evidence is not trusted.
+
+The configured large-case bounds are **1 GiB of originals, 2,000 documents and 64 MiB per document**, with additional parser, cache and browser-storage limits. A full 1 GiB import → search → answer → backup → reopen benchmark has **not yet passed**. This control is for development validation until that evidence is recorded.
+
+Large-case candidate search scans all selected stored passage shards. The learned encoder reranks a bounded text-search shortlist; it is not a global dense index of the entire case. A very broad question may require a document, participant name or ID. Browser storage and case backups are **unencrypted**. Keep the original files and a portable backup. Optional passphrase encryption remains work to do.
+
+## Existing 1.0 RC1 checks
+
+These badges describe the preserved earlier runtime and package, not this development branch:
+
+[![Source checks: Windows and Ubuntu passed](https://img.shields.io/badge/RC1%20source-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
+[![Complete office ZIP: Windows and Ubuntu passed](https://img.shields.io/badge/RC1%20office%20ZIP-Windows%20%2B%20Ubuntu%20PASS-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
+[![Offline file entry tested](https://img.shields.io/badge/RC1%20offline%20file%20entry-tested-008065)](docs/evidence/habemus-1.0-rc1-verified.json)
+[![Qwen2.5 1.5B included and tested](https://img.shields.io/badge/RC1%20Qwen2.5-1.5B%20tested-002D72)](docs/evidence/habemus-1.0-rc1-verified.json)
+[![English OCR tested offline](https://img.shields.io/badge/RC1%20English%20OCR-offline%20tested-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100)
+[![Accessibility: automated checks passed](https://img.shields.io/badge/RC1%20accessibility-automated%20checks%20passed-008065)](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279082)
+
+## Download the preserved 1.0 RC1 office package
 
 1. Open the [passed 1.0 candidate download run](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100#artifacts). Sign in to GitHub if asked.
 2. Under **Artifacts**, select **habemus-office-evidence-windows-latest** for your office desktop. Choose that one item. The Ubuntu item contains the other tested package copy.
@@ -49,7 +69,7 @@ Use the complete office ZIP. GitHub’s **Code → Download ZIP** and the small 
 
 The candidate is available as a workflow artifact, with **seven-day retention after the run**. If it has expired, request a fresh verified candidate package. Developers can use the [build instructions](#development-checks-and-portable-build). The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and [larger-model 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older permanent downloads; they do not contain the 1.0 controls. The 1.0 candidate has not replaced those releases or `main`.
 
-## Your first case
+## Your first case in the preserved package
 
 1. **Start Qwen.** Choose **Get started**, then **Start Qwen**. Wait for the ready message. The model is included; you do not need to choose a model file. Choose **Use source passages instead** if you only want to find and read text.
 2. **Add documents for one case.** Follow the guide and choose your files. You can use the supplied synthetic example to learn the controls. The app keeps original files unchanged.
@@ -93,7 +113,7 @@ These are bounded extraction subsets, not arbitrary format fidelity. Unsupported
 
 Imports use dedicated local workers with cancellation and 15-second hard deadlines. Binary imports fail if workers are blocked. Small text up to 128 KiB has a bounded synchronous fallback. Verified import checkpoints survive reload; reselect files to resume, or keep/discard the checked subset. Failed batches do not change active sources.
 
-Limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; eight cases and 80 MB per recovery catalog. Text extraction is bounded at 2,000,000 UTF-16 code units per source. Archives and each parser have additional limits. Browser workers have no hard OS memory quota; elapsed-time and output limits do not certify hostile-document safety.
+Legacy workspace limits: 5 MB per source; 20 MB, 200 sources and 50,000 records per workspace; eight cases and 80 MB per recovery catalog. The separate large-case development path has the configured bounds listed above and does not use this catalog. Text extraction is bounded at 2,000,000 UTF-16 code units per source. Archives and each parser have additional limits. Browser workers have no hard OS memory quota; elapsed-time and output limits do not certify hostile-document safety.
 
 ## Ask your documents
 

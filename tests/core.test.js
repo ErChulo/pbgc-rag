@@ -53,3 +53,19 @@ test('empty input and BOM handling', () => {
   const cell = parseText('case.csv','\uFEFF"x"').records[0];
   assert.equal(cell.text,'x'); assert.equal(cell.locator.offset,1);
 });
+test('repeated searches reuse normalized text while changed records and replacements are searched fresh', () => {
+  const original=String.prototype.toLocaleLowerCase,first={text:'Retirement FACT one'},second={text:'Pension FACT two'};
+  let normalized=0;
+  String.prototype.toLocaleLowerCase=function(...args){if(['Retirement FACT one','Pension FACT two','Changed benefit FACT','Replacement FACT'].includes(String(this)))normalized++;return original.apply(this,args);};
+  try{
+    const records=[first,second];
+    assert.deepEqual(search(records,'fact').map(r=>r.text),['Retirement FACT one','Pension FACT two']);
+    assert.equal(normalized,2);
+    assert.equal(search(records,'fact').length,2);assert.equal(normalized,2,'unchanged record strings are normalized once');
+    first.text='Changed benefit FACT';assert.equal(search(records,'retirement').length,0);assert.equal(normalized,3);
+    assert.deepEqual(search(records,'benefit').map(r=>r.text),['Changed benefit FACT']);assert.equal(normalized,3);
+    records[1]={text:'Replacement FACT'};assert.equal(search(records,'pension').length,0);assert.equal(normalized,4);
+    assert.deepEqual(search(records,'replacement').map(r=>r.text),['Replacement FACT']);assert.equal(normalized,4);
+    first.text=null;assert.throws(()=>search(records,'fact'),/Invalid search record/);
+  }finally{String.prototype.toLocaleLowerCase=original;}
+});

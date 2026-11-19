@@ -24,7 +24,7 @@ parser.add_argument('--office', action='store_true',
                     help='Include the verified generation model. No preparation is needed at the office.')
 args = parser.parse_args()
 if args.out is None:
-    args.out = root / 'dist' / ('PBGC-RAG-1.0-rc1-office.zip' if args.office else 'PBGC-RAG-1.0-rc1-core.zip')
+    args.out = root / 'dist' / ('PBGC-RAG-1.1-dev-office.zip' if args.office else 'PBGC-RAG-1.1-dev-core.zip')
 paths = [root / 'index.html', root / 'README.md', root / 'ACCEPTANCE.md', root / 'BLOCKERS.md']
 paths += sorted((root / 'assets').glob('*.js')) + sorted((root / 'assets').glob('*.css'))
 paths += sorted(p for p in (root / 'docs').rglob('*') if p.is_file() and p.suffix in {'.md','.json','.log'})
@@ -86,7 +86,7 @@ for match in re.finditer(r'(?:src|href)="([^"#]+)"', (root / 'index.html').read_
     ref = match[1]
     if '://' in ref or not (root / ref).is_file():
         raise SystemExit(f'Invalid or missing local entry asset: {ref}')
-manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '1.0-rc1',
+manifest = {'schemaVersion': 1, 'kind': 'pbgc-rag-workplace-build', 'version': '1.1-dev',
             'distribution': 'complete-offline-office' if args.office else 'core-without-generation-weights',
             'modelVariant': 'qwen2.5-1.5b-q3_k_s', 'official': False, 'fileProfileAcceptance': 'BLOCKED for workplace approval; see browser-specific evidence in ACCEPTANCE.md',
             'files': [{'path': name, 'bytes': path.stat().st_size,

@@ -3,6 +3,7 @@
 (function(root,factory){'use strict';const api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;root.PBGCRag=Object.assign(root.PBGCRag||{},api);})(typeof globalThis!=='undefined'?globalThis:this,function(root){
   'use strict';
   const SEMANTIC_LIMITS=Object.freeze({chunks:20000,dimension:4096,vectorBytes:64*1024*1024,text:40*1024*1024,chunkText:8000,query:2000,topK:100,batch:64,cacheCharacters:160*1024*1024});
+  const SEMANTIC_RETRIEVAL_PROFILE=Object.freeze({id:'candidate-screening-v2',defaultMinScore:0.25,thresholdUse:'candidate-screening-only',relevanceNotice:'Passing this threshold does not establish that a passage answers the question. Topic, property, identity, scope and grounding checks are still required.'});
   const issued=new WeakSet();
   const fail=message=>{throw Error(message);};
   const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&(Object.getPrototypeOf(value)===Object.prototype||Object.getPrototypeOf(value)===null);
@@ -69,7 +70,22 @@
     }
     return Object.freeze(ids);
   }
-  function retrievalConfig(query,config){options(config);if(typeof query!=='string'||!query.trim()||query.length>SEMANTIC_LIMITS.query)fail('Semantic queries need one to 2,000 characters.');const topK=config.topK===undefined?8:config.topK,minScore=config.minScore===undefined?0.25:config.minScore,ambiguityMargin=config.ambiguityMargin===undefined?0.02:config.ambiguityMargin;if(!Number.isInteger(topK)||topK<1||topK>SEMANTIC_LIMITS.topK||typeof minScore!=='number'||!Number.isFinite(minScore)||minScore< -1||minScore>1||typeof ambiguityMargin!=='number'||!Number.isFinite(ambiguityMargin)||ambiguityMargin<0||ambiguityMargin>2)fail('Invalid semantic retrieval limit, threshold or ambiguity margin.');return{topK,minScore,ambiguityMargin,sourceIds:sourceSelection(config.sourceIds)};}
+  function retrievalConfig(query,config,provider){options(config);if(typeof query!=='string'||!query.trim()||query.length>SEMANTIC_LIMITS.query)fail('Semantic queries need one to 2,000 characters.');const profile=provider?.retrievalProfile,profileScore=profile?.defaultMinScore,hasProfileScore=typeof profileScore==='number'&&Number.isFinite(profileScore)&&profileScore>=-1&&profileScore<=1,topK=config.topK===undefined?8:config.topK,minScore=config.minScore===undefined?(hasProfileScore?profileScore:SEMANTIC_RETRIEVAL_PROFILE.defaultMinScore):config.minScore,ambiguityMargin=config.ambiguityMargin===undefined?0.02:config.ambiguityMargin;if(!Number.isInteger(topK)||topK<1||topK>SEMANTIC_LIMITS.topK||typeof minScore!=='number'||!Number.isFinite(minScore)||minScore< -1||minScore>1||typeof ambiguityMargin!=='number'||!Number.isFinite(ambiguityMargin)||ambiguityMargin<0||ambiguityMargin>2)fail('Invalid semantic retrieval limit, threshold or ambiguity margin.');return{topK,minScore,ambiguityMargin,minScoreSource:config.minScore!==undefined?'caller':hasProfileScore?'provider-profile':'generic-candidate-default',thresholdProfileId:typeof profile?.id==='string'?profile.id.slice(0,200):SEMANTIC_RETRIEVAL_PROFILE.id,sourceIds:sourceSelection(config.sourceIds)};}
+  const normalizedPassage=text=>text.replace(/\s+/gu,' ').trim();
+  function literalContained(text,part){let start=text.indexOf(part);while(start>=0){const end=start+part.length,before=text[start-1]||'',after=text[end]||'';if(!(/[\p{L}\p{N}]/u.test(part[0])&&/[\p{L}\p{N}]/u.test(before))&&!(/[\p{L}\p{N}]/u.test(part.at(-1))&&/[\p{L}\p{N}]/u.test(after)))return true;start=text.indexOf(part,start+1);}return false;}
+  function deduplicateRetrievalResults(results,options={}){
+    const limit=options.limit??SEMANTIC_LIMITS.topK;if(!Array.isArray(results)||results.length>SEMANTIC_LIMITS.chunks||!Number.isInteger(limit)||limit<1||limit>SEMANTIC_LIMITS.topK)fail('Invalid passage deduplication budget.');
+    const kept=[],removed=[],groups=new Map();let examined=0;
+    for(const result of results){if(kept.length>=limit)break;examined++;const chunk=result?.chunk||result;if(!plain(chunk)||typeof chunk.id!=='string'||!chunk.id||typeof chunk.text!=='string'||!chunk.text.trim()||chunk.text.length>SEMANTIC_LIMITS.chunkText||typeof chunk.sourceId!=='string'||!chunk.sourceId||typeof chunk.sourceHash!=='string'||!/^[a-f0-9]{64}$/.test(chunk.sourceHash))fail('Invalid source-bound passage for deduplication.');
+      // Never interpret flattened table cells or remove a distinct source. A
+      // 70% token overlap alone can erase a new qualification or contradiction.
+      const table=chunk.evidenceKind==='table-field-v1'||chunk.locators?.some(locator=>/cell|table/i.test(locator?.type||'')||locator?.table!==undefined),key=JSON.stringify([chunk.sourceId,chunk.sourceHash,chunk.parserVersion??null,chunk.hasMachineText??false,chunk.hasUnverifiedTextLayer??false,chunk.minimumOcrConfidence??null,chunk.requiresSourceReview??false]),text=normalizedPassage(chunk.text),group=groups.get(key)||[];
+      const duplicate=table?null:group.find(item=>literalContained(item.text,text));
+      if(duplicate){removed.push({chunkId:chunk.id,duplicateOf:duplicate.id});continue;}
+      kept.push(result);if(!table){group.push({id:chunk.id,text});groups.set(key,group);}
+    }
+    return{results:kept,diagnostics:{policy:'literal-passage-containment-within-source-v1',examined,removed,fullIndexRetained:true,notice:'Only literal contained passages within one source are omitted from returned context. New statements and different source documents remain eligible; the original index is unchanged.'}};
+  }
   const citation=chunk=>({chunkId:chunk.id,sourceId:chunk.sourceId,sourceName:chunk.sourceName,sourceHash:chunk.sourceHash,locators:copy(chunk.locators),excerpt:chunk.text});
   function selectedPositions(chunks,sourceIds){
     const allowed=sourceIds===undefined?null:new Set(sourceIds),positions=[];
@@ -94,8 +110,11 @@
     }
     cancelled(config.signal);
     const topScore=scored[0]?.score??null,margin=scored.length>1?scored[0].score-scored[1].score:null,weak=topScore===null||topScore<settings.minScore;
-    const results=scored.filter(item=>item.score>=settings.minScore).slice(0,settings.topK).map(item=>({...copy(clean[item.index]),score:item.score,semanticScore:item.score,citations:[citation(clean[item.index])]}));
-    const diagnostics={method:'dense-cosine',providerId:id,dimension,indexedChunks:positions.length,topScore,margin,minScore:settings.minScore,weak,ambiguous:!weak&&margin!==null&&margin<=settings.ambiguityMargin,ambiguityMargin:settings.ambiguityMargin,confidenceNotice:'Cosine similarity is a retrieval score, not a calibrated probability, factual confidence or legal authority.'};
+    // Keep the validated snapshot by reference while choosing context. Copy
+    // metadata only for retained results; no arbitrary candidate cutoff can
+    // let a long run of duplicate passages hide a later distinct passage.
+    const ranked=scored.filter(item=>item.score>=settings.minScore).map(item=>({chunk:clean[item.index],score:item.score})),dedup=deduplicateRetrievalResults(ranked,{limit:settings.topK}),results=dedup.results.map(item=>({...copy(item.chunk),score:item.score,semanticScore:item.score,citations:[citation(item.chunk)]}));
+    const diagnostics={method:'dense-cosine',providerId:id,dimension,indexedChunks:positions.length,topScore,margin,minScore:settings.minScore,minScoreSource:settings.minScoreSource,thresholdProfileId:settings.thresholdProfileId,thresholdUse:SEMANTIC_RETRIEVAL_PROFILE.thresholdUse,relevanceEstablished:false,relevanceNotice:SEMANTIC_RETRIEVAL_PROFILE.relevanceNotice,weak,semanticWeak:weak,ambiguous:!weak&&margin!==null&&margin<=settings.ambiguityMargin,ambiguityMargin:settings.ambiguityMargin,deduplication:dedup.diagnostics,confidenceNotice:'Cosine similarity is a retrieval score, not a calibrated probability, factual confidence or legal authority.'};
     if(settings.sourceIds!==undefined){
       const matched=new Set(positions.map(position=>clean[position].sourceId));
       diagnostics.totalIndexedChunks=clean.length;
@@ -105,20 +124,23 @@
     return{results,diagnostics};
   }
   async function retrieveSemantic(index,query,provider,config={}){
-    const settings=retrievalConfig(query,config),clean=validateIndex(index,undefined,provider),positions=selectedPositions(clean,settings.sourceIds);
+    const settings=retrievalConfig(query,config,provider),clean=validateIndex(index,undefined,provider),positions=selectedPositions(clean,settings.sourceIds);
     return denseResult(index,clean,positions,query,provider,config,settings);
   }
   async function retrieveHybrid(index,query,provider,config={}){
-    const settings=retrievalConfig(query,config),weight=config.semanticWeight===undefined?0.7:config.semanticWeight,k=config.rrfK===undefined?60:config.rrfK;
+    const settings=retrievalConfig(query,config,provider),weight=config.semanticWeight===undefined?0.7:config.semanticWeight,k=config.rrfK===undefined?60:config.rrfK;
     if(typeof weight!=='number'||!Number.isFinite(weight)||weight<0||weight>1||!Number.isInteger(k)||k<1||k>1000)fail('Invalid hybrid fusion weight or rank constant.');
     if(query.length>500)fail('Hybrid queries exceed the 500-character lexical limit.');
     const clean=validateIndex(index,undefined,provider),positions=selectedPositions(clean,settings.sourceIds),selected=positions.map(position=>clean[position]);
-    const semantic=await denseResult(index,clean,positions,query,provider,config,{...settings,topK:SEMANTIC_LIMITS.topK}),rank=root.PBGCRag?.rankRecords||(typeof require==='function'?require('./ranking.js').rankRecords:null);if(typeof rank!=='function')fail('BM25 lexical ranking is unavailable.');
+    const semantic=await denseResult(index,clean,positions,query,provider,config,{...settings,topK:SEMANTIC_LIMITS.topK}),ranking=typeof require==='function'?require('./ranking.js'):root.PBGCRag,rank=ranking?.rankRecords;if(typeof rank!=='function')fail('BM25 lexical ranking is unavailable.');
     const lexical=rank(selected,query,{limit:SEMANTIC_LIMITS.topK}),map=new Map(),byId=new Map(selected.map(chunk=>[chunk.id,chunk]));
     semantic.results.forEach((chunk,i)=>map.set(chunk.id,{chunk,semanticRank:i+1,semanticScore:chunk.semanticScore,lexicalRank:null,lexicalScore:null}));
     lexical.forEach((chunk,i)=>{const entry=map.get(chunk.id)||{chunk,semanticRank:null,semanticScore:null,lexicalRank:null,lexicalScore:null};entry.lexicalRank=i+1;entry.lexicalScore=chunk.score;map.set(chunk.id,entry);});
     const scored=Array.from(map.values()).map(entry=>({...entry,fusionScore:(entry.semanticRank===null?0:weight/(k+entry.semanticRank))+(entry.lexicalRank===null?0:(1-weight)/(k+entry.lexicalRank))})).sort((a,b)=>b.fusionScore-a.fusionScore||(a.chunk.id<b.chunk.id?-1:a.chunk.id>b.chunk.id?1:0));
-    cancelled(config.signal);return{results:scored.slice(0,settings.topK).map(entry=>{const chunk=byId.get(entry.chunk.id);return{...copy(chunk),score:entry.fusionScore,semanticScore:entry.semanticScore,lexicalScore:entry.lexicalScore,citations:[citation(chunk)],explanation:{method:'weighted reciprocal-rank fusion',semanticRank:entry.semanticRank,lexicalRank:entry.lexicalRank,semanticWeight:weight,rrfK:k}};}),diagnostics:{...semantic.diagnostics,method:'hybrid-cosine-bm25-rrf',semanticWeight:weight,rrfK:k,lexicalMatches:lexical.length,confidenceNotice:'Reciprocal-rank fusion is a ranking score, not confidence. Semantic weakness and ambiguity diagnostics remain separate. No learned reranker is used.'}};
+    const contentTerms=typeof ranking.lexicalContentTerms==='function'?ranking.lexicalContentTerms(query):[],strongLexical=contentTerms.length>=2?lexical.filter(chunk=>{const words=new Set(ranking.lexicalContentTerms(chunk.text));return contentTerms.every(term=>words.has(term));}):[];
+    const fused=scored.map(entry=>{const chunk=byId.get(entry.chunk.id);return{...copy(chunk),score:entry.fusionScore,semanticScore:entry.semanticScore,lexicalScore:entry.lexicalScore,citations:[citation(chunk)],explanation:{method:'weighted reciprocal-rank fusion',semanticRank:entry.semanticRank,lexicalRank:entry.lexicalRank,semanticWeight:weight,rrfK:k}};}),dedup=deduplicateRetrievalResults(fused,{limit:settings.topK});
+    const returned=new Set(dedup.results.map(chunk=>chunk.id)),returnedStrongLexical=strongLexical.filter(chunk=>returned.has(chunk.id));
+    cancelled(config.signal);return{results:dedup.results,diagnostics:{...semantic.diagnostics,method:'hybrid-cosine-bm25-rrf',semanticWeight:weight,rrfK:k,lexicalMatches:lexical.length,semanticWeak:semantic.diagnostics.weak,weak:semantic.diagnostics.weak&&returnedStrongLexical.length===0,strongLexicalSupport:{policy:'all-content-terms-v1',queryTerms:contentTerms,minimumTerms:2,chunkIds:returnedStrongLexical.map(chunk=>chunk.id)},deduplication:dedup.diagnostics,confidenceNotice:'Reciprocal-rank fusion is a ranking score, not confidence. A nonweak hybrid result can pass the cosine screen or cover every lexical content term; neither establishes relevance or truth. Semantic weakness remains available separately. No learned reranker is used.'}};
   }
   async function rerankSemantic(index,query,provider,candidateIds,config={}){
     validateIndex(index,undefined,provider);if(!Array.isArray(candidateIds)||!candidateIds.length||candidateIds.length>1000||candidateIds.some(id=>typeof id!=='string')||new Set(candidateIds).size!==candidateIds.length)fail('Provide one to 1,000 distinct candidate chunk IDs.');
@@ -136,5 +158,5 @@
     // valid-looking forged vectors never become an issued retrieval index.
     return buildSemanticIndex(verifiedChunks,provider,config);
   }
-  return{SEMANTIC_LIMITS,buildSemanticIndex,validateSemanticIndex,retrieveSemantic,retrieveHybrid,rerankSemantic,serializeSemanticIndex,restoreSemanticIndex};
+  return{SEMANTIC_LIMITS,SEMANTIC_RETRIEVAL_PROFILE,deduplicateRetrievalResults,buildSemanticIndex,validateSemanticIndex,retrieveSemantic,retrieveHybrid,rerankSemantic,serializeSemanticIndex,restoreSemanticIndex};
 });

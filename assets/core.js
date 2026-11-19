@@ -87,6 +87,9 @@
     }
     return { parserVersion: '1', records, warnings: ext === 'json' ? ['JSON pointers identify parsed values, not source lines. Duplicate object keys use the last value; retain original bytes for review.'] : [] };
   }
+  // Retain only the last normalized text per record. Mutable callers are checked
+  // against the current string on every search, so edits never reuse stale text.
+  const searchTextCache = new WeakMap();
   function search(records, query, mode) {
     if (!Array.isArray(records) || typeof query !== 'string') fail('Provide records and a text query.');
     mode = mode || 'keyword';
@@ -100,7 +103,9 @@
     const result = [];
     records.forEach((record, order) => {
       if (!record || typeof record.text !== 'string' || record.text.length > LIMITS.characters) fail('Invalid search record.');
-      const value = record.text.toLocaleLowerCase('en-US');
+      const text=record.text,cached=searchTextCache.get(record);
+      const value=cached?.text===text?cached.value:text.toLocaleLowerCase('en-US');
+      if(!cached||cached.text!==text)searchTextCache.set(record,{text,value});
       if (terms.every(term => value.includes(term))) {
         const score = terms.reduce((sum, term) => {
           let count = 0, position = 0;

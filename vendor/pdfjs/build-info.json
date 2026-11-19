@@ -25,13 +25,13 @@
   "isolation": "Dedicated classic Blob worker; no synchronous fallback",
   "workerArtifacts": {
     "parser-core.js": {
-      "sha256": "84393764e59df793b74f227e3c5f55eb09b224b7d8cefe668979bc96e74d7dad"
+      "sha256": "ec60bbe07bed6a9176cda1eca7698593ef09fda72dc665766103235255d62a0c"
     },
     "build-worker-source.py": {
-      "sha256": "cd9241ce55f122c9257a4950d12bd284d2a75c112269657210dd6c16ff2edb56"
+      "sha256": "80b87a97a365fe7cde539c2f1c6964146d7b5147bb0420b11b66a029bd46f5cd"
     },
     "parser-worker-source.js": {
-      "sha256": "6a36b269886dc184be5943ae6d395e4e306870d7aab50c0165063b9217cf86e9"
+      "sha256": "d14c811107c4ab62c240b850cb6bbb57d7782d87c681f1ab62cd01a682a3d008"
     }
   }
 }

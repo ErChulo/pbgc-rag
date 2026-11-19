@@ -1,5 +1,25 @@
 # Acceptance evidence
 
+## Current gate: 1.1 audit remediation
+
+**NOT A RELEASE CANDIDATE for the clarified approximately 1 GB office case.** Historical results below remain tied to their exact runtime, package and workload. They do not accept this branch or the larger case requirement.
+
+| Requirement | Current status | Evidence or remaining work |
+| --- | --- | --- |
+| Ordinary multi-paragraph fact questions; units, scope and number words | PASS, synthetic module scope | `tests/rag-multiparagraph-audit.test.js`: 12 passing checks, including retained real-conflict/unsupported-topic guards |
+| Corrupt current/previous recovery snapshots are isolated | PASS, module scope | `tests/storage.test.js`: 13 passing checks; explicit prior-snapshot selection required before rollback save |
+| Mixed-page OCR coverage and low-confidence provenance | PASS, synthetic module scope | `tests/ocr-coverage-audit.test.js`: 7 passing checks; native/unknown external OCR origin stays unverified |
+| PDF parent protocol, worker integrity and explicit page windows | PASS, module scope | `tests/pdf-native-protocol.test.js`: 5 passing checks; real browser integration is a separate gate |
+| Single-document answers disclose source dependence | IMPLEMENTED; integrated UI verification pending | One original SHA counts as one source. Citation does not certify factual truth |
+| Large original-document store, bounded shards, portable ZIP | IMPLEMENTED; orchestration verification in progress | IndexedDB-only large-case path; no localStorage or memory fallback. Configured 1 GiB/2,000 sources/64 MiB per source is not measured capacity |
+| Full 1 GiB end-to-end workload and whole-process resource limits | NOT PASSED | Require representative synthetic import, passage retrieval, real model answer, cancellation/reopen and backup/restore measurements |
+| Exact-current-head Windows/Ubuntu actual offline-file acceptance | NOT PASSED | Prior `d3ce073` CI results do not substitute; local actual-file entry is administrator-blocked, HTTP checks are supplementary |
+| Optional passphrase encryption | NOT IMPLEMENTED | Unencrypted local storage and backup notices are visible; this is the documented interim choice |
+| Independent re-audit after integration | PENDING | Review current fixes and residual limitations before another RC claim |
+
+Detailed dispositions and reproduction commands: [1.1 audit remediation](docs/AUDIT-REMEDIATION-1.1.md).
+
+
 ## Build 0.5: OCR, question relevance and measured resources
 
 Local integration: the regression run covered 279 tests, with 277 passing, one OCR-checkbox boundary defect and one opt-in resource duplicate skipped. The boundary defect was fixed and its full accessibility test passed. The resource workload passed separately through its required real-inference CLI. These are separate, inspectable results; the original failed run is retained with the repair evidence.
@@ -134,10 +154,10 @@ Keep default all-source conflict checks and source guards unchanged. The same qu
 
 Verify asynchronous input, source and vector mutation; preparation-time selection changes; cancellation; source removal; case privacy; old guide/persistence workflows; keyboard labels/focus; dark/light contrast; and375/1280px layouts. Real model and complete-ZIP checks require selected-document answers65/67 with exact original-source hashes, then an all-document conflict without a third inference, on Windows and Ubuntu offline file entry. Model/API mocks alone are not quality evidence. Main and published packages remain unchanged.
 
-## 1.0 candidate — current development
+## Historical 1.0 candidate
 
 Local module and supplementary HTTP evidence is recorded in PROGRESS.md and `docs/evidence/habemus-local-real-model.json`. It covers combined independent facts, strict table-field provenance and focus navigation, explicit column-name setup, and real selected-page OCR preserving existing notes/graph bindings. That initial report used compatible0.5B and does not substitute for bundled1.5B acceptance.
 
 Runtime `d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89` passed both source jobs in workflow43980279082 and both complete-ZIP jobs in workflow43980279100. The exact runtime was checked with actual offline file URLs, included1.5B Qwen, combined/table answers, selected documents, explicit headings, real mixed-page OCR, original PDF viewing, save/reopen, cancellation and source integrity. Generation, memory, quality and output limits were unchanged. See [final candidate acceptance](docs/HABEMUS-ACCEPTANCE.md) and [versioned evidence](docs/evidence/habemus-1.0-rc1-verified.json).
 
-Maturity is 1.0 RC1, ready for an office pilot. The fixed factual corpus yielded three correct cited answers and one abstention on each platform; all four unsafe cases were blocked or returned conflict. Broader real-plan quality and manual assistive-technology validation remain pilot work. These results apply to the tested runtime and existing archive. This documentation-only follow-up keeps application code and that archive unchanged. Published 0.8 acceptance remains tied to its earlier exact versions; no official-output or production certification is asserted.
+For the preserved runtime and bounded test workload, maturity was recorded as 1.0 RC1 for an office pilot. The later audit and clarified 1 GB requirement reopen release acceptance. The fixed factual corpus yielded three correct cited answers and one abstention on each platform; all four unsafe cases were blocked or returned conflict. Broader real-plan quality and manual assistive-technology validation remain pilot work. These results apply to the tested runtime and existing archive. This documentation-only follow-up keeps application code and that archive unchanged. Published 0.8 acceptance remains tied to its earlier exact versions; no official-output or production certification is asserted.

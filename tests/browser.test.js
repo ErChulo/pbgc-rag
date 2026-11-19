@@ -449,3 +449,34 @@ test('readable evidence presentation keeps technical provenance collapsed and or
     assert.equal(data.sources[0].records[1].locator.line,2);
   } finally {await context.close();await browser.close();await fs.rm(directory,{recursive:true,force:true});}
 });
+
+test(`${targetURL.startsWith('file:')?'actual file://':'supplementary HTTP only'} source pagination preserves all searchable documents and report choices`,{timeout:120000},async()=>{
+  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+  const context=await browser.newContext(),page=await context.newPage(),errors=[],external=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  context.on('request',request=>{if(/^https?:|^wss?:/.test(request.url())&&!request.url().startsWith(process.env.PBGC_TEST_URL||'file:'))external.push(request.url());});
+  await context.route(/^https?:\/\//,route=>route.request().url().startsWith(process.env.PBGC_TEST_URL||'file:')?route.continue():route.abort());
+  try{
+    await page.goto(targetURL);await showAllTools(page);await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    assert.deepEqual(await page.locator('#report-sections option').evaluateAll(nodes=>nodes.map(node=>[node.value,node.textContent])),[
+      ['inventory,evidence,timeline','Inventory, evidence and timeline'],['inventory','Inventory only'],['evidence','Evidence only'],['timeline','Timeline only']
+    ]);
+    await page.locator('#case-name').fill('Pagination corpus');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    const firstCase=await page.locator('#workspace-select').inputValue();
+    await page.locator('#files').setInputFiles(Array.from({length:52},(_,i)=>({name:`source-${String(i+1).padStart(2,'0')}.txt`,mimeType:'text/plain',buffer:Buffer.from(`Unique pagination evidence ${i+1}.`)})));
+    await page.waitForFunction(()=>!document.querySelector('#files').disabled);assert.match(await page.locator('#status').innerText(),/Imported 52 sources/);
+    assert.equal(await page.locator('#sources > li').count(),25);assert.match(await page.locator('#sources-range').innerText(),/Documents 1–25 of 52/);
+    assert.equal(await page.locator('#sources-previous').isDisabled(),true);assert.equal(await page.locator('#graph-start option').count(),52);
+    await page.locator('#sources-next').click();assert.equal(await page.locator('#sources > li').count(),25);assert.match(await page.locator('#sources-range').innerText(),/Documents 26–50 of 52/);
+    await page.locator('#sources-next').click();assert.equal(await page.locator('#sources > li').count(),2);assert.match(await page.locator('#sources-range').innerText(),/Documents 51–52 of 52/);assert.equal(await page.locator('#sources-next').isDisabled(),true);
+    await page.locator('#query').fill('pagination evidence 52');await page.locator('#search').click();await page.waitForFunction(()=>!document.querySelector('#search').disabled);
+    assert.match(await page.locator('#results').innerText(),/source-52\.txt/);assert.equal(await page.locator('#sources-next').isDisabled(),true,'unrelated operations keep the last-page bound');
+    assert.match(await page.locator('#sources-range').innerText(),/Documents 51–52 of 52/);
+    await page.locator('#results').getByRole('button',{name:'View evidence',exact:true}).click();assert.equal(await page.locator('#source-title').innerText(),'source-52.txt');await page.keyboard.press('Escape');
+    await page.locator('#case-name').fill('Other pagination case');await page.locator('#create-case').click();await page.waitForFunction(()=>!document.querySelector('#create-case').disabled);
+    assert.equal(await page.locator('#source-pages').isVisible(),false);assert.equal(await page.locator('#sources > li').count(),0);
+    await page.locator('#workspace-select').selectOption(firstCase);await page.waitForFunction(()=>!document.querySelector('#workspace-select').disabled);
+    assert.equal(await page.locator('#sources > li').count(),25);assert.match(await page.locator('#sources-range').innerText(),/Documents 1–25 of 52/);assert.equal(await page.locator('#sources-previous').isDisabled(),true);
+    assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
+  }finally{await context.close();await browser.close();}
+});

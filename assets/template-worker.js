@@ -11,8 +11,43 @@ function validResult(result){return result&&result.bytes instanceof Uint8Array&&
  * Exactly one render may run at a time. Worker policy failures never invoke renderTemplate on the UI thread.
  */
 function renderTemplateIsolated(bytes,manifest,values,options={}){return new Promise((resolve,reject)=>{
- let copiedJSON;try{if(!(bytes instanceof Uint8Array)||bytes.length<22||bytes.length>TEMPLATE_WORKER_LIMITS.bytes)throw error('Provide template bytes between 22 bytes and 5 MB.');if(!options||typeof options!=='object'||Array.isArray(options))throw error('Invalid template worker options.');const timeout=options.timeoutMs??TEMPLATE_WORKER_LIMITS.timeoutMs;if(!Number.isInteger(timeout)||timeout<1||timeout>TEMPLATE_WORKER_LIMITS.timeoutMs)throw error('Template timeout must be from one to 15,000 ms.');const signal=options.signal;if(signal&&(typeof signal.aborted!=='boolean'||typeof signal.addEventListener!=='function'||typeof signal.removeEventListener!=='function'))throw error('Invalid template cancellation signal.');if(signal?.aborted)throw aborted();if(active)throw error('A template render is already active. Wait or cancel it first.');if(typeof root.Worker!=='function'||typeof root.Blob!=='function'||typeof root.URL?.createObjectURL!=='function'||typeof root.PBGCRagIngestWorkerSource!=='string'||!root.PBGCRagIngestWorkerSource)throw error('Isolated template rendering is unavailable. Browser policy must permit local Blob workers.');copiedJSON=jsonCopy({manifest,values});if(!copiedJSON.manifest||typeof copiedJSON.manifest!=='object'||Array.isArray(copiedJSON.manifest)||!/^[a-f0-9]{64}$/.test(copiedJSON.manifest.originalHash)||!copiedJSON.values||typeof copiedJSON.values!=='object'||Array.isArray(copiedJSON.values))throw error('Template manifest must bind an original SHA-256 and values must be a JSON object.');active=true;let worker,url,timer,done=false;const requestId='template-'+String(++sequence);const abort=()=>finish(aborted());function finish(failure,result){if(done)return;done=true;active=false;if(timer!==undefined)root.clearTimeout(timer);signal?.removeEventListener('abort',abort);if(worker){try{worker.terminate();}catch(_){}}if(url){try{root.URL.revokeObjectURL(url);}catch(_){}}if(failure)reject(failure);else resolve(result);}try{url=root.URL.createObjectURL(new root.Blob([root.PBGCRagIngestWorkerSource],{type:'text/javascript'}));worker=new root.Worker(url,{name:'pbgc-template-renderer'});worker.onmessage=event=>{const response=event.data;if(done||!response||response.requestId!==requestId)return;if(response.type==='error')finish(error(typeof response.message==='string'?response.message.slice(0,4000):'Template worker rejected the input.'));else if(response.type==='template-result'){const result=response.result;if(!validResult(result)||result.originalHash!==copiedJSON.manifest.originalHash)finish(error('Template worker returned invalid or unbound output.'));else finish(null,result);}else finish(error('Template worker returned an unsupported response.'));};worker.onerror=event=>{event?.preventDefault?.();finish(error('Isolated template worker failed or was blocked by browser policy. No output was released.'));};worker.onmessageerror=()=>finish(error('Template worker output could not be transferred.'));signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted){finish(aborted());return;}timer=root.setTimeout(()=>finish(error('Template rendering exceeded its hard '+timeout+' ms time limit. The worker was terminated.')),timeout);const copiedBytes=bytes.slice();worker.postMessage({type:'render-template',requestId,bytes:copiedBytes.buffer,manifest:copiedJSON.manifest,values:copiedJSON.values},[copiedBytes.buffer]);}catch(cause){finish(error('Isolated template rendering is unavailable: '+String(cause?.message||cause)));}}
- catch(cause){reject(cause);}
+ let copiedJSON;
+ try{
+  if(!(bytes instanceof Uint8Array)||bytes.length<22||bytes.length>TEMPLATE_WORKER_LIMITS.bytes)throw error('Provide template bytes between 22 bytes and 5 MB.');
+  if(!options||typeof options!=='object'||Array.isArray(options))throw error('Invalid template worker options.');
+  const timeout=options.timeoutMs??TEMPLATE_WORKER_LIMITS.timeoutMs;
+  if(!Number.isInteger(timeout)||timeout<1||timeout>TEMPLATE_WORKER_LIMITS.timeoutMs)throw error('Template timeout must be from one to 15,000 ms.');
+  const signal=options.signal;
+  if(signal&&(typeof signal.aborted!=='boolean'||typeof signal.addEventListener!=='function'||typeof signal.removeEventListener!=='function'))throw error('Invalid template cancellation signal.');
+  if(signal?.aborted)throw aborted();
+  if(active)throw error('A template render is already active. Wait or cancel it first.');
+  const workerSource=root.PBGCRagIngestWorkerSource,verify=root.PBGCRag?.verifyIngestWorkerSource;
+  if(typeof root.Worker!=='function'||typeof root.Blob!=='function'||typeof root.URL?.createObjectURL!=='function'||typeof workerSource!=='string'||!workerSource||typeof verify!=='function')throw error('Isolated template rendering is unavailable. Browser policy must permit verified local Blob workers.');
+  copiedJSON=jsonCopy({manifest,values});
+  if(!copiedJSON.manifest||typeof copiedJSON.manifest!=='object'||Array.isArray(copiedJSON.manifest)||!/^[a-f0-9]{64}$/.test(copiedJSON.manifest.originalHash)||!copiedJSON.values||typeof copiedJSON.values!=='object'||Array.isArray(copiedJSON.values))throw error('Template manifest must bind an original SHA-256 and values must be a JSON object.');
+  // Snapshot inputs before integrity verification yields control to the caller.
+  const copiedBytes=bytes.slice();active=true;
+  let worker,url,timer,done=false;const requestId='template-'+String(++sequence);
+  const abort=()=>finish(aborted());
+  function finish(failure,result){if(done)return;done=true;active=false;if(timer!==undefined)root.clearTimeout(timer);signal?.removeEventListener('abort',abort);if(worker){try{worker.terminate();}catch(_){}}if(url){try{root.URL.revokeObjectURL(url);}catch(_){}}if(failure)reject(failure);else resolve(result);}
+  signal?.addEventListener('abort',abort,{once:true});
+  if(signal?.aborted){finish(aborted());return;}
+  timer=root.setTimeout(()=>finish(error('Template rendering exceeded its hard '+timeout+' ms time limit. The worker was terminated.')),timeout);
+  (async()=>{
+   try{
+    await verify(workerSource);
+    // A timed-out/cancelled verification must never create a late worker.
+    if(done)return;
+    if(signal?.aborted){finish(aborted());return;}
+    url=root.URL.createObjectURL(new root.Blob([workerSource],{type:'text/javascript'}));
+    worker=new root.Worker(url,{name:'pbgc-template-renderer'});
+    worker.onmessage=event=>{const response=event.data;if(done||!response||response.requestId!==requestId)return;if(response.type==='error')finish(error(typeof response.message==='string'?response.message.slice(0,4000):'Template worker rejected the input.'));else if(response.type==='template-result'){const result=response.result;if(!validResult(result)||result.originalHash!==copiedJSON.manifest.originalHash)finish(error('Template worker returned invalid or unbound output.'));else finish(null,result);}else finish(error('Template worker returned an unsupported response.'));};
+    worker.onerror=event=>{event?.preventDefault?.();finish(error('Isolated template worker failed or was blocked by browser policy. No output was released.'));};
+    worker.onmessageerror=()=>finish(error('Template worker output could not be transferred.'));
+    worker.postMessage({type:'render-template',requestId,bytes:copiedBytes.buffer,manifest:copiedJSON.manifest,values:copiedJSON.values},[copiedBytes.buffer]);
+   }catch(cause){finish(error('Isolated template rendering is unavailable: '+String(cause?.message||cause)));}
+  })();
+ }catch(cause){reject(cause);}
  });}
 return{renderTemplateIsolated,TEMPLATE_WORKER_LIMITS};
 });

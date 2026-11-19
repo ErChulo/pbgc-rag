@@ -20,9 +20,9 @@ function compound(streams,sectorSize=512){
   directory(0,'Root Entry',5,rootStart,rootBytes.length,FREE,names.length?1:FREE);entries.forEach((entry,index)=>directory(index+1,entry.name,2,entry.start,entry.size,index===entries.length-1?FREE:index+2,FREE));
   const header=new Uint8Array(sectorSize);header.set([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1]);u16(header,24,0x003e);u16(header,26,sectorSize===512?3:4);u16(header,28,0xfffe);u16(header,30,sectorSize===512?9:12);u16(header,32,6);u32(header,40,sectorSize===512?0:1);u32(header,44,1);u32(header,48,0);u32(header,56,4096);u32(header,60,miniStart);u32(header,64,miniCount?1:0);u32(header,68,END);for(let i=0;i<109;i++)u32(header,76+i*4,FREE);u32(header,76,fatId);return concat(header,...sectors);
 }
-function wordFixture(text,{compressed=false,split=null,encrypted=false,large=false}={}){
+function wordFixture(text,{compressed=false,split=null,encrypted=false,large=false,ignoredBit31=false}={}){
   const word=new Uint8Array(large?4096:1024);u16(word,0,0xa5ec);u16(word,2,0x00c1);u16(word,10,0x0200|(encrypted?0x0100:0));u16(word,32,14);u16(word,62,22);u32(word,76,text.length);u16(word,152,34);
-  const pieces=split===null?[text]:[text.slice(0,split),text.slice(split)];const plc=new Uint8Array(4+pieces.length*12);let cp=0,fc=700;u32(plc,0,0);for(let i=0;i<pieces.length;i++){const bytes=compressed?Uint8Array.from(pieces[i],c=>c.charCodeAt(0)):utf16(pieces[i]);word.set(bytes,fc);cp+=pieces[i].length;u32(plc,(i+1)*4,cp);u32(plc,(pieces.length+1)*4+i*8+2,compressed?(fc*2)|0x40000000:fc);fc+=bytes.length+4;}
+  const pieces=split===null?[text]:[text.slice(0,split),text.slice(split)];const plc=new Uint8Array(4+pieces.length*12);let cp=0,fc=700;u32(plc,0,0);for(let i=0;i<pieces.length;i++){const bytes=compressed?Uint8Array.from(pieces[i],c=>c.charCodeAt(0)):utf16(pieces[i]);word.set(bytes,fc);cp+=pieces[i].length;u32(plc,(i+1)*4,cp);u32(plc,(pieces.length+1)*4+i*8+2,(compressed?(fc*2)|0x40000000:fc)|(ignoredBit31?0x80000000:0));fc+=bytes.length+4;}
   const clx=new Uint8Array(5+plc.length);clx[0]=2;u32(clx,1,plc.length);clx.set(plc,5);u32(word,154+33*8,0);u32(word,154+33*8+4,clx.length);return compound({WordDocument:word,'1Table':clx});
 }
 function record(id,data=new Uint8Array()){const out=new Uint8Array(data.length+4);u16(out,0,id);u16(out,2,data.length);out.set(data,4);return out;}
@@ -102,3 +102,5 @@ test('XLS negative RK and MULRK coordinates retain cached numbers without recalc
   const bytes=concat(original.subarray(0,original.length-4),record(0x00bd,multiple),record(0x000a));const result=await parseLegacyBytes('synthetic.xls',compound({Workbook:bytes}));
   assert.equal(result.records[2].text,'-17');assert.deepEqual(result.records.slice(-2).map(r=>[r.locator.cell,r.text]),[['C9','10'],['D9','-8']]);
 });
+
+test('DOC FcCompressed reserved bit 31 is ignored for Unicode and compressed piece offsets',async()=>{for(const compressed of [false,true]){const options={compressed,split:12};const ordinary=await parseLegacyBytes('synthetic.doc',wordFixture('Normal retirement age is 65\r',options));const reserved=await parseLegacyBytes('synthetic.doc',wordFixture('Normal retirement age is 65\r',{...options,ignoredBit31:true}));assert.deepEqual(reserved,ordinary);}});

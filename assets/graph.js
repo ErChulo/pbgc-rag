@@ -50,18 +50,100 @@
   const documentId = sourceId => 'document:' + encodeURIComponent(sourceId);
   const recordId = (sourceId, index) => 'record:' + encodeURIComponent(sourceId) + ':' + index;
   const containsId = (sourceId, index) => 'contains:' + encodeURIComponent(sourceId) + ':' + index;
-  function buildGraph(sources) {
+  // Only immutable, data-property source trees can reuse an index. A frozen
+  // accessor may still return changing values, so it is deliberately excluded.
+  const sourceIndexes = new WeakMap(), issuedIndexes = new WeakMap(), checkedGraphs = new WeakSet(), traversalIndexes = new WeakMap();
+  function deeplyFrozen(value, seen = new WeakSet()) {
+    if (!value || typeof value !== 'object' || seen.has(value)) return true;
+    if (!Object.isFrozen(value)) return false;
+    seen.add(value);
+    for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(value))) {
+      if (descriptor.get || descriptor.set || !deeplyFrozen(descriptor.value, seen)) return false;
+    }
+    return true;
+  }
+  function freezeTree(value, seen = new WeakSet()) {
+    if (!value || typeof value !== 'object' || seen.has(value)) return value;
+    seen.add(value);
+    for (const child of Object.values(value)) freezeTree(child, seen);
+    return Object.freeze(value);
+  }
+  function sourceEntry(source) {
+    const cached = sourceIndexes.get(source);
+    if (cached) return cached;
+    if (!plain(source)) fail('Invalid verified graph source.');
+    const sourceName = string(source.name,'source name',255), sourceHash = hash(source.hash);
+    const sourceId = source.id === undefined ? null : string(source.id,'source ID',200);
+    if (!Array.isArray(source.records) || source.records.length > GRAPH_LIMITS.records) fail('Graph exceeds the 50,000-record limit.');
+    const records = [], byLocator = new Map(); let characters = 0;
+    for (let index = 0; index < source.records.length; index++) {
+      const record = source.records[index];
+      if (!plain(record) || typeof record.text !== 'string' || record.text.length > 2000000) fail('Invalid graph source record.');
+      characters += record.text.length;
+      if (characters > GRAPH_LIMITS.characters) fail('Graph exceeds the 20 MB text budget.');
+      const recordLocator = freezeTree(locator(record.locator)), key = JSON.stringify(recordLocator);
+      const item = Object.freeze({source,record,index,recordIndex:index,sourceId,sourceName,sourceHash,text:record.text,locator:recordLocator,locatorKey:key});
+      records.push(item);
+      // Existing source-order resolution is preserved for repeated identical locators.
+      if (!byLocator.has(key)) byLocator.set(key,item);
+    }
+    const entry = {source,sourceId,sourceName,sourceHash,records,byLocator,characters,immutable:deeplyFrozen(source)};
+    if (entry.immutable) sourceIndexes.set(source,entry);
+    return entry;
+  }
+  function indexState(sources) {
     if (!Array.isArray(sources) || sources.length > GRAPH_LIMITS.sources) fail('Graph exceeds the 200-source limit.');
-    const nodes = [], edges = [], ids = new Set(); let count = 0, characters = 0;
+    const entries = [], byId = new Map(), byHash = new Map(); let recordCount = 0, characters = 0;
     for (const source of sources) {
-      if (!plain(source)) fail('Invalid graph source.');
-      const sourceId = string(source.id, 'source ID', 200), sourceName = string(source.name, 'source name', 255), sourceHash = hash(source.hash);
-      if (ids.has(sourceId)) fail('Duplicate graph source ID.'); ids.add(sourceId);
-      if (!Array.isArray(source.records) || (count += source.records.length) > GRAPH_LIMITS.records) fail('Graph exceeds the 50,000-record limit.');
+      const entry = sourceEntry(source);
+      if (entry.sourceId !== null) {
+        if (byId.has(entry.sourceId)) fail('Duplicate graph source ID.');
+        byId.set(entry.sourceId,entry);
+      }
+      recordCount += entry.records.length; characters += entry.characters;
+      if (recordCount > GRAPH_LIMITS.records) fail('Graph exceeds the 50,000-record limit.');
+      if (characters > GRAPH_LIMITS.characters) fail('Graph exceeds the 20 MB text budget.');
+      entries.push(entry);
+      if (!byHash.has(entry.sourceHash)) byHash.set(entry.sourceHash,[]);
+      byHash.get(entry.sourceHash).push(entry);
+    }
+    return {sources,sequence:sources.slice(),entries,byId,byHash,recordCount,characters,immutable:entries.every(entry=>entry.immutable)};
+  }
+  function currentIndex(handle) {
+    const state = issuedIndexes.get(handle);
+    if (!state) fail('Use an issued source-record index.');
+    if (state.immutable && state.sources.length === state.sequence.length && state.sources.every((source,index)=>source === state.sequence[index])) return state;
+    // Mutable source content is never accepted merely because its hash label is unchanged.
+    const updated = indexState(state.sources); issuedIndexes.set(handle,updated); return updated;
+  }
+  function buildSourceRecordIndex(sources) {
+    const state = indexState(sources), handle = Object.freeze({schemaVersion:1,kind:'source-record-index'});
+    issuedIndexes.set(handle,state); return handle;
+  }
+  function lookupRecord(state,sourceHash,recordLocator) {
+    hash(sourceHash); const key = JSON.stringify(locator(recordLocator));
+    for (const source of state.byHash.get(sourceHash) || []) {
+      const found = source.byLocator.get(key); if (found) return found;
+    }
+    return null;
+  }
+  function findSourceRecords(handle,references) {
+    if (!Array.isArray(references) || references.length > GRAPH_LIMITS.records) fail('Provide bounded source references.');
+    const state = currentIndex(handle);
+    return references.map(reference=>{
+      if (!plain(reference)) fail('Invalid source record reference.');
+      return lookupRecord(state,reference.sourceHash,reference.locator);
+    });
+  }
+  function findSourceRecord(handle,sourceHash,recordLocator) { return findSourceRecords(handle,[{sourceHash,locator:recordLocator}])[0]; }
+  function sourceRecordIndexInfo(handle) { const state = currentIndex(handle); return Object.freeze({sourceCount:state.entries.length,recordCount:state.recordCount,characters:state.characters,immutable:state.immutable}); }
+  function buildGraph(sources) {
+    const state = issuedIndexes.has(sources) ? currentIndex(sources) : indexState(sources);
+    const nodes = [], edges = [];
+    for (const source of state.entries) {
+      const sourceId = string(source.sourceId,'source ID',200), sourceName = source.sourceName, sourceHash = source.sourceHash;
       const parent = {id:documentId(sourceId),type:'document',sourceId,sourceName,sourceHash}; nodes.push(parent);
       source.records.forEach((record,index) => {
-        if (!plain(record) || typeof record.text !== 'string' || record.text.length > 2000000) fail('Invalid graph source record.');
-        if ((characters += record.text.length) > GRAPH_LIMITS.characters) fail('Graph exceeds the 20 MB text budget.');
         const evidence = {sourceId,sourceHash,locator:locator(record.locator)};
         const child = {id:recordId(sourceId,index),type:'record',sourceId,sourceName,sourceHash,index,text:record.text,locator:locator(record.locator)};
         nodes.push(child); edges.push({id:containsId(sourceId,index),type:'contains',from:parent.id,to:child.id,evidence,validity:{from:null,to:null},status:'documentary'});
@@ -70,6 +152,7 @@
     return {schemaVersion:1,nodes,edges};
   }
   function validateGraph(graph, verifiedSources) {
+    if (checkedGraphs.has(graph) && verifiedSources === undefined) return true;
     if (!plain(graph) || graph.schemaVersion !== 1 || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) fail('Invalid graph schema.');
     if (graph.nodes.length > GRAPH_LIMITS.records + GRAPH_LIMITS.sources || graph.edges.length > GRAPH_LIMITS.records + GRAPH_LIMITS.assertions) fail('Graph exceeds its size limit.');
     const nodes = new Map(), documents = new Map(), records = new Map(), edgeIds = new Set(), contained = new Set(); let assertions = 0, characters = 0;
@@ -111,12 +194,51 @@
     }
     if (contained.size !== records.size) fail('A graph record lacks a documentary containment edge.');
     if (verifiedSources !== undefined) {
-      const expected = buildGraph(verifiedSources);
-      if (expected.nodes.length !== graph.nodes.length) fail('Graph does not match the verified source set.');
-      for (const expectedNode of expected.nodes) {
-        const actual = nodes.get(expectedNode.id);
-        if (!actual || actual.type !== expectedNode.type || actual.sourceHash !== expectedNode.sourceHash || actual.sourceName !== expectedNode.sourceName || (actual.type === 'record' && (actual.text !== expectedNode.text || !same(actual.locator,expectedNode.locator)))) fail('Graph record differs from the verified source set.');
+      const expected = issuedIndexes.has(verifiedSources) ? currentIndex(verifiedSources) : indexState(verifiedSources);
+      if (expected.entries.length + expected.recordCount !== graph.nodes.length) fail('Graph does not match the verified source set.');
+      for (const source of expected.entries) {
+        const actualDocument = documents.get(source.sourceId);
+        if (!actualDocument || actualDocument.sourceHash !== source.sourceHash || actualDocument.sourceName !== source.sourceName) fail('Graph record differs from the verified source set.');
+        for (const record of source.records) {
+          const actual = records.get(recordId(source.sourceId,record.index));
+          if (!actual || actual.sourceHash !== source.sourceHash || actual.sourceName !== source.sourceName || actual.text !== record.text || !same(actual.locator,record.locator)) fail('Graph record differs from the verified source set.');
+        }
       }
+    }
+    return true;
+  }
+  function prepareGraph(graph,verifiedSources) {
+    validateGraph(graph,verifiedSources); freezeTree(graph);
+    if (!deeplyFrozen(graph)) fail('Prepared graphs require immutable data properties.');
+    checkedGraphs.add(graph); return graph;
+  }
+  function indexedNode(state,id) {
+    if (typeof id !== 'string') return null;
+    const document = /^document:(.*)$/.exec(id), record = /^record:(.*):([0-9]+)$/.exec(id);
+    let sourceId;
+    try { sourceId = decodeURIComponent(document ? document[1] : record ? record[1] : ''); } catch (_) { return null; }
+    const source = state.byId.get(sourceId); if (!source) return null;
+    if (document) return documentId(sourceId) === id ? {type:'document',source} : null;
+    if (!record) return null;
+    const index = Number(record[2]);
+    return Number.isSafeInteger(index) && index >= 0 && index < source.records.length && recordId(sourceId,index) === id ? {type:'record',source,record:source.records[index]} : null;
+  }
+  // Workbench persistence validates proposed links directly against originals.
+  // It does not need the materialized document/record containment graph.
+  function validateGraphAssertions(assertions,verifiedSources) {
+    if (!Array.isArray(assertions) || assertions.length > GRAPH_LIMITS.assertions) fail('Invalid proposed graph assertions.');
+    const state = issuedIndexes.has(verifiedSources) ? currentIndex(verifiedSources) : indexState(verifiedSources), ids = new Set();
+    for (const edge of assertions) {
+      if (!plain(edge)) fail('Invalid proposed graph assertion.');
+      string(edge.id,'edge ID',700);
+      if (ids.has(edge.id)) fail('Duplicate graph edge ID.'); ids.add(edge.id);
+      if (edge.type !== 'user-link' || edge.status !== 'proposed' || !edge.id.startsWith('assertion:') || edge.id.length <= 10) fail('Invalid proposed graph assertion.');
+      if (!indexedNode(state,edge.from) || !indexedNode(state,edge.to)) fail('Graph contains a dangling edge.');
+      period(edge.validity); string(edge.label,'assertion label',200); string(edge.author,'assertion author',200); date(edge.recordedOn);
+      if (!plain(edge.evidence) || !edge.evidence.recordId) fail('Graph edge lacks documentary evidence.');
+      hash(edge.evidence.sourceHash);
+      const evidence = indexedNode(state,edge.evidence.recordId);
+      if (!evidence || evidence.type !== 'record' || evidence.source.sourceId !== edge.evidence.sourceId || evidence.source.sourceHash !== edge.evidence.sourceHash || evidence.record.locatorKey !== JSON.stringify(locator(edge.evidence.locator))) fail('Graph edge evidence does not match a source record.');
     }
     return true;
   }
@@ -134,6 +256,17 @@
     validateGraph({...graph,edges:graph.edges.concat(edge)});
     return edge;
   }
+  function traversalIndex(graph) {
+    const cached = checkedGraphs.has(graph) ? traversalIndexes.get(graph) : null;
+    if (cached) return cached;
+    const byId = new Map(graph.nodes.map(node=>[node.id,node])),outbound = new Map(),both = new Map();
+    const add=(map,id,edge,target)=>{if(!map.has(id))map.set(id,[]);map.get(id).push({edge,target});};
+    for(const edge of graph.edges){add(outbound,edge.from,edge,edge.to);add(both,edge.from,edge,edge.to);if(edge.from!==edge.to)add(both,edge.to,edge,edge.from);}
+    for(const map of [outbound,both])for(const list of map.values())list.sort((a,b)=>a.edge.id<b.edge.id?-1:a.edge.id>b.edge.id?1:0);
+    const result={byId,outbound,both};
+    if(checkedGraphs.has(graph))traversalIndexes.set(graph,result);
+    return result;
+  }
   /* Traversal returns a deterministic BFS view. asOf only filters explicitly
    * dated user links; documentary edges have unknown applicability and remain
    * visible. It does not resolve legal authority or contradiction.
@@ -149,19 +282,15 @@
     const types = options.types === undefined ? ['contains','user-link'] : options.types;
     if (!Array.isArray(types) || !types.length || types.some(type => !['contains','user-link'].includes(type))) fail('Unsupported graph edge filter.');
     const asOf = options.asOf === undefined || options.asOf === '' ? null : date(options.asOf);
-    const byId = new Map(graph.nodes.map(node => [node.id,node]));
+    const prepared = traversalIndex(graph),byId=prepared.byId;
     if (!byId.has(options.startId)) fail('Graph start node does not exist.');
-    const adjacency = new Map();
-    function add(id, edge, target) { if (!adjacency.has(id)) adjacency.set(id,[]); adjacency.get(id).push({edge,target}); }
-    for (const edge of graph.edges) {
-      if (!types.includes(edge.type) || (asOf && ((edge.validity.from && edge.validity.from > asOf) || (edge.validity.to && edge.validity.to < asOf)))) continue;
-      add(edge.from,edge,edge.to); if (direction === 'both' && edge.from !== edge.to) add(edge.to,edge,edge.from);
-    }
-    for (const list of adjacency.values()) list.sort((a,b) => a.edge.id < b.edge.id ? -1 : a.edge.id > b.edge.id ? 1 : 0);
+    const adjacency=direction==='both'?prepared.both:prepared.outbound;
     const queue = [{id:options.startId,depth:0}], visited = new Set([options.startId]), edges = [], edgeIds = new Set(); let truncated = false;
     for (let index = 0; index < queue.length; index++) {
       const current = queue[index];
       for (const item of adjacency.get(current.id) || []) {
+        const edge=item.edge;
+        if(!types.includes(edge.type)||(asOf&&((edge.validity.from&&edge.validity.from>asOf)||(edge.validity.to&&edge.validity.to<asOf))))continue;
         if (current.depth >= maxDepth) { if (!visited.has(item.target)) truncated = true; continue; }
         if (!visited.has(item.target)) {
           if (queue.length >= maxNodes) { truncated = true; continue; }
@@ -172,5 +301,5 @@
     }
     return {nodes:queue.map(item => ({...byId.get(item.id),depth:item.depth})),edges,truncated};
   }
-  return {GRAPH_LIMITS,buildGraph,validateGraph,createGraphAssertion,queryGraph};
+  return {GRAPH_LIMITS,buildSourceRecordIndex,sourceRecordIndexInfo,findSourceRecord,findSourceRecords,buildGraph,validateGraph,validateGraphAssertions,prepareGraph,createGraphAssertion,queryGraph};
 });

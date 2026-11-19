@@ -71,6 +71,12 @@ try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catc
 $taskRoot = ${rootPid}
 $taskSample = ${sampleMs}
 $collectorPid = $PID
+# Warm CIM before the first timed sample. A cold provider can take tens of
+# seconds; monitorResources waits for real counters before the workload starts.
+try { $null = Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId } catch {
+  @{collectorError='Windows process metrics unavailable';collectorStage='process-enumeration'} | ConvertTo-Json -Compress | Write-Output
+  exit 1
+}
 while (Get-Process -Id $taskRoot -ErrorAction SilentlyContinue) {
   try {
     $stage = 'process-enumeration'
@@ -94,7 +100,9 @@ while (Get-Process -Id $taskRoot -ErrorAction SilentlyContinue) {
         $rows += @{pid=[int]$p.Id;ppid=[int]$item.ParentProcessId;startId=[string]$p.StartTime.ToUniversalTime().Ticks;rssBytes=[double]$p.WorkingSet64;privateBytes=[double]$p.PrivateMemorySize64;pssBytes=$null;cpuMs=[double]$p.TotalProcessorTime.TotalMilliseconds}
       } catch { if ($_.CategoryInfo.Category -eq 'PermissionDenied' -or ($_.Exception -is [System.ComponentModel.Win32Exception] -and $_.Exception.NativeErrorCode -eq 5)) { throw }; $missing++ }
     }
-    @{timestamp=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();rows=@($rows);missingProcesses=$missing} | ConvertTo-Json -Compress -Depth 4 | Write-Output
+    $own = Get-Process -Id $collectorPid -ErrorAction Stop
+    $overhead = @{cpuMs=[double]$own.TotalProcessorTime.TotalMilliseconds;rssBytes=[double]$own.WorkingSet64;privateBytes=[double]$own.PrivateMemorySize64}
+    @{timestamp=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();rows=@($rows);missingProcesses=$missing;collector=$overhead} | ConvertTo-Json -Compress -Depth 4 | Write-Output
   } catch {
     @{collectorError='Windows process metrics unavailable';collectorStage=$stage} | ConvertTo-Json -Compress | Write-Output
   }
@@ -116,11 +124,19 @@ function aggregateRows(rows, cpuHighWater) {
 function createAccumulator({budgetBytes = DEFAULT_BUDGET, onLimit = () => {}} = {}) {
   const cpu = new Map(), browserCpu = new Map(), samples = [];
   let exceeded = false, browserPid = null, baselineCpuMs = null;
+  const collector = {samples:0,cpuMs:0,peakRssBytes:0,peakPrivateBytes:0};let collectorCpuBaseline=null;
   const peak = {rssBytes:0, pssBytes:0, privateBytes:0, browserRssBytes:0, browserPssBytes:0, processCount:0, budgetMetricBytes:0};
   function accept(snapshot) {
     if (snapshot.collectorError) throw Error(snapshot.collectorError + (snapshot.collectorStage ? ' ('+snapshot.collectorStage+')' : ''));
     if (!Array.isArray(snapshot.rows) || !snapshot.rows.length) throw Error('No workload process metrics were collected');
     const total = aggregateRows(snapshot.rows, cpu);
+    if(snapshot.collector){
+      const own=snapshot.collector;
+      if(!['cpuMs','rssBytes','privateBytes'].every(key=>Number.isFinite(own[key])&&own[key]>=0))throw Error('Invalid collector overhead measurement');
+      if(collectorCpuBaseline===null)collectorCpuBaseline=own.cpuMs;
+      collector.samples++;collector.cpuMs=Math.max(collector.cpuMs,own.cpuMs-collectorCpuBaseline);
+      collector.peakRssBytes=Math.max(collector.peakRssBytes,own.rssBytes);collector.peakPrivateBytes=Math.max(collector.peakPrivateBytes,own.privateBytes);
+    }
     if (baselineCpuMs === null) baselineCpuMs = total.cpuMs;
     const browser = aggregateRows(browserPid ? descendants(snapshot.rows, browserPid) : [], browserCpu);
     const metric = total.pssBytes ?? total.rssBytes;
@@ -141,13 +157,21 @@ function createAccumulator({budgetBytes = DEFAULT_BUDGET, onLimit = () => {}} = 
       maximumSampleGapMs:intervals.length ? Math.max(...intervals) : null, peak,
       cpuMs:Math.max(0, [...cpu.values()].reduce((sum, value) => sum + value, 0) - (baselineCpuMs || 0)),
       browserCpuMs:[...browserCpu.values()].reduce((sum, value) => sum + value, 0),
+      collector:collector.samples?{...collector}:null,
       pssComplete:samples.length > 0 && samples.every(sample => sample.total.pssBytes !== null),
       missingProcessSamples:samples.reduce((sum, sample) => sum + sample.missingProcesses, 0), exceeded};
   }};
 }
+function createSamplerDiagnostics(limit=50){
+  const errors=[],warnings=[];let errorCount=0,warningCount=0;
+  return {error(error){errorCount++;if(errors.length<limit)errors.push(String(error?.message||error).slice(0,500));},
+    warning(message){warningCount++;if(warnings.length<limit)warnings.push(String(message).slice(0,500));},
+    summary(){return{errors:errors.slice(),errorCount,warnings:warnings.slice(),warningCount};}};
+}
 async function monitorResources({rootPid = process.pid, intervalMs = 200, budgetBytes = DEFAULT_BUDGET, onLimit} = {}) {
   if (!['linux','win32'].includes(process.platform)) throw Error('Whole-process resource sampling is supported only on Linux and Windows');
-  const accumulator = createAccumulator({budgetBytes, onLimit}), errors = [];
+  const accumulator = createAccumulator({budgetBytes, onLimit}), diagnostics=createSamplerDiagnostics();
+  const recordError=error=>{diagnostics.error(error);if(onLimit)onLimit(error);};
   let stopped = false, active = false, timer, collector, pending = '', callback;
   if (process.platform === 'linux') {
     const hz = spawnSync('getconf',['CLK_TCK'],{encoding:'utf8'});
@@ -156,33 +180,36 @@ async function monitorResources({rootPid = process.pid, intervalMs = 200, budget
     callback = async () => {
       if (stopped || active) return; active = true;
       try { accumulator.accept(await linuxSnapshot(rootPid, new Set(), '/proc', ticks)); }
-      catch (error) { errors.push(error.message); if (onLimit) onLimit(error); }
+      catch (error) { recordError(error); }
       finally { active = false; }
     };
     await callback(); timer = setInterval(callback, intervalMs);
   } else {
     const script = Buffer.from(windowsCollectorScript(rootPid, intervalMs),'utf16le').toString('base64');
     collector = spawn('powershell.exe',['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',script],{stdio:['ignore','pipe','pipe'],windowsHide:true});
-    collector.on('error', error => {errors.push(error.message);if(onLimit)onLimit(error);});
-    collector.on('close',()=>{if(!stopped){const error=Error('Windows process collector stopped unexpectedly');errors.push(error.message);if(onLimit)onLimit(error);}});
-    collector.stderr.on('data', () => {const error=Error('Windows process collector wrote an error');errors.push(error.message);if(onLimit)onLimit(error);});
+    collector.on('error', recordError);
+    collector.on('close',()=>{if(!stopped)recordError(Error('Windows process collector stopped unexpectedly'));});
+    // PowerShell can write nonfatal startup diagnostics to stderr. Preserve a
+    // bounded warning sample; fail on protocol errors or missing counters.
+    collector.stderr.on('data', block => {diagnostics.warning(block.toString());});
     collector.stdout.on('data', block => {
-      pending += block.toString(); const lines = pending.split(/\r?\n/); pending = lines.pop();
-      for (const line of lines) if (line.trim()) try { accumulator.accept(JSON.parse(line.replace(/^\uFEFF/,''))); } catch (error) { errors.push(error.message);if(onLimit)onLimit(error); }
+      pending += block.toString();if(pending.length>1024*1024){pending='';recordError(Error('Windows sampler exceeded its bounded JSON line budget'));return;}
+      const lines = pending.split(/\r?\n/); pending = lines.pop();
+      for (const line of lines) if (line.trim()) try { accumulator.accept(JSON.parse(line.replace(/^\uFEFF/,''))); } catch (error) { recordError(error); }
     });
     await new Promise((resolve, reject) => {
       const start = Date.now();
       const first = setInterval(() => {
         if (accumulator.summary().samples) { clearInterval(first); resolve(); }
-        else if (errors.length || Date.now()-start > WINDOWS_SAMPLER_STARTUP_MS) { clearInterval(first); reject(Error(errors[0] || 'Windows process sampler did not initialize')); }
+        else if (diagnostics.summary().errorCount || Date.now()-start > WINDOWS_SAMPLER_STARTUP_MS) { clearInterval(first); reject(Error(diagnostics.summary().errors[0] || 'Windows process sampler did not initialize')); }
       },100);
     }).catch(error=>{collector.kill();throw error;});
   }
-  return {setBrowserPid:accumulator.setBrowserPid, summary:() => ({...accumulator.summary(), errors}), async stop() {
+  return {setBrowserPid:accumulator.setBrowserPid, summary:() => ({...accumulator.summary(), ...diagnostics.summary()}), async stop() {
     stopped = true; if (timer) clearInterval(timer);
     if (collector) await new Promise(resolve => {const ending=setTimeout(resolve,2000);collector.once('close',()=>{clearTimeout(ending);resolve();});collector.kill();});
     while (active) await new Promise(resolve => setTimeout(resolve,10));
-    return {...accumulator.summary(), errors};
+    return {...accumulator.summary(), ...diagnostics.summary()};
   }};
 }
 function cgroupLimits(memoryText, cpuText) {
@@ -229,7 +256,7 @@ async function runBenchmark(options = {}) {
     budgets:{targetMachineMemoryBytes:16_000_000_000, workloadMemoryBytes:budgetBytes,totalTimeMs:timeoutMs,sampleIntervalMs:200},
     scope:'Harness Node process and its full Chromium descendant tree, including browser/renderers/worker hosts/utility processes. Model load, learned index, retrieval and one generated answer. Parser/import/recovery and other desktop applications are not exercised.',
     measurement:{method:process.platform==='linux'?'Linux smaps_rollup PSS (preferred) plus RSS/private bytes and /proc CPU ticks':'Windows process WorkingSet/private bytes and TotalProcessorTime; shared pages can be counted more than once',
-      limits:'Sampled peaks are lower bounds between samples. RSS/WorkingSet sums can double count shared pages. Sampling overhead is included in Node on Linux; the independent Windows PowerShell collector is excluded. CPU can miss short-lived processes between samples.'},stagesMs:{},quality:{},errors:[]};
+      limits:'Sampled peaks are lower bounds between samples. RSS/WorkingSet sums can double count shared pages. Sampling overhead is included in Node on Linux. Windows warms CIM before timed samples and records independent PowerShell collector CPU/memory separately, outside the workload budget. CPU can miss short-lived processes between samples.'},stagesMs:{},quality:{},errors:[]};
   let loopback, server, browser, context, page, monitor, deadline, limitError, started=Date.now();
   const cleanupBrowser = () => { if (server) server.kill().catch(()=>{}); };
   try {
@@ -284,4 +311,4 @@ async function main() {
   console.log(JSON.stringify(report,null,2));process.exitCode=report.status==='PASS'?0:1;
 }
 if(require.main===module)main().catch(error=>{console.error(error.message);process.exitCode=1;});
-module.exports={descendants,parseProcStat,parseSmaps,linuxSnapshot,aggregateRows,createAccumulator,windowsCollectorScript,monitorResources,syntheticCorpus,cgroupLimits,runBenchmark,DEFAULT_BUDGET};
+module.exports={descendants,parseProcStat,parseSmaps,linuxSnapshot,aggregateRows,createAccumulator,createSamplerDiagnostics,windowsCollectorScript,monitorResources,syntheticCorpus,cgroupLimits,runBenchmark,DEFAULT_BUDGET};
