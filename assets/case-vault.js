@@ -109,6 +109,9 @@
       if(actual!==hash)fail('INTEGRITY','Original source bytes do not match their SHA-256.');return BlobType.prototype.slice.call(blob,0,blob.size,blob.type);
     }
     function cursorDelete(api,store,index,key,done){let count=0,bytes=0;return api.request(store.index(index).openCursor(key),cursor=>{if(!cursor){done({count,bytes});return;}const value=cursor.value;count++;bytes+=value.bytes||0;cursor.delete();cursor.continue();});}
+    // Whole-case deletion needs only primary keys. Keep large originals and
+    // derived payloads out of cursor results when their totals are discarded.
+    function deleteByKey(api,store,index,key,done){return api.request(store.index(index).openKeyCursor(key),cursor=>{if(!cursor){done();return;}api.request(store.delete(cursor.primaryKey));cursor.continue();});}
     function readCase(caseId,signal){checkId(caseId,'case');return run(['cases'],'readonly',api=>api.request(api.store('cases').get(caseId),value=>api.result(value?caseChecked(value):null)),signal);}
     function page(index,key,{afterId,limit=100,signal}={}){
       if(afterId!==undefined&&!id(afterId))fail('INVALID_INPUT','Invalid source pagination cursor.');
@@ -277,7 +280,7 @@
       deleteCase(caseId,options={}){return serialize(()=>{
         checkId(caseId,'case');return run(['cases','sourceMeta','originals','shards'],'readwrite',api=>api.request(api.store('cases').get(caseId),rawCase=>{
           if(!rawCase){api.result(false);return;}const c=caseChecked(rawCase);expected(c,options.expectedRevision);
-          cursorDelete(api,api.store('sourceMeta'),'byCase',caseId,()=>cursorDelete(api,api.store('originals'),'byCase',caseId,()=>cursorDelete(api,api.store('shards'),'byCase',caseId,()=>{api.store('cases').delete(caseId);api.result(true);}))); 
+          deleteByKey(api,api.store('sourceMeta'),'byCase',caseId,()=>deleteByKey(api,api.store('originals'),'byCase',caseId,()=>deleteByKey(api,api.store('shards'),'byCase',caseId,()=>{api.store('cases').delete(caseId);api.result(true);})));
         }),options.signal);
       });},
       close(){if(closed)return;closed=true;for(const tx of active)try{tx.abort();}catch(_){}db.close();}

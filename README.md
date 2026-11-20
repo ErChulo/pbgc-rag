@@ -1,18 +1,28 @@
 # PBGC-RAG
 
-[![Maturity: 1.1 audit remediation, development](https://img.shields.io/badge/maturity-1.1%20audit%20remediation%20%7C%20development-E4002B)](docs/AUDIT-REMEDIATION-1.1.md)
+[![Maturity: 1.1 RC1 verification pending](https://img.shields.io/badge/maturity-1.1%20RC1%20%7C%20verification%20pending-E4002B)](docs/AUDIT-REMEDIATION-1.1.md)
 
 Find information in your documents. Ask the included Qwen assistant a question. Open each answer’s source to check it. Save the case to reopen your work.
 
 PBGC-RAG runs on your computer without sending documents or questions to a service. It is an independent project, not an official Pension Benefit Guaranty Corporation (PBGC) product. Its current purpose is document search and supported answers. Official templates, actuarial rules and field dictionaries are not required for that workflow.
 
-**This branch is under development. It is not a release candidate for a 1 GB case.** The November audit identified answer-quality, incomplete-extraction, recovery and performance defects. Fixes and a separate large-case storage path are being integrated and tested. Configured limits are not measured capacity. See the [audit remediation record](docs/AUDIT-REMEDIATION-1.1.md) for verified fixes and remaining gates.
+**The proposed 1.1 RC1 is in final verification.** All six source, complete-package and 1 GiB Windows/Ubuntu checks passed for `a987a6e`. A separate local run found a cleanup timeout; its repair now needs its own checks. See the [audit record](docs/AUDIT-REMEDIATION-1.1.md) and [exact earlier results](docs/evidence/audit-a987-public-ci-status.json). Do not treat earlier results as acceptance of a changed runtime.
 
 The earlier **1.0 RC1** package and `main` are preserved. Its Windows/Ubuntu checks apply to runtime [`d3ce073`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89), the existing complete office ZIP and its bounded test workloads. Those results do not establish readiness for realistic multi-paragraph documents or the newly specified case size. See [historical RC1 evidence](#verified-rc1-evidence) and the [machine-readable record](docs/evidence/habemus-1.0-rc1-verified.json).
 
 [![8cb8873 source and office checks: four jobs pass](https://img.shields.io/badge/8cb8873%20source%20%2B%20office-4%20jobs%20pass-008065)](docs/evidence/audit-8cb-public-ci-status.json)
 
-The four Windows/Ubuntu source and complete-package checks passed for `8cb8873` and `ac68c7f`. The compact-index runtime at `ac68c7f` also passed a supplementary Linux 1 GiB import/search/Qwen/backup run. Its full-case searches took 27–34 seconds and its sampled process-memory peak was 5.31 GB. [Exact workload and limits](docs/evidence/audit-large-case-ac68-1gib.json). Final safeguards, a full browser restart at that scale and actual-file scale checks still need their own evidence.
+The four Windows/Ubuntu source and complete-package checks passed for `8cb8873` and `ac68c7f`. The later `a987a6e` also passed both complete 1 GiB offline scale checks. Each rebuilt all 256 originals from backup, retained exact source locations and produced a real Qwen answer. The new key-only cleanup repair preserves the 30-second storage deadline; final-head results remain pending.
+
+## Get the 1.1 RC1 office candidate
+
+1. Open the [office candidate checks](https://github.com/ErChulo/pbgc-rag/actions/workflows/rag-audit-remediation.yml). Select the latest passed **1.1 RC1** run on `codex/rag-audit-remediation-1.1`.
+2. Under **Artifacts**, download **audit-rc1-office-evidence-windows-latest**. Sign in to GitHub if asked.
+3. Extract that ZIP. Open **dist**, then extract **PBGC-RAG-1.1-rc1-office.zip** too.
+4. Open the app folder and double-click **index.html**. Keep **assets**, **vendor** and **models** beside it.
+5. Choose **Get started**, then **Start Qwen**. For hundreds of documents, open **Case → Open a large case workspace**. Follow the [office instructions](docs/OFFICE-START.md).
+
+The complete app includes Qwen. No office installation, terminal, server or separate model download is needed. The ZIP is about 777 MB; extracted app files use about 1.05 GB. Allow 4 GB for download/extraction, plus space for your documents, local indexes and backups. The target is a 16 GB computer. GitHub artifacts expire seven days after their run. `main` and older packages are preserved.
 
 ## Large-case development path
 
@@ -26,7 +36,7 @@ The **Large case workspace** control opens a separate document store. It keeps o
 4. For a written answer, start the included Qwen and select **Write an answer with sources**. Check each quoted source. A single cited document is marked for review.
 5. Choose **Save large case backup**. Reopen that ZIP with **Open a large case backup**. Restore verifies original bytes and rebuilds passages; imported derived evidence is not trusted.
 
-The configured large-case bounds are **1 GiB of originals, 2,000 documents and 64 MiB per document**, with additional parser, cache and browser-storage limits. The intermediate 1 GiB test used 256 synthetic text documents and checked all backup hashes, with three original files reparsed. It did not measure arbitrary PDF/Office collections or a second full-case restore. Final-head acceptance is pending.
+The configured large-case bounds are **1 GiB of originals, 2,000 documents and 64 MiB per document**, with additional parser, cache and browser-storage limits. The `a987a6e` actual-file tests used 256 synthetic text documents and rebuilt the complete second case from backup on Windows and Ubuntu. They did not measure arbitrary PDF/Office collections or the 2,000-document maximum. Final repair-head acceptance is pending.
 
 Large-case search checks authenticated term indexes for all selected passages, then loads matching passage text. The learned encoder reranks a bounded text-search shortlist; it is not a global dense index of the entire case. A very broad question may require a document, participant name or ID. Browser storage and case backups are **unencrypted**. Keep the original files and a portable backup. Optional passphrase encryption remains work to do.
 

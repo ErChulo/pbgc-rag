@@ -1,4 +1,4 @@
-name: Verify audit-remediation office development package
+name: Verify audit-remediation office candidate
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   office-candidate:
     if: github.ref == 'refs/heads/codex/rag-audit-remediation-1.1'
-    name: audit development office package (${{ matrix.os }})
+    name: 1.1 RC1 office package (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -27,7 +27,7 @@ jobs:
       run:
         shell: bash
     env:
-      PBGC_OFFICE_ZIP: dist/PBGC-RAG-1.1-dev-office.zip
+      PBGC_OFFICE_ZIP: dist/PBGC-RAG-1.1-rc1-office.zip
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -168,7 +168,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: audit-development-office-evidence-${{ matrix.os }}
+          name: audit-rc1-office-evidence-${{ matrix.os }}
           path: |
             test-results/audit-development*.log
             test-results/audit-development*.json
@@ -182,7 +182,7 @@ jobs:
             test-results/office-resources-file.json
             test-results/office-package-file.png
             test-results/office-original-page-file.png
-            dist/PBGC-RAG-1.1-dev-office.zip
+            dist/PBGC-RAG-1.1-rc1-office.zip
           if-no-files-found: warn
           retention-days: 7
           compression-level: 0

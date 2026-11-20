@@ -1,6 +1,6 @@
 # Audit remediation 1.1
 
-Status: **development; not a release candidate for an approximately 1 GB case.** Updated November 20, 2026, Eastern time.
+Status: **proposed 1.1 RC1; final repair-head verification pending.** Updated November 20, 2026, Eastern time.
 
 The independent audit examined `main` at `c429b8f`. This work is isolated on `codex/rag-audit-remediation-1.1`, based on `d28733f`, whose application runtime was `d3ce073`. `main`, published releases and the earlier complete office ZIP remain preserved. No new release or environment publication is authorized by this increment.
 
@@ -135,3 +135,11 @@ Later review fixes retain every bounded exact candidate through reranking safety
 The final Node suite passed **558 checks, zero failures and seven explicit skips**. Targeted Chromium integration passed **31 checks**, including native PDF headers/wrapped conditions, full persistent-browser restart, visible 26-original backup/restore, and selected-document questions. The final definite-head refinement followed that browser run and passed the complete Node suite; committed-runtime CI and the full scale run must verify the combined version.
 
 The scale harness now uses a normal on-disk browser profile, records a changed browser PID on restart, captures quota/free-disk evidence and supports mandatory complete second-case restore. Both 4 MiB and 32 MiB full-restore smokes passed with exact stored bytes, every original/header binding, three restored source-location queries, original-case invariance and cleanup. The 32 MiB run took 55.3 seconds with a 756 MB PSS peak and zero external requests. These smokes used no model. The full 1 GiB restart, real-Qwen and complete-restore run, plus final Windows/Ubuntu actual-file checks, remain pending.
+
+## Complete scale evidence and deletion repair
+
+All six [Windows/Ubuntu checks passed for `a987a6e`](evidence/audit-a987-public-ci-status.json), including actual offline 1 GiB import, real Qwen, complete browser restart and full second-case restore. Ubuntu completed the scale workload in 17 minutes 16 seconds, with a 2.56 GB sampled process PSS peak. Windows completed it in 21 minutes 12 seconds, with a 4.25 GB sampled process-memory peak. Each verified all 256 restored originals and header bindings, three exact restored source locations, unchanged runtime bytes and zero sampler errors. This remains synthetic UTF-8 prose and one model fact per scale run, not arbitrary document-format or general answer-quality certification.
+
+The separate 30-minute local HTTP run is still **FAIL**: all 256 originals restored and the real Qwen answer passed, but whole-case deletion exceeded its unchanged 30-second transaction budget. The old cursor unnecessarily read about 5.6 GB of cached payloads. The repair deletes through key cursors within the same atomic transaction, without reading original Blobs or cached values. Revision checks, cancellation and neighboring-case isolation remain intact. Twenty real Chromium/IndexedDB checks pass, including rollback after earlier deletions. The exact repair runtime and newly named `PBGC-RAG-1.1-rc1-office.zip` require fresh platform checks; no RC acceptance follows from the earlier commit alone.
+
+The reproducible `tools/measure-rag-multiparagraph.js` probe adds actual local Qwen questions over a nine-document, eight-paragraph synthetic plan corpus, with full conditions and conflicting/unsupported controls. It is a separate bounded quality check, not a replacement for the scale or complete-package gates.

@@ -1,28 +1,35 @@
 # Use PBGC-RAG
 
-**Current audit branch:** 1.1 development packages are separate from the historical 1.0 package below. They are not yet accepted for a 1 GiB case. Use the [large-case guide](LARGE-CASE-GUIDE.md) and [audit test status](AUDIT-REMEDIATION-1.1.md). Do not replace your earlier app folder.
-
-This is the 1.0 candidate guide. The published 0.8 downloads do not contain its new controls. See the [complete step-by-step guide](USER-GUIDE.md) and [candidate test status](HABEMUS-ACCEPTANCE.md).
+This guide is for **1.1 RC1**. Keep earlier app versions in their own folders. See the [large-case guide](LARGE-CASE-GUIDE.md), [full user guide](USER-GUIDE.md) and [current test record](AUDIT-REMEDIATION-1.1.md).
 
 PBGC-RAG helps you find information in documents and check the source of an answer. It runs on your computer. It does not send your documents or questions to a service.
 
 ## Open the app
 
-1. Open the [passed 1.0 package run](https://github.com/ErChulo/pbgc-rag/actions/runs/43980279100#artifacts). Sign in to GitHub if asked. Under **Artifacts**, choose **habemus-office-evidence-windows-latest** for the office desktop.
-2. Extract that artifact ZIP. Open **dist**. Find **PBGC-RAG-1.0-rc1-office.zip** and extract this ZIP too. If you already have the app ZIP directly, extract it once.
+1. Open the [office candidate checks](https://github.com/ErChulo/pbgc-rag/actions/workflows/rag-audit-remediation.yml). Select the latest passed **1.1 RC1** run on the audit branch. Sign in to GitHub if asked. Under **Artifacts**, choose **audit-rc1-office-evidence-windows-latest**.
+2. Extract that artifact ZIP. Open **dist**. Find **PBGC-RAG-1.1-rc1-office.zip** and extract this ZIP too. If you already have the app ZIP directly, extract it once.
 3. Open the extracted app folder. Keep **index.html**, **assets**, **vendor** and **models** together. Double-click **index.html** from that folder.
 4. Choose **Get started**, then **Start Qwen**.
 5. Wait for the ready message. Follow the guide to add documents.
 
-GitHub wraps the app ZIP in an outer artifact ZIP. Extract both before opening the app. The app download is about 777 MB; allow 4 GB of free disk space while extracting and saving work. The target computer has 16 GB of RAM. The tested matrix used Chromium on Windows and Ubuntu.
+GitHub wraps the app ZIP in an outer artifact ZIP. Extract both before opening the app. The app download is about 777 MB; allow 4 GB of free disk space for download and extraction. Your documents, local indexes and case backups need additional disk space. The target computer has 16 GB of RAM. The automated matrix uses Chromium on Windows and Ubuntu.
 
-This is the verified 1.0 release candidate for an office pilot. Its runtime is `d3ce073`; all four source/package Windows/Ubuntu jobs passed. The existing tested ZIP remains unchanged by this guide update. See the [verification record](evidence/habemus-1.0-rc1-verified.json).
-
-Artifacts are retained for seven days after the run. If expired, request a fresh verified candidate package. The [stable 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/office-v0.8.0) and [larger-model 0.8 release](https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-v0.8.0) are older permanent downloads without the new controls. No 1.0 release tag has replaced them.
+Check the GitHub run's green result before downloading. The source, full office package and 1 GiB workload have separate checks. Historical results apply only to the named version. Artifacts remain available for seven days after their run.
 
 Qwen is the included local assistant. You do not need to find a model file, install software, open a terminal or run a server. Model startup can take time on the local CPU. The app shows progress and lets you cancel.
 
-The GitHub source-code ZIP and small core developer ZIP are not complete office packages. This 1.0 candidate includes Qwen2.5 1.5B Instruct Q3_K_S. Broader real-plan answer quality remains pilot work. Keep older packages in separate folders.
+Use the complete office ZIP. The source-code ZIP and small core ZIP omit the included Qwen files. This candidate includes Qwen2.5 1.5B Instruct Q3_K_S. Check every answer against its source.
+
+## Use hundreds of documents
+
+1. Open **Case**. Choose **Open a large case workspace**.
+2. Enter a case name and choose **Create large case**.
+3. Choose **Add case documents**. Read the import errors and coverage notes.
+4. Enter a specific question. Use **Find source passages** first. Choose **Write an answer with sources** when Qwen is ready.
+5. Open the cited source to check the text or value.
+6. Choose **Save large case backup**. To restore that ZIP, choose **Open a large case backup**.
+
+Use the large-case workspace for hundreds of documents, up to its configured 1 GiB limit. Include a plan name, participant ID or field in your question. Very broad questions can need a narrower document selection. See the [large-case guide](LARGE-CASE-GUIDE.md) for format limits, table setup and backup steps. Browser storage and case backups are unencrypted.
 
 ## Ask your first question
 
@@ -36,9 +43,7 @@ A case keeps documents together. Questions use the selected case or reference li
 
 Each written answer must pass source checks. If the app cannot support an answer, it says so. If sources appear to disagree, read both before deciding what to use. A citation does not prove that the answer applies to a particular person or date.
 
-## Ask separate questions in this development branch
-
-These controls are in the 1.0 candidate. They are not in the published 0.8 packages. See [candidate test status](HABEMUS-ACCEPTANCE.md) for the tested version.
+## Ask separate questions
 
 1. In **Ask your documents**, write the first question.
 2. Choose **Add another question**. Enter **Question 2**. You can add **Question 3**. Use different questions when you search the same documents.
@@ -48,7 +53,7 @@ These controls are in the 1.0 candidate. They are not in the published 0.8 packa
 
 Each question gets its own search and source checks. An answer can come from a different document. This does not create a free-form combined report or decide which conflicting provision governs.
 
-## Ask about one document in this development branch
+## Ask about one document
 
 1. Below the question, open **Documents: All documents**.
 2. In **Documents for this question**, choose one file. Leave **All documents** selected to search the case.

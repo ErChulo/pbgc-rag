@@ -55,6 +55,8 @@ jobs:
         env:
           PBGC_CHALLENGE_QWEN: '1'
         run: node tests/rag-challenges.test.js
+      - name: Verify real Qwen on qualified multi-paragraph plan documents offline
+        run: node tools/measure-rag-multiparagraph.js --file --output test-results/verification-multiparagraph-file.json
       - name: Measure whole-process resource budget on actual offline file profile
         run: node tools/measure-resources.js --file --out test-results/resources-file.json
       - name: Record bounded synthetic model verification summary

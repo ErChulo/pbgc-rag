@@ -1,8 +1,8 @@
 # Acceptance evidence
 
-## Current gate: 1.1 audit remediation
+## Current gate: proposed 1.1 RC1
 
-**NOT A RELEASE CANDIDATE for the clarified approximately 1 GB office case.** Historical results below remain tied to their exact runtime, package and workload. They do not accept this branch or the larger case requirement.
+**Final verification pending.** Commit `a987a6e` passed all six Windows/Ubuntu source, office-package and full 1 GiB actual-file checks. A separate local run found a whole-case deletion timeout. The key-only deletion repair passes its real IndexedDB regressions and now needs exact-current-head platform and scale checks before RC maturity is accepted.
 
 | Requirement | Current status | Evidence or remaining work |
 | --- | --- | --- |
@@ -10,12 +10,12 @@
 | Corrupt current/previous recovery snapshots are isolated | PASS, module scope | `tests/storage.test.js`: 13 passing checks; explicit prior-snapshot selection required before rollback save |
 | Mixed-page OCR coverage and low-confidence provenance | PASS, synthetic module scope | `tests/ocr-coverage-audit.test.js`: 7 passing checks; native/unknown external OCR origin stays unverified |
 | PDF parent protocol, worker integrity and explicit page windows | PASS, module scope | `tests/pdf-native-protocol.test.js`: 5 passing checks; real browser integration is a separate gate |
-| Single-document answers disclose source dependence | IMPLEMENTED; integrated UI verification pending | One original SHA counts as one source. Citation does not certify factual truth |
-| Large original-document store, bounded shards, portable ZIP | IMPLEMENTED; orchestration verification in progress | IndexedDB-only large-case path; no localStorage or memory fallback. Configured 1 GiB/2,000 sources/64 MiB per source is not measured capacity |
-| Full 1 GiB end-to-end workload and whole-process resource limits | NOT PASSED | Require representative synthetic import, passage retrieval, real model answer, cancellation/reopen and backup/restore measurements |
-| Exact-current-head Windows/Ubuntu actual offline-file acceptance | NOT PASSED | Prior `d3ce073` CI results do not substitute; local actual-file entry is administrator-blocked, HTTP checks are supplementary |
+| Single-document answers disclose source dependence | PASS, bounded integration scope | One original SHA counts as one source. Citation does not certify factual truth |
+| Large original-document store, bounded shards, portable ZIP | PASS at `a987a6e`, 1 GiB synthetic workload | Both platforms imported and fully restored 256 originals; all hashes, header bindings and source locations checked. Arbitrary PDF/Office cases and configured 2,000-source maximum are not implied |
+| Full 1 GiB end-to-end workload and whole-process resource limits | PASS at `a987a6e`; repair-head repeat pending | [Six exact jobs and full summaries](docs/evidence/audit-a987-public-ci-status.json). Real Qwen, full browser restart, backup and complete second-case restore included |
+| Exact-current-head Windows/Ubuntu actual offline-file acceptance | PENDING after deletion repair | `a987a6e` source/package/scale all passed. Local actual-file entry remains administrator-blocked; HTTP is supplementary |
 | Optional passphrase encryption | NOT IMPLEMENTED | Unencrypted local storage and backup notices are visible; this is the documented interim choice |
-| Independent re-audit after integration | PENDING | Review current fixes and residual limitations before another RC claim |
+| Independent re-audit after integration | PASS, bounded scope | Twelve final source/qualification/ownership probes; deletion review and 20 real IndexedDB checks. Not a general semantic-entailment or factual-truth certificate |
 
 Detailed dispositions and reproduction commands: [1.1 audit remediation](docs/AUDIT-REMEDIATION-1.1.md).
 

@@ -1,0 +1,706 @@
+{
+  "schemaVersion": 1,
+  "kind": "public-github-run-page-status",
+  "checkedAt": "2026-11-20T23:03:24.743922+00:00",
+  "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+  "branch": "codex/rag-audit-remediation-1.1",
+  "status": "PASS_FOR_EXACT_COMMIT_SCOPED_CI",
+  "passedJobs": 6,
+  "scope": "Six source, complete office ZIP and 1 GiB persistent-profile actual-file jobs on public Ubuntu and Windows CI for exact commit a987a6e. This does not accept later working changes or establish broad real-plan answer quality.",
+  "sourceAccess": "Unauthenticated public GitHub run and job HTML only. Complete allowlisted synthetic benchmark annotations were parsed from the public run page and bound to their job URLs. No private logs, API credentials or authenticated artifacts were accessed.",
+  "requirements": {
+    "actualOfflineFileEntry": true,
+    "normalPersistentProfile": true,
+    "browserStorageQuotaOverride": false,
+    "fullBrowserProcessRestart": true,
+    "syntheticOriginalBytes": 1073741824,
+    "syntheticSources": 256,
+    "realPinnedQwenRequired": true,
+    "generationDeadlineMs": 120000,
+    "completeSecondCaseRestoreRequired": true,
+    "allRestoredOriginalHashesVerified": 256,
+    "allRestoredHeaderBindingsVerified": 256,
+    "postRestoreExactSearchChecks": 3,
+    "restoredCaseCleanupRequired": true
+  },
+  "reports": [
+    {
+      "run": "44765022239",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022239",
+      "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+      "workflow": "Verify synthetic offline build",
+      "publicStatus": "Success",
+      "publicTotalDuration": "27m 12s",
+      "rawRunPageSha256": "7b19ef7c8a182ee1bd0a787f22b815c259c370de9ad0300decf4844f0ee16885",
+      "jobs": [
+        {
+          "job": "136387205535",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022239/job/136387205535",
+          "label": "verification (windows-latest)",
+          "os": "windows-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Verify bundled model profile",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify model recovery integrity guards",
+              "conclusion": "success"
+            },
+            {
+              "name": "Prepare hash-verified local model for actual CPU inference",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify source and supplementary HTTP browser workflow",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify actual file browser workflow",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify independent real-model question relevance and answer quality offline",
+              "conclusion": "success"
+            },
+            {
+              "name": "Measure whole-process resource budget on actual offline file profile",
+              "conclusion": "success"
+            },
+            {
+              "name": "Record bounded synthetic model verification summary",
+              "conclusion": "success"
+            },
+            {
+              "name": "Package synthetic source build",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "8a12be8b811360012f62853d21e8e6740fa293075faea6aa954e8655a79f1240"
+        },
+        {
+          "job": "136387206354",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022239/job/136387206354",
+          "label": "verification (ubuntu-latest)",
+          "os": "ubuntu-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Verify bundled model profile",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify model recovery integrity guards",
+              "conclusion": "success"
+            },
+            {
+              "name": "Prepare hash-verified local model for actual CPU inference",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify source and supplementary HTTP browser workflow",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify actual file browser workflow",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify independent real-model question relevance and answer quality offline",
+              "conclusion": "success"
+            },
+            {
+              "name": "Measure whole-process resource budget on actual offline file profile",
+              "conclusion": "success"
+            },
+            {
+              "name": "Record bounded synthetic model verification summary",
+              "conclusion": "success"
+            },
+            {
+              "name": "Package synthetic source build",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "180e98e5e54e4cd191422951b3fe1da37f94ab6260752c4555bde01c6aa7414f"
+        }
+      ]
+    },
+    {
+      "run": "44765022270",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022270",
+      "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+      "workflow": "Verify audit-remediation office development package",
+      "publicStatus": "Success",
+      "publicTotalDuration": "10m 58s",
+      "rawRunPageSha256": "5e40f790ede7f9039aaa1ea773797419004231f9f9c737bfd63e37304ae59021",
+      "jobs": [
+        {
+          "job": "136387205796",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022270/job/136387205796",
+          "label": "audit development office package (ubuntu-latest)",
+          "os": "ubuntu-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Check generated assets and prepare the exact pinned local model",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build the complete candidate ZIP",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify the same ZIP offline with real Qwen, OCR and original-page reading",
+              "conclusion": "success"
+            },
+            {
+              "name": "Extract the checked candidate to a path with spaces",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check the previous separate-question flow in the extracted candidate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check actual scoped Qwen answers in the extracted candidate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check table setup, original evidence and save/reopen",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check real mixed-page OCR and unchanged review bindings",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check actual combined and table answers from bundled Qwen",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check large-case orchestration in the extracted package",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "7720fddc40869f4a1bf28a9571f9cc7a62dff3215f15ceedd6e82c45c3f45c27"
+        },
+        {
+          "job": "136387206510",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022270/job/136387206510",
+          "label": "audit development office package (windows-latest)",
+          "os": "windows-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Check generated assets and prepare the exact pinned local model",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build the complete candidate ZIP",
+              "conclusion": "success"
+            },
+            {
+              "name": "Verify the same ZIP offline with real Qwen, OCR and original-page reading",
+              "conclusion": "success"
+            },
+            {
+              "name": "Extract the checked candidate to a path with spaces",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check the previous separate-question flow in the extracted candidate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check actual scoped Qwen answers in the extracted candidate",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check table setup, original evidence and save/reopen",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check real mixed-page OCR and unchanged review bindings",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check actual combined and table answers from bundled Qwen",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check large-case orchestration in the extracted package",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "62e26cd9a65299c13cc6a6dd47de3b254f80ed9d317ca765e95af7ca3fa013e4"
+        }
+      ]
+    },
+    {
+      "run": "44765022320",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022320",
+      "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+      "workflow": "Verify large-case audit workload",
+      "publicStatus": "Success",
+      "publicTotalDuration": "26m 12s",
+      "rawRunPageSha256": "1925712b70ed6459cb09cad63e7b925bc57e6a191a32175896cdf3321bb8ad44",
+      "jobs": [
+        {
+          "job": "136387205251",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022320/job/136387205251",
+          "label": "actual-file large case (ubuntu-latest)",
+          "os": "ubuntu-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Verify generated parser assets are current",
+              "conclusion": "success"
+            },
+            {
+              "name": "Prepare the pinned local model outside the office",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check bounded quota and workload diagnostics",
+              "conclusion": "success"
+            },
+            {
+              "name": "Measure actual offline file import, search, Qwen, full browser restart and complete backup restore",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "67b39672e996e7157c3859405f43ebdf7f4bf749ec8eb6fb71b399f135cabe66",
+          "largeCaseNotice": {
+            "annotationUrl": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022320/job/136387205251#step:10:15",
+            "summary": {
+              "schemaVersion": 1,
+              "status": "PASS",
+              "profile": "actual offline file://",
+              "browserMode": "persistent-normal-profile",
+              "fullBrowserRestart": true,
+              "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+              "lastStage": "full-restore-cleanup",
+              "runtimeUnchanged": true,
+              "totalMs": 1036322,
+              "workload": {
+                "sourceBytes": 1073741824,
+                "sourceCount": 256,
+                "indexedChunks": 1219840,
+                "derivedBytes": 5635959296,
+                "realModelRequired": true,
+                "fullRestoreRequired": true
+              },
+              "timings": {
+                "generateCorpus": 2985,
+                "browserEntry": 3161,
+                "cancelAndRollback": 521,
+                "import": 420252,
+                "reopen": 474,
+                "threeFullCaseSearches": 34090,
+                "selectedSourceSearch": 172,
+                "modelFileSelection": 72,
+                "modelHashAndLoad": 2867,
+                "embeddingLoad": 263,
+                "realQwenAnswerAndGrounding": 90396,
+                "backupParseAndVerify": 13822,
+                "fullRestore": 415279,
+                "fullRestoreSearch": 34978,
+                "fullRestoreCleanup": 15880
+              },
+              "modelCheck": {
+                "status": "answered",
+                "reason": "cited-synthesis-guarded",
+                "singleSource": true,
+                "calls": [
+                  {
+                    "promptCharacters": 327,
+                    "outputTokenBudget": 64,
+                    "firstTokenMs": 76767,
+                    "elapsedMs": 78418,
+                    "emittedCharacters": 2,
+                    "returnedCharacters": 2
+                  }
+                ]
+              },
+              "importFailures": {
+                "failureCounts": {},
+                "firstFailure": null
+              },
+              "fullRestore": {
+                "status": "PASS",
+                "sourceCount": 256,
+                "originalBytes": 1073741824,
+                "derivedBytes": 5635959296,
+                "importedCount": 256,
+                "rejectedCount": 0,
+                "verifiedOriginals": 256,
+                "verifiedHeaderBindings": 256,
+                "searchChecks": 3,
+                "deleted": true,
+                "failureCounts": {},
+                "firstFailure": null
+              },
+              "storage": {
+                "beforeImport": {
+                  "available": true,
+                  "usageBytes": 214136,
+                  "quotaBytes": 10737632376,
+                  "indexedDBBytes": 214136,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterImport": {
+                  "available": true,
+                  "usageBytes": 1689073201,
+                  "quotaBytes": 12426491441,
+                  "indexedDBBytes": 1689073201,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterBrowserRestart": {
+                  "available": true,
+                  "usageBytes": 1689074467,
+                  "quotaBytes": 12426492707,
+                  "indexedDBBytes": 1689074467,
+                  "persisted": false,
+                  "reason": null
+                },
+                "beforeFullRestore": {
+                  "available": true,
+                  "usageBytes": 1689074467,
+                  "quotaBytes": 12426492707,
+                  "indexedDBBytes": 1689074467,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterFullRestore": {
+                  "available": true,
+                  "usageBytes": 3374949767,
+                  "quotaBytes": 14112368007,
+                  "indexedDBBytes": 3374949767,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterFullRestoreCleanup": {
+                  "available": true,
+                  "usageBytes": 1928313223,
+                  "quotaBytes": 12665731463,
+                  "indexedDBBytes": 1928313223,
+                  "persisted": false,
+                  "reason": null
+                }
+              },
+              "hostDisk": {
+                "atStart": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 91830784000,
+                  "freeBytes": 91847561216,
+                  "errorCode": null
+                },
+                "beforeImport": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 90737385472,
+                  "freeBytes": 90754162688,
+                  "errorCode": null
+                },
+                "afterImport": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 89046728704,
+                  "freeBytes": 89063505920,
+                  "errorCode": null
+                },
+                "beforeFullRestore": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 89046659072,
+                  "freeBytes": 89063436288,
+                  "errorCode": null
+                },
+                "afterFullRestore": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 87357386752,
+                  "freeBytes": 87374163968,
+                  "errorCode": null
+                },
+                "afterFullRestoreCleanup": {
+                  "available": true,
+                  "totalBytes": 154993672192,
+                  "availableBytes": 88822841344,
+                  "freeBytes": 88839618560,
+                  "errorCode": null
+                }
+              },
+              "resources": {
+                "samples": 2071,
+                "peakBudgetBytes": 2559365120,
+                "exceeded": false,
+                "errorCount": 0
+              },
+              "failure": null
+            }
+          }
+        },
+        {
+          "job": "136387205568",
+          "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022320/job/136387205568",
+          "label": "actual-file large case (windows-latest)",
+          "os": "windows-latest",
+          "publicStatus": "succeeded",
+          "jobStatus": "completed",
+          "requiredStepConclusions": [
+            {
+              "name": "Verify generated parser assets are current",
+              "conclusion": "success"
+            },
+            {
+              "name": "Prepare the pinned local model outside the office",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check bounded quota and workload diagnostics",
+              "conclusion": "success"
+            },
+            {
+              "name": "Measure actual offline file import, search, Qwen, full browser restart and complete backup restore",
+              "conclusion": "success"
+            }
+          ],
+          "rawJobPageSha256": "8f4f49f10ee6261894cdcba376aa2c88501c3c62679bcf08c5e1e362b5d1bfbc",
+          "largeCaseNotice": {
+            "annotationUrl": "https://github.com/ErChulo/pbgc-rag/actions/runs/44765022320/job/136387205568#step:10:14",
+            "summary": {
+              "schemaVersion": 1,
+              "status": "PASS",
+              "profile": "actual offline file://",
+              "browserMode": "persistent-normal-profile",
+              "fullBrowserRestart": true,
+              "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+              "lastStage": "full-restore-cleanup",
+              "runtimeUnchanged": true,
+              "totalMs": 1271641,
+              "workload": {
+                "sourceBytes": 1073741824,
+                "sourceCount": 256,
+                "indexedChunks": 1219840,
+                "derivedBytes": 5635959296,
+                "realModelRequired": true,
+                "fullRestoreRequired": true
+              },
+              "timings": {
+                "generateCorpus": 4504,
+                "browserEntry": 2772,
+                "cancelAndRollback": 348,
+                "import": 518618,
+                "reopen": 941,
+                "threeFullCaseSearches": 51301,
+                "selectedSourceSearch": 218,
+                "modelFileSelection": 45,
+                "modelHashAndLoad": 3461,
+                "embeddingLoad": 185,
+                "realQwenAnswerAndGrounding": 111240,
+                "backupParseAndVerify": 15489,
+                "fullRestore": 480472,
+                "fullRestoreSearch": 51195,
+                "fullRestoreCleanup": 24249
+              },
+              "modelCheck": {
+                "status": "answered",
+                "reason": "cited-synthesis-guarded",
+                "singleSource": true,
+                "calls": [
+                  {
+                    "promptCharacters": 327,
+                    "outputTokenBudget": 64,
+                    "firstTokenMs": 91103,
+                    "elapsedMs": 93038,
+                    "emittedCharacters": 2,
+                    "returnedCharacters": 2
+                  }
+                ]
+              },
+              "importFailures": {
+                "failureCounts": {},
+                "firstFailure": null
+              },
+              "fullRestore": {
+                "status": "PASS",
+                "sourceCount": 256,
+                "originalBytes": 1073741824,
+                "derivedBytes": 5635959296,
+                "importedCount": 256,
+                "rejectedCount": 0,
+                "verifiedOriginals": 256,
+                "verifiedHeaderBindings": 256,
+                "searchChecks": 3,
+                "deleted": true,
+                "failureCounts": {},
+                "firstFailure": null
+              },
+              "storage": {
+                "beforeImport": {
+                  "available": true,
+                  "usageBytes": 214070,
+                  "quotaBytes": 10737632310,
+                  "indexedDBBytes": 214070,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterImport": {
+                  "available": true,
+                  "usageBytes": 1689072236,
+                  "quotaBytes": 12426490476,
+                  "indexedDBBytes": 1689072236,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterBrowserRestart": {
+                  "available": true,
+                  "usageBytes": 1689073566,
+                  "quotaBytes": 12426491806,
+                  "indexedDBBytes": 1689073566,
+                  "persisted": false,
+                  "reason": null
+                },
+                "beforeFullRestore": {
+                  "available": true,
+                  "usageBytes": 1689073566,
+                  "quotaBytes": 12426491806,
+                  "indexedDBBytes": 1689073566,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterFullRestore": {
+                  "available": true,
+                  "usageBytes": 3374954249,
+                  "quotaBytes": 14112372489,
+                  "indexedDBBytes": 3374954249,
+                  "persisted": false,
+                  "reason": null
+                },
+                "afterFullRestoreCleanup": {
+                  "available": true,
+                  "usageBytes": 1937699839,
+                  "quotaBytes": 12675118079,
+                  "indexedDBBytes": 1937699839,
+                  "persisted": false,
+                  "reason": null
+                }
+              },
+              "hostDisk": {
+                "atStart": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 31351934976,
+                  "freeBytes": 31351934976,
+                  "errorCode": null
+                },
+                "beforeImport": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 30271635456,
+                  "freeBytes": 30271635456,
+                  "errorCode": null
+                },
+                "afterImport": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 28629606400,
+                  "freeBytes": 28629606400,
+                  "errorCode": null
+                },
+                "beforeFullRestore": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 28627230720,
+                  "freeBytes": 28627230720,
+                  "errorCode": null
+                },
+                "afterFullRestore": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 26933997568,
+                  "freeBytes": 26933997568,
+                  "errorCode": null
+                },
+                "afterFullRestoreCleanup": {
+                  "available": true,
+                  "totalBytes": 160939618304,
+                  "availableBytes": 28374179840,
+                  "freeBytes": 28374179840,
+                  "errorCode": null
+                }
+              },
+              "resources": {
+                "samples": 2120,
+                "peakBudgetBytes": 4254392320,
+                "exceeded": false,
+                "errorCount": 0
+              },
+              "failure": null
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "memoryMetric": "The published summary exposes the combined workload budget metric. The collector uses summed PSS when available (Linux); otherwise summed RSS/working set (Windows). These are distinct operating-system metrics, not interchangeable per-process allocations.",
+  "localSupplementaryFailure": {
+    "status": "FAIL",
+    "rawEvidence": "test-results/large-case-1024mib-persistent-full-restore-model-http.json",
+    "rawEvidenceBytes": 669703,
+    "rawEvidenceSha256": "c90c2120b98dc97d2a17dbb6e5dd25b368a94f2a0eb48603e13f181e35f0fbb5",
+    "commit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+    "trackedSourceDirty": false,
+    "runtimeUnchanged": true,
+    "profile": "supplementary HTTP only",
+    "browserMode": "persistent-normal-profile",
+    "totalMs": 1804455,
+    "lastStage": "full-restore-cleanup",
+    "failure": {
+      "reason": "TIME_OR_MEMORY_BUDGET",
+      "name": "Error",
+      "code": null,
+      "stage": "full-restore-cleanup",
+      "assertion": null,
+      "location": {
+        "file": "tools/measure-large-case.js",
+        "line": 250,
+        "column": 110
+      }
+    },
+    "fullBrowserRestart": true,
+    "answerStatus": "answered",
+    "providerElapsedMs": 111081.90000000037,
+    "fullRestoreStatus": "FAIL",
+    "restoredSources": 256,
+    "verifiedOriginals": 256,
+    "verifiedHeaderBindings": 256,
+    "searchChecks": 3,
+    "deletedFlag": true,
+    "externalRequests": 0,
+    "resourceBudgetExceeded": false,
+    "samplerErrors": 0,
+    "disposition": "The separate local HTTP report remains FAIL at full-restore-cleanup after approximately 30 minutes. Its report records all original/header verifications and three restored searches, a grounded Qwen answer and a true deletion flag; these component results do not convert the run into a PASS. A later vault cleanup optimization is outside the CI commit recorded here."
+  },
+  "limits": [
+    "These results apply to exact a987a6e runtime and workflow contents. Later vault cleanup or other runtime changes need their own verification.",
+    "The large corpus is synthetic UTF-8 multi-paragraph text. It does not validate arbitrary mixed PDF/OCR/Office workloads or every format-specific extraction limit.",
+    "The scale benchmark checks one distinctive real-model answer with a source citation. It does not certify general Qwen accuracy, source truth, legal applicability or semantic entailment.",
+    "Large-case retrieval is authenticated exact-term candidate search with bounded learned reranking, not a global dense index.",
+    "Storage persistence was false in the published browser estimates. A normal profile surviving a tested restart does not guarantee immunity from browser storage clearing or eviction; keep portable backups.",
+    "Public step conclusions and allowlisted notices are preserved here; raw workflow artifacts have separate retention and authenticated-download rules.",
+    "The managed local development browser blocks file navigation; its supplementary HTTP results do not replace these CI actual-file results or test the actual managed workplace desktop.",
+    "Main and prior published packages are not replaced by this evidence. No final release-candidate claim for a later head is made."
+  ]
+}

@@ -123,6 +123,49 @@ test(`${profile} real IndexedDB Blob storage, authenticated shards and bounded c
       assert.equal(result.first.payload.text,'isolation-a');assert.equal(result.second.payload.text,'isolation-b');assert.equal(result.kept.payload.text,'isolation-b');assert.deepEqual(result.erased,{case:null,sources:[],source:null,shard:null});
     });
 
+    await t.test('whole-case deletion uses only keys without loading original Blobs or derived payloads',async()=>{
+      const result=await page.evaluate(async()=>{
+        const vault=await PBGCRag.createCaseVault(),target='delete-keys',neighbor='delete-keys-neighbor';
+        for(const caseId of [target,neighbor]){
+          await vault.createCase({id:caseId,name:caseId});
+          for(const sourceId of caseId===target?['first','shared']:['shared']){
+            const source=await vaultTest.source(vault,caseId,sourceId,new Blob([caseId,'x'.repeat(2*1024*1024)]));
+            for(const kind of ['records','chunks'])await vault.putShard(caseId,sourceId,{id:'large',kind,sourceHash:source.hash,sourceRevision:source.revision,payload:{marker:caseId,text:'y'.repeat(1024*1024)}});
+          }
+        }
+        const before=await vault.getCase(target),neighborBefore=await vault.getCase(neighbor),neighborOriginal=await vault.getSource(neighbor,'shared'),neighborHash=await vaultTest.hash(neighborOriginal.blob),protectedStores=new Set(['sourceMeta','originals','shards']),saved=[],keyCursors=[],deletions=[],transactions=[];let valueReads=0,blobReads=0,deleted;
+        const protect=(prototype,name,replacement)=>{const descriptor=Object.getOwnPropertyDescriptor(prototype,name);saved.push(()=>Object.defineProperty(prototype,name,descriptor));Object.defineProperty(prototype,name,{...descriptor,value:replacement(descriptor.value)});};
+        const storeName=source=>source.objectStore?.name||source.name;
+        try{
+          for(const prototype of [IDBObjectStore.prototype,IDBIndex.prototype])for(const name of ['get','getAll','openCursor'])protect(prototype,name,original=>function(...args){if(protectedStores.has(storeName(this))){valueReads++;throw Error('Whole-case deletion must not load stored values.');}return original.apply(this,args);});
+          const value=Object.getOwnPropertyDescriptor(IDBCursorWithValue.prototype,'value');saved.push(()=>Object.defineProperty(IDBCursorWithValue.prototype,'value',value));Object.defineProperty(IDBCursorWithValue.prototype,'value',{...value,get(){if(protectedStores.has(storeName(this.source))){valueReads++;throw Error('Whole-case deletion must not deserialize cursor values.');}return value.get.call(this);}});
+          for(const name of ['arrayBuffer','text','stream','slice'])protect(Blob.prototype,name,original=>function(...args){blobReads++;throw Error('Whole-case deletion must not read or clone original Blobs.');});
+          protect(IDBIndex.prototype,'openKeyCursor',original=>function(...args){if(protectedStores.has(this.objectStore.name))keyCursors.push({store:this.objectStore.name,index:this.name,key:args[0]});return original.apply(this,args);});
+          protect(IDBObjectStore.prototype,'delete',original=>function(key){if(protectedStores.has(this.name))deletions.push({store:this.name,key});return original.call(this,key);});
+          protect(IDBDatabase.prototype,'transaction',original=>function(stores,mode,...args){if(mode==='readwrite')transactions.push([...stores].sort());return original.call(this,stores,mode,...args);});
+          deleted=await vault.deleteCase(target,{expectedRevision:before.revision});
+        }finally{for(const restore of saved.reverse())restore();}
+        const neighborAfter=await vault.getCase(neighbor),keptOriginal=await vault.getSource(neighbor,'shared'),kept=await vault.getShard(neighbor,'shared','chunks','large'),erased={case:await vault.getCase(target),sources:await vault.listSources(target),original:await vault.getSource(target,'shared'),shard:await vault.getShard(target,'shared','chunks','large')},keptHash=await vaultTest.hash(keptOriginal.blob),timeoutMs=vault.info().limits.timeoutMs;
+        vault.close();return{deleted,valueReads,blobReads,keyCursors,deletions,transactions,neighborBefore,neighborAfter,neighborHash,keptHash,kept:{marker:kept.payload.marker,textLength:kept.payload.text.length},erased,timeoutMs};
+      });
+      assert.equal(result.deleted,true);assert.equal(result.valueReads,0);assert.equal(result.blobReads,0);assert.equal(result.timeoutMs,30000);
+      assert.deepEqual(result.keyCursors,[{store:'sourceMeta',index:'byCase',key:'delete-keys'},{store:'originals',index:'byCase',key:'delete-keys'},{store:'shards',index:'byCase',key:'delete-keys'}]);
+      assert.deepEqual(result.transactions,[['cases','originals','shards','sourceMeta']]);assert.equal(result.deletions.length,8);assert.ok(result.deletions.every(item=>item.key[0]==='delete-keys'));
+      assert.deepEqual(result.neighborAfter,result.neighborBefore);assert.equal(result.keptHash,result.neighborHash);assert.deepEqual(result.kept,{marker:'delete-keys-neighbor',textLength:1024*1024});assert.deepEqual(result.erased,{case:null,sources:[],original:null,shard:null});
+    });
+
+    await t.test('whole-case key deletion preserves all stores on stale revisions and cancellation after earlier deletes',async()=>{
+      const result=await page.evaluate(async()=>{
+        const vault=await PBGCRag.createCaseVault(),caseId='delete-keys-abort';await vault.createCase({id:caseId,name:'Atomic key deletion'});const source=await vaultTest.source(vault,caseId,'shared','Keep this original.');
+        await vault.putShard(caseId,'shared',{id:'proof',kind:'chunks',sourceHash:source.hash,sourceRevision:source.revision,payload:{text:'Keep this authenticated evidence.'}});
+        const before=await vault.getCase(caseId),stale=await vaultTest.code(()=>vault.deleteCase(caseId,{expectedRevision:before.revision-1})),early=new AbortController();early.abort();const pre=await vaultTest.code(()=>vault.deleteCase(caseId,{signal:early.signal}));
+        const controller=new AbortController(),remove=IDBObjectStore.prototype.delete,deletions=[];let mid;
+        try{IDBObjectStore.prototype.delete=function(key){const request=remove.call(this,key);deletions.push(this.name);if(this.name==='shards')controller.abort();return request;};mid=await vaultTest.code(()=>vault.deleteCase(caseId,{expectedRevision:before.revision,signal:controller.signal}));}finally{IDBObjectStore.prototype.delete=remove;}
+        const after=await vault.getCase(caseId),sources=await vault.listSources(caseId),original=await vault.getSource(caseId,'shared'),shard=await vault.getShard(caseId,'shared','chunks','proof');vault.close();return{before,after,stale,pre,mid,deletions,sources:sources.map(item=>item.id),originalText:await original.blob.text(),shardText:shard.payload.text};
+      });
+      assert.equal(result.stale.code,'CONFLICT');assert.equal(result.pre.code,'ABORTED');assert.equal(result.mid.code,'ABORTED');assert.deepEqual(result.deletions,['sourceMeta','originals','shards']);assert.deepEqual(result.after,result.before);assert.deepEqual(result.sources,['shared']);assert.equal(result.originalText,'Keep this original.');assert.equal(result.shardText,'Keep this authenticated evidence.');
+    });
+
     await t.test('two actual database connections reject stale case compare-and-swap writes',async()=>{
       const result=await page.evaluate(async()=>{
         const first=await PBGCRag.createCaseVault(),second=await PBGCRag.createCaseVault();await first.createCase({id:'cas',name:'Stale writer'});

@@ -1,6 +1,6 @@
 # Use a large case
 
-This guide covers the **1.1 development branch**. This version is under audit and scale testing. Keep the earlier app in its own folder. See [current test status](AUDIT-REMEDIATION-1.1.md).
+This guide covers the **1.1 RC1 candidate**. Keep the earlier app in its own folder. See [current test status](AUDIT-REMEDIATION-1.1.md).
 
 ## Open the case workspace
 
