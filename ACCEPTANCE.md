@@ -7,6 +7,7 @@
 | Requirement | Current status | Evidence or remaining work |
 | --- | --- | --- |
 | Ordinary multi-paragraph fact questions; units, scope and number words | PASS, synthetic module scope | `tests/rag-multiparagraph-audit.test.js`: 12 passing checks, including retained real-conflict/unsupported-topic guards |
+| Actual Qwen on multi-paragraph qualified facts | CORRECTIVE RERUN PENDING | The `98c1bb3` local probe abstained on an answerable age question. Numeric-only value choices and exact overlap dedup now require fresh real-model verification; the original [FAIL record](docs/evidence/audit-98c1-real-model-failure.json) is preserved |
 | Corrupt current/previous recovery snapshots are isolated | PASS, module scope | `tests/storage.test.js`: 13 passing checks; explicit prior-snapshot selection required before rollback save |
 | Mixed-page OCR coverage and low-confidence provenance | PASS, synthetic module scope | `tests/ocr-coverage-audit.test.js`: 7 passing checks; native/unknown external OCR origin stays unverified |
 | PDF parent protocol, worker integrity and explicit page windows | PASS, module scope | `tests/pdf-native-protocol.test.js`: 5 passing checks; real browser integration is a separate gate |

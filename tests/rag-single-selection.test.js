@@ -4,6 +4,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {answerQuestion}=require('../assets/rag.js');
 const {chunkSources}=require('../assets/chunking.js');
+const {parseText}=require('../assets/core.js'),{buildTableEvidenceChunks}=require('../assets/table-evidence.js');
 const QUESTION='What is the normal retirement age?',FACT='Normal retirement age is 65.';
 function chunk(id,text){return{id,text,sourceId:'source-'+id,sourceName:'synthetic-'+id+'.txt',sourceHash:(id==='other'?'b':'a').repeat(64),recordIndices:[0],locators:[{type:'text-line',line:1,offset:0}]};}
 function provider(raw='S1',inspect=()=>{}){return{id:'MOCK-single-selection-protocol-only',answerFormat:'source-selection-grounded-v1',generate:async request=>{inspect(request);return raw;}};}
@@ -29,6 +30,35 @@ test('opt-in profile retains all source conditions and refuses a source sentence
  let calls=0;const text='Normal retirement age is 65'+' '.repeat(2100)+'only if service is at least 10 years.';
  const result=await run(QUESTION,[chunk('age',text)],provider('S1',()=>calls++),{contextCharacters:12000});
  assert.equal(result.status,'abstained');assert.equal(result.diagnostics.reason,'question-part-evidence-missing');assert.equal(calls,0);
+});
+
+for(const [name,question,review,fact]of [
+ ['age digits',QUESTION,'The review does not change the normal retirement age.','Normal retirement age is 65 if service is at least 10 years.'],
+ ['age written number',QUESTION,'The review does not change the normal retirement age.','Normal retirement age is sixty-five if service is at least ten years.'],
+ ['factor digits','What is the early retirement factor at age 60?','The review does not change the early retirement factor at age 60.','Early retirement factor at age 60 is 0.80 only if the participant is vested.'],
+ ['factor written number','What is the early retirement factor at age 60?','The review does not change the early retirement factor at age 60.','Early retirement factor at age 60 is eighty percent only if the participant is vested.']
+])test('a numeric value question offers the value assertion and excludes a topic-only review sentence: '+name,async()=>{
+ let observed;const result=await run(question,[chunk('value',review+' '+fact)],provider('S1',request=>observed=request));
+ assert.equal(result.status,'answered',JSON.stringify(result.diagnostics));assert.equal(result.answer,fact+' [C1]');assert.deepEqual(result.citations[0].quotes,[fact]);assert.deepEqual(promptData(observed.prompt).sources,[{id:'S1',text:fact}]);
+ let calls=0;const missing=await run(question,[chunk('review',review)],provider('S1',()=>calls++));
+ assert.equal(missing.status,'abstained');assert.equal(missing.diagnostics.reason,'question-part-evidence-missing');assert.equal(missing.diagnostics.answerProfile.choiceCount,0);assert.equal(calls,0);assert.equal(missing.diagnostics.modelOutputAccepted,false);
+});
+
+for(const [question,text]of [
+ ['What is the definition of normal retirement age?','The definition of normal retirement age is the age specified in the plan.'],
+ ['What is the definition of an early retirement factor?','The definition of an early retirement factor is a documented adjustment to a pension.'],
+ ['How is the early retirement factor described?','Early retirement factor is described as a documented adjustment.'],
+ ['What is the type of early retirement factor?','The type of early retirement factor is a documented adjustment.'],
+ ['What are the requirements for the normal retirement age?','The requirements for the normal retirement age are service and vesting.'],
+ ['Who reports the normal retirement age?','Alice reports the normal retirement age.']
+])test('a nonnumeric definition, explanation or relationship remains a source choice: '+question,async()=>{
+ const result=await run(question,[chunk('qualitative',text)],provider());assert.equal(result.status,'answered',JSON.stringify(result.diagnostics));assert.equal(result.answer,text+' [C1]');assert.deepEqual(result.citations[0].quotes,[text]);
+});
+
+test('a typed age status remains an exact literal table answer',async()=>{
+ const name='synthetic-status.csv',source={id:'status',name,hash:'a'.repeat(64),parserVersion:'synthetic-status-v1',records:parseText(name,'Name,Age\nAlice,N/A').records};
+ const {chunks}=await buildTableEvidenceChunks([source],{headers:[{sourceId:source.id,tableName:name,headerRow:1}]});
+ const result=await run("What is Alice's age?",chunks,provider());assert.equal(result.status,'answered',JSON.stringify(result.diagnostics));assert.equal(result.citations[0].evidenceKind,'table-field-v1');assert.equal(result.citations[0].tableEvidence.focus.rawText,'N/A');
 });
 
 test('full retrieved evidence still blocks a conflict beyond the model prompt prefix',async()=>{

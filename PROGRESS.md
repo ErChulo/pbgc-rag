@@ -6,6 +6,8 @@ All six source, complete-office-package and full 1 GiB actual-file checks passed
 
 Whole-case deletion now uses only primary keys instead of loading cached payloads. The atomic transaction, revision/cancellation guards and 30-second budget remain unchanged. Twenty real IndexedDB checks, 31 Chromium workflow checks and 558 Node checks pass; seven Node checks are explicitly skipped. The proposed package is named `PBGC-RAG-1.1-rc1-office.zip`, and its office guide now describes the current large-case controls. Fresh exact-head platform checks and the real multi-paragraph Qwen probe are required before accepting RC maturity. Main, prior packages and published environments remain preserved.
 
+The first real multi-paragraph probe at `98c1bb3` abstained on an answerable age question: its choices included duplicate nonnumeric review text. The failed result is preserved. Numeric age/factor value binding and exact same-original prose deduplication now remove those unsuitable choices while retaining all safety evidence. Definitions, WHO questions, conditions and literal table statuses remain supported. The corrected code passes 573 Node checks (seven explicit skips), 31 Chromium workflow checks and an independent 41-check review; the identical-corpus actual-model rerun and exact-head platform checks must still pass before acceptance.
+
 ## Audit checkpoint — November 20, 2026
 
 - Saved and pushed `8cb8873` and `ac68c7f` on `codex/rag-audit-remediation-1.1`; main and the prior office ZIP are preserved.

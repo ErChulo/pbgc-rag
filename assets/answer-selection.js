@@ -112,7 +112,7 @@ function buildSelectionPrompt(plan,choices){
 function safeBind(bind,part,choice){try{return bind(part,choice)===true;}catch(_){return false;}}
 function createAnswerChoices(context,{plan,bind}={}){
  if(!Array.isArray(context)||context.length>64||!validPlan(plan)||typeof bind!=='function')return[];
- const choices=[];
+ const choices=[],seenProse=new Set();
  for(const item of context){
   if(!item||!item.chunk||typeof item.chunk.text!=='string'||item.chunk.text.length>12000||typeof item.excerpt!=='string'||!/^C[1-6]$/.test(item.label))continue;
   const table=item.chunk.evidenceKind==='table-field-v1'&&item.chunk.tableEvidence&&item.chunk.tableEvidence.schemaVersion===1;
@@ -133,8 +133,13 @@ function createAnswerChoices(context,{plan,bind}={}){
    if(table){choice.tableEvidence=item.chunk.tableEvidence;choice.trustedTableField=true;}
    const matches=plan.parts.filter(part=>safeBind(bind,part,choice)).length;
    if(!matches||!table&&matches>1)continue;
+   // Ranked overlap chunks can repeat one exact source quotation. Preserve
+   // its first eligible citation; other originals and typed rows stay distinct.
+   const proseKey=!table&&typeof item.chunk.sourceHash==='string'&&/^[a-f0-9]{64}$/.test(item.chunk.sourceHash)?item.chunk.sourceHash+'\0'+text:null;
+   if(proseKey&&seenProse.has(proseKey))continue;
    try{buildSelectionPrompt(plan,[...choices,choice]);}catch(_){continue;}
    choices.push(choice);
+   if(proseKey)seenProse.add(proseKey);
   }
  }
  return choices;

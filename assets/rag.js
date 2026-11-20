@@ -413,6 +413,14 @@ function bindQuestion(question,citations){
 
 function scopeCheck(scope){if(scope===undefined)return{};if(!object(scope)||Object.keys(scope).some(key=>!['sourceIds','sourceHashes','asOf','group'].includes(key)))fail('Invalid RAG scope.');for(const key of['sourceIds','sourceHashes'])if(scope[key]!==undefined&&(!Array.isArray(scope[key])||scope[key].length>200||scope[key].some(value=>typeof value!=='string'||value.length>256)))fail('Invalid RAG source scope.');if(scope.asOf!==undefined){const date=typeof scope.asOf==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(scope.asOf)?new Date(scope.asOf+'T00:00:00Z'):null;if(!date||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==scope.asOf)fail('Invalid RAG as-of date.');}if(scope.group!==undefined&&(typeof scope.group!=='string'||scope.group.length>200))fail('Invalid RAG group scope.');return scope;}
 function citation(item){const result={label:item.label,chunkId:item.chunk.id,sourceId:item.chunk.sourceId,sourceName:item.chunk.sourceName,sourceHash:item.chunk.sourceHash,locators:JSON.parse(JSON.stringify(item.chunk.locators)),excerpt:item.excerpt};if(item.chunk.evidenceKind==='table-field-v1'){result.evidenceKind=item.chunk.evidenceKind;result.tableEvidence=JSON.parse(JSON.stringify(item.chunk.tableEvidence));result.primaryLocator=tableApi().focusPrimaryLocator(item.chunk);}const {segments,...provenance}=retrievalMetadata(item.chunk);Object.assign(result,provenance);return result;}
+function numericChoiceRole(question){
+ const role=propertyRole(question);if(!['age','factor'].includes(role.kind))return null;
+ // This guard selects value answers. Definition, explanation and relationship
+ // questions can be supported without a numeric literal in their quotation.
+ if(!/^\s*(?:(?:what|which)\b|at\s+what\s+age\b|how\s+(?:old|much|many)\b)/iu.test(question))return null;
+ if(/\b(?:defin(?:e|es|ed|ition|itions)|mean(?:s|ing)?|explain(?:s|ed|ing|ation)?|describ(?:e|es|ed|ing)|description|purpose|reason|types?|kinds?|names?|methods?|formulas?|procedures?|conditions?|requirements?)\b|\bused\s+for\b/iu.test(question))return null;
+ return role;
+}
 // A table answer must match the focus column/key. Identity cells cannot donate
 // an unrelated number to a missing field (for example, ID65 is not an age).
 function bindChoice(question,choice){
@@ -422,7 +430,13 @@ function bindChoice(question,choice){
   // An explicit ID is checked against the actual identity cell above; its
   // number cannot be supplied by an unrelated focus value or header spelling.
   bindQuestion(tableIdReferences(question).propertyQuestion,[source]);
- }else{if(!completeSourceStatements(item,choice.text).includes(choice.text))fail('A source choice touches a cut sentence or omits its complete qualifications.');if(!relevantStatement(choice.text,question,true))fail('The source statement does not give the requested property and unit.');bindQuestion(question,[source]);}
+ }else{
+  if(!completeSourceStatements(item,choice.text).includes(choice.text))fail('A source choice touches a cut sentence or omits its complete qualifications.');
+  if(!relevantStatement(choice.text,question,true))fail('The source statement does not give the requested property and unit.');
+  const numericRole=numericChoiceRole(question);
+  if(numericRole&&!numericAssertions(choice.text).some(value=>value.role===numericRole.kind&&(!numericRole.subtype||!value.subtype||value.subtype===numericRole.subtype)))fail('A numeric value question requires a source assertion of the requested value.');
+  bindQuestion(question,[source]);
+ }
  return true;
 }
 function acceptedClaimChoices(validated,context,plan){

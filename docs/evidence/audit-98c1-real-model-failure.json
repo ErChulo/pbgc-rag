@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "real-qwen-multiparagraph-failure-disposition",
+  "status": "FAIL",
+  "commit": "98c1bb3e7281d271fb223b202b95dd1e9f136098",
+  "profile": "supplementary HTTP only",
+  "rawReport": "test-results/audit-98c1-multiparagraph-http.json",
+  "rawSha256": "15f3ac1d22ec0cf85117de4cbf2c1fca72ae96d50c3e1f2e45f2fab5613333ca",
+  "fixtureSha256": "8190a5c418b3802583170dc1f147cb524473dfa3580dfa61a563981990fbc022",
+  "model": {
+    "id": "local-gguf:qwen2.5-1.5b-instruct-q3-k-s:39feb79d0c05e409",
+    "model": "Qwen2.5 1.5B Instruct Q3_K_S",
+    "license": "Apache-2.0",
+    "source": "https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-weights-v1",
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+    "modelBytes": 760944640,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048,
+    "loaded": true,
+    "disposed": false,
+    "hparams": {
+      "nVocab": 151936,
+      "nCtxTrain": 32768,
+      "nEmbd": 1536,
+      "nLayer": 28
+    }
+  },
+  "cases": [
+    {
+      "id": "conflicting-age",
+      "status": "conflict",
+      "reason": "possible-source-conflict",
+      "providerCalls": []
+    },
+    {
+      "id": "unsupported-mortality",
+      "status": "abstained",
+      "reason": "question-topic-not-supported",
+      "providerCalls": []
+    },
+    {
+      "id": "normal-age",
+      "status": "abstained",
+      "reason": "model-abstained",
+      "providerCalls": [
+        {
+          "responseFormat": "source-selection-v1",
+          "maxTokens": 64,
+          "temperature": 0,
+          "promptCharacters": 471,
+          "firstTokenMs": 110580,
+          "state": "completed",
+          "raw": "NONE",
+          "elapsedMs": 111512
+        }
+      ]
+    }
+  ],
+  "externalRequests": 0,
+  "failure": {
+    "name": "AssertionError",
+    "code": "ERR_ASSERTION",
+    "message": "{\"id\":\"normal-age\",\"reason\":\"model-abstained\"}\n+ actual - expected\n\n+ 'abstained'\n- 'answered'\n"
+  },
+  "finding": "The ordinary numeric age question offered a repeated nonnumeric review statement alongside the complete conditional age fact; Qwen returned NONE. The application released no unsupported answer. A fresh corrective runtime and actual-model run are required.",
+  "choiceCount": 3,
+  "promptCharacters": 471,
+  "limits": [
+    "Synthetic nine-source multi-paragraph corpus; no general quality estimate.",
+    "The failed result remains FAIL. Later fixes do not relabel this run."
+  ]
+}

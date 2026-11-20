@@ -39,6 +39,29 @@ test('choices bind complete source statements and preserve full source/context i
  const prompt=buildSelectionPrompt(plan(),choices);assert.ok(prompt.length<=2600);assert.match(prompt,/EVERY question part/);assert.match(prompt,/UNTRUSTED DATA JSON/);assert.match(prompt,/"id":"S2"/);assert.match(prompt,/seven years/);
  const body=JSON.parse(prompt.split('UNTRUSTED DATA JSON\n')[1].split('\nEND DATA')[0]);assert.equal(body.question,plan().question);assert.deepEqual(body.parts,plan().parts);assert.deepEqual(body.sources,[{id:'S1',text:input[0].chunk.text},{id:'S2',text:input[1].chunk.text}]);
 });
+test('overlap prose from one verified original is offered once with its highest-ranked eligible citation',()=>{
+ const p=planFactualQuestion('What is the normal retirement age?'),text='Normal retirement age is 65.',review='Reviewers compare normal retirement age records.',hash='a'.repeat(64);
+ const first=context(text+' '+review,'C1',text+' '+review,{id:'ranked-first',sourceHash:hash,locators:[{type:'text-line',line:1}]}),overlap=context(text+' '+review,'C2',text+' '+review,{id:'overlap-later',sourceHash:hash,locators:[{type:'text-line',line:25}]});
+ const choices=createAnswerChoices([first,overlap],{plan:p,bind:propertyBind});assert.deepEqual(choices.map(choice=>({id:choice.id,text:choice.text,label:choice.label})),[{id:'S1',text,label:'C1'},{id:'S2',text:review,label:'C1'}]);assert.ok(choices.every(choice=>choice.context===first));assert.equal(choices[0].context.chunk.locators[0].line,1);
+ const repeated=context(Array(14).fill(text).join(' '),'C1',undefined,{sourceHash:hash}),qualified=context('Normal retirement age is 65 only after ten years of service.','C2',undefined,{sourceHash:hash});
+ const bounded=createAnswerChoices([repeated,qualified],{plan:p,bind:propertyBind});assert.equal(bounded.length,2,'Repeated overlap must not consume the choice budget before a different complete qualification.');assert.equal(bounded[1].text,qualified.chunk.text);
+});
+test('exact prose dedup retains distinct original hashes and every differing number, negation or qualification',()=>{
+ const p=planFactualQuestion('What is the normal retirement age?'),text='Normal retirement age is 65.',hash='a'.repeat(64),different='b'.repeat(64),values=[text,'Normal retirement age is 67.','Normal retirement age is not 65.','Normal retirement age is 65 only after ten years of service.','Normal retirement age is 65 unless the participant elects an early benefit.'];
+ const inputs=[context(text,'C1',undefined,{sourceHash:hash}),context(text,'C2',undefined,{sourceHash:different}),...values.slice(1).map((value,index)=>context(value,'C'+(index+3),undefined,{sourceHash:hash}))],choices=createAnswerChoices(inputs,{plan:p,bind:propertyBind});
+ assert.deepEqual(choices.map(choice=>choice.text),[text,...values]);assert.equal(choices[0].context,inputs[0]);assert.equal(choices[1].context,inputs[1]);
+ for(const sourceHash of [undefined,'not-a-hash','A'.repeat(64)]){const unverified=[context(text,'C1',undefined,{sourceHash}),context(text,'C2',undefined,{sourceHash})];assert.equal(createAnswerChoices(unverified,{plan:p,bind:propertyBind}).length,2,'Missing or malformed source hashes must not merge identities.');}
+});
+test('an ineligible overlap does not suppress the first later valid binding',()=>{
+ const p=planFactualQuestion('What is the normal retirement age?'),text='Normal retirement age is 65.',hash='a'.repeat(64),first=context(text,'C1',undefined,{sourceHash:hash}),second=context(text,'C2',undefined,{sourceHash:hash}),calls=[];
+ const choices=createAnswerChoices([first,second],{plan:p,bind:(_part,choice)=>{calls.push(choice.context);return choice.context===second;}});
+ assert.deepEqual(calls,[first,second]);assert.equal(choices.length,1);assert.equal(choices[0].id,'S1');assert.equal(choices[0].context,second);
+});
+test('exact prose dedup never collapses typed table fields or their row and focus identities',()=>{
+ const p=planFactualQuestion('What is the normal retirement age?'),text='Normal retirement age is 65.',sourceHash='a'.repeat(64),fields=[{sourceRow:2,focus:{propertyText:'Normal retirement age',cell:'B2'}},{sourceRow:3,focus:{propertyText:'Normal retirement age',cell:'B3'}},{sourceRow:2,focus:{propertyText:'Normal retirement age',cell:'B2'}}];
+ const prose=context(text,'C1',undefined,{sourceHash}),tables=fields.map((field,index)=>context(text,'C'+(index+2),undefined,{sourceHash,evidenceKind:'table-field-v1',tableEvidence:{schemaVersion:1,...field}})),choices=createAnswerChoices([prose,...tables],{plan:p,bind:propertyBind});
+ assert.equal(choices.length,4);assert.equal(choices[0].context,prose);for(let index=0;index<tables.length;index++){assert.equal(choices[index+1].context,tables[index]);assert.equal(choices[index+1].tableEvidence,tables[index].chunk.tableEvidence);assert.equal(choices[index+1].trustedTableField,true);}
+});
 test('clipped source conditions and unpunctuated wrapped conditions cannot become new sentences',()=>{
  const complete='Normal retirement age is 65 only if the service condition is met.';
  const clipped=context(complete,'C1','Normal retirement age is 65');
