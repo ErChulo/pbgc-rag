@@ -253,6 +253,7 @@ if(process.env.PBGC_REQUIRE_BATCH_MODEL==='1')test(`${profile} REAL Qwen answers
   assert.equal(rows.length,2,'The real model must complete both explicit questions');
   assert.equal(observed.calls.length,2,'Each answer must come from a separate real Qwen inference');
   assert.ok(observed.calls.every(call=>call.state==='completed'),'Both real generation calls must complete successfully');
+  assert.ok(observed.calls.every(call=>call.responseFormat==='source-selection-v1'&&/^S(?:[1-9]|1[0-2])(?:\s*,\s*S(?:[1-9]|1[0-2]))*$/.test(call.raw.trim())),'The real UI model selects verified source IDs; source text supplies each answer');
   for(const [index,question,source,quote,fact] of [[0,AGE,'synthetic-retirement.txt','Normal retirement age is 65.',/\b65\b/],[1,keptQuestion,'synthetic-retention.txt','Case files are kept for seven years.',/\b(?:seven|7) years\b/i]]){
    const row=rows[index];assert.equal(row.question,question);assert.equal(row.result.status,'answered');assert.match(row.result.answer,fact);
    assert.ok(row.result.citations.some(citation=>citation.sourceName===source&&citation.quotes?.includes(quote)),'The accepted answer cites the independently expected source sentence');

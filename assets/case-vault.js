@@ -5,7 +5,7 @@
   'use strict';
   const MiB=1024*1024,GiB=1024*MiB;
   const CASE_VAULT_LIMITS=Object.freeze({caseBytes:GiB,sourceBytes:64*MiB,shardBytes:20*MiB,derivedBytes:8*GiB,sources:2000,cases:128,shards:200000,pageSize:200});
-  const DB_NAME='pbgc-rag-case-vault',VERSION=2,KINDS=['records','chunks','vectors'],CACHE_PROFILE='authenticated-local-derived-v1';
+  const DB_NAME='pbgc-rag-case-vault',VERSION=2,KINDS=['records','chunks','terms','vectors'],CACHE_PROFILE='authenticated-local-derived-v1';
   const HASH=/^[a-f0-9]{64}$/;
   class CaseVaultError extends Error{constructor(code,message,cause){super(message);this.name=code==='ABORTED'?'AbortError':'CaseVaultError';this.code=code;if(cause)this.cause=cause;}}
   const error=(code,message,cause)=>new CaseVaultError(code,message,cause);
@@ -240,7 +240,7 @@
         const summaryPayload=await verified(summary,settings.signal);
         if(summaryPayload.ready!==true||summaryPayload.generation!==settings.keepGeneration)fail('CONFLICT','Only the source generation in its authenticated committed summary can be kept.');
         const summaryProof=stable(summaryPayload),summarySignature=Array.from(summary.signature).join(','),candidates=[];
-        for(const kind of ['records','chunks'])for await(const shard of vault.iterateShards(caseId,{sourceId,kind,signal:settings.signal})){
+        for(const kind of ['records','chunks','terms'])for await(const shard of vault.iterateShards(caseId,{sourceId,kind,signal:settings.signal})){
           if(kind==='records'&&shard.id==='summary')continue;
           if(!id(shard.payload?.generation))fail('INTEGRITY','A source cache row has no valid generation. Rebuild it before pruning.');
           if(shard.payload.generation===settings.keepGeneration)continue;

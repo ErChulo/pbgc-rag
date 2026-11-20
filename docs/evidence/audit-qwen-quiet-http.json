@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "real-qwen-quiet-ui-verification",
+  "status": "PASS",
+  "scope": "Two real Chromium supplementary-HTTP UI tests: learned retrieval/evidence/case isolation and actual pinned GGUF generation, exact source citation, cancellation and model cleanup. One synthetic factual generated answer; not general answer quality or 1 GiB acceptance.",
+  "tests": 2,
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "generationDeadlineMs": 120000,
+  "deadlineChanged": false,
+  "modelId": "qwen2.5-1.5b-instruct-q3-k-s",
+  "modelSpec": {
+    "name": "qwen2.5-1.5b-instruct-q3_k_s.gguf",
+    "bytes": 760944640,
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d"
+  },
+  "loadAndAnswerMs": 130496,
+  "suiteMs": 138794.800722,
+  "externalRequests": 0,
+  "pageErrors": 0,
+  "logSha256": "e6931f3d80409f1754a01edb861939cc9aee769905d46c75f4e44bea2cc935fe",
+  "startedAt": "2026-11-19T23:30:14.918Z",
+  "finishedAt": "2026-11-19T23:32:34.407Z"
+}

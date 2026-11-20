@@ -87,7 +87,10 @@ function createAnswerChoices(context,{plan,bind}={}){
   const statements=table?[item.chunk.text]:completeStatements(item.chunk.text);
   for(const text of statements){
    if(choices.length===SELECTION_LIMITS.choices)return choices;
-   if(!text||text.length>SELECTION_LIMITS.choiceCharacters||!item.excerpt.includes(text)||!table&&!plainStatement(text))continue;
+   // A single factual answer can need the entire joined condition or benefit
+   // qualifier. Keep that complete source sentence; compound question parts
+   // retain their stricter atomic-statement isolation.
+   if(!text||text.length>SELECTION_LIMITS.choiceCharacters||!item.excerpt.includes(text)||!table&&plan.kind!=='single'&&!plainStatement(text))continue;
    const choice={id:'S'+(choices.length+1),label:item.label,text,context:item};
    if(table){choice.tableEvidence=item.chunk.tableEvidence;choice.trustedTableField=true;}
    const matches=plan.parts.filter(part=>safeBind(bind,part,choice)).length;

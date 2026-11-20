@@ -10,6 +10,10 @@ PBGC-RAG runs on your computer without sending documents or questions to a servi
 
 The earlier **1.0 RC1** package and `main` are preserved. Its Windows/Ubuntu checks apply to runtime [`d3ce073`](https://github.com/ErChulo/pbgc-rag/commit/d3ce073c7bd4cecfe64b8cdc38bdb8ec028f1e89), the existing complete office ZIP and its bounded test workloads. Those results do not establish readiness for realistic multi-paragraph documents or the newly specified case size. See [historical RC1 evidence](#verified-rc1-evidence) and the [machine-readable record](docs/evidence/habemus-1.0-rc1-verified.json).
 
+[![8cb8873 source and office checks: four jobs pass](https://img.shields.io/badge/8cb8873%20source%20%2B%20office-4%20jobs%20pass-008065)](docs/evidence/audit-8cb-public-ci-status.json)
+
+The four Windows/Ubuntu source and complete-package checks passed for `8cb8873`. The separate 1 GiB benchmark remains unaccepted; the current compact-index changes need their own checks.
+
 ## Large-case development path
 
 Follow the [large-case guide](docs/LARGE-CASE-GUIDE.md) for the current controls, table setup, source checks and backup/reopen steps.

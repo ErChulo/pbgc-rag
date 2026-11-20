@@ -71,6 +71,8 @@ async function* recordBatches(parsed){
   lastRow=row;
  }if(records.length)yield records;
 }
+function requireTermApi(){const current=api();if(typeof current.CASE_TERM_INDEX_PROFILE!=='string'||!current.CASE_TERM_INDEX_PROFILE||typeof current.buildCaseTermIndex!=='function'||typeof current.queryCaseTermIndex!=='function'||typeof current.validateCaseTermIndex!=='function')throw Error('Large-case term index assets are unavailable. Keep all app assets together.');return current.CASE_TERM_INDEX_PROFILE;}
+function evidenceTerms(text){return [...new Set(api().normalizeEvidenceTopics?api().normalizeEvidenceTopics(text):text.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[])].filter(term=>term.length<=1000);}
 function requireAuthenticated(shard){if(!shard||shard.verification!==AUTH||shard.payload?.profile!==PROFILE)throw Error('Stored passages failed their authenticated source binding. Reimport the source.');return shard.payload;}
 async function createCaseCollection({vault}={}){
  if(!vault||typeof vault.iterateShards!=='function')throw Error('A large-case vault is required.');
@@ -78,16 +80,16 @@ async function createCaseCollection({vault}={}){
  async function summary(caseId,sourceId,signal){const shard=await vault.getShard(caseId,sourceId,'records','summary',{signal});return shard?requireAuthenticated(shard):null;}
  async function buildSource(caseId,file,options={}){
   abort(options.signal);sourceName(file.name);if(!(file instanceof root.Blob)||file.size>COLLECTION_LIMITS.sourceBytes)throw Error('Large-case files must be no larger than 64 MiB.');
-  const choices=checkedHeaders(options.tableHeaders??(options.headerRow===undefined?[]:[{tableName:file.name,headerRow:options.headerRow}]));
+  const termIndexProfile=requireTermApi(),normalizationProfile=api().RAG_TOPIC_PROFILE;if(typeof normalizationProfile!=='string'||!normalizationProfile)throw Error('Topic normalization assets are unavailable. Keep the complete app folder together.');let choices=checkedHeaders(options.tableHeaders??(options.headerRow===undefined?[]:[{tableName:file.name,headerRow:options.headerRow}]));
   const bytes=new Uint8Array(await file.arrayBuffer());abort(options.signal);const hash=await digest(bytes),existing=(await sources(caseId,options.signal)).find(s=>s.hash===hash);
   if(options.expectedHash!==undefined&&hash!==options.expectedHash)throw Error('A backup source does not match its recorded SHA-256.');
-  if(existing&&!options.replaceId){const previous=await summary(caseId,existing.id,options.signal);if(previous?.ready)return{source:existing,duplicate:true};throw Error('An incomplete copy of this source is stored. Remove it and import the original again.');}
+  if(existing&&!options.replaceId){const previous=await summary(caseId,existing.id,options.signal);if(!previous?.ready)throw Error('An incomplete copy of this source is stored. Remove it and import the original again.');if(previous.termIndexProfile===termIndexProfile&&previous.normalizationProfile===normalizationProfile&&previous.chunkerProfile===chunkProfile())return{source:existing,duplicate:true};const checked=await vault.getSource(caseId,existing.id,{signal:options.signal});if(!checked||checked.hash!==hash)throw Error('The stored original changed before its passage index could be upgraded.');file=new root.File([checked.blob],checked.name);options={...options,replaceId:existing.id};choices=checkedHeaders(previous.tableHeaders??(previous.headerRow==null?[]:[{tableName:checked.name,headerRow:previous.headerRow}]));}
   const id=options.replaceId||root.crypto.randomUUID(),blob=new root.Blob([bytes]);
   const source=options.replaceId?await vault.getSource(caseId,id,{includeBlob:false,signal:options.signal}):await vault.putSource(caseId,{id,name:file.name,hash,parserVersion:PROFILE,blob},{signal:options.signal});
   if(!source||source.hash!==hash)throw Error('The original source changed before its index could be rebuilt.');
   const previousSummary=options.replaceId?await summary(caseId,id,options.signal):null,generation=root.crypto.randomUUID();let caseRevision=source.caseRevision||(await vault.getCase(caseId,options.signal)).revision;
   async function saveShard(kind,shardId,payload){const saved=await vault.putShard(caseId,id,{id:shardId,kind,sourceHash:hash,sourceRevision:source.revision,payload:{...payload,generation}},{signal:options.signal,expectedRevision:caseRevision});caseRevision=saved.caseRevision;}
-  const headerRows=new Map(choices.map(choice=>[choice.tableName,choice.headerRow])),headersByTable=new Map(),tableNames=new Set(),tablePreviews=new Map();let previewCells=0,ordinal=0,totalRecords=0,totalChunks=0,characters=0;const warnings=new Set(),pages=new Map();let format='',preview=[];
+  const headerRows=new Map(choices.map(choice=>[choice.tableName,choice.headerRow])),headersByTable=new Map(),tableNames=new Set(),tablePreviews=new Map();let previewCells=0,ordinal=0,totalRecords=0,totalChunks=0,characters=0;const warnings=new Set(),pages=new Map(),termShards=[];let format='',preview=[];
   try{
    for await(const parsed of parsedBatches(file.name,blob,bytes,options)){
     format=parsed.format||file.name.toLowerCase().split('.').pop();for(const warning of parsed.warnings||[])if(!/^Native text was extracted only from pages .* other pages were not processed in this window\.$/.test(String(warning)))warnings.add(String(warning));
@@ -107,10 +109,12 @@ async function createCaseCollection({vault}={}){
       if(built.unconfiguredTables.length)warnings.add('Table column names must be confirmed before those cells can supply written answers.');
       for(const diagnostic of built.tableDiagnostics||[])warnings.add('Table '+(diagnostic.tableName||file.name)+': '+String(diagnostic.message||'Some source cells cannot supply written answers.').slice(0,300));
      }else answerChunks=raw.chunks;
-     const lexical=chunk=>({chunk,terms:api().normalizeEvidenceTopics?api().normalizeEvidenceTopics(chunk.text):chunk.text.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]});
-     const key=generation+'-'+String(ordinal++).padStart(8,'0');
+     const lexical=chunk=>({chunk,terms:evidenceTerms(chunk.text)}),searchEntries=raw.chunks.map(lexical),answersUseSearch=answerChunks===raw.chunks,answerEntries=answersUseSearch?searchEntries:answerChunks.map(lexical),searchIndex=api().buildCaseTermIndex(searchEntries),answersIndex=answersUseSearch?null:api().buildCaseTermIndex(answerEntries);
+     const key=generation+'-'+String(ordinal++).padStart(8,'0'),chunkShardId='c-'+key,termShardId='t-'+key;
      await saveShard('records','r-'+key,{profile:PROFILE,parserVersion:parsed.parserVersion,records});
-     await saveShard('chunks','c-'+key,{profile:PROFILE,chunkerProfile:chunkProfile(),search:raw.chunks.map(lexical),...(answerChunks===raw.chunks?{answersUseSearch:true}:{answers:answerChunks.map(lexical)})});
+     await saveShard('chunks',chunkShardId,{profile:PROFILE,chunkerProfile:chunkProfile(),search:searchEntries,...(answersUseSearch?{answersUseSearch:true}:{answers:answerEntries})});
+     await saveShard('terms',termShardId,{profile:PROFILE,chunkerProfile:chunkProfile(),termIndexProfile,normalizationProfile,chunkShardId,searchIndex,...(answersUseSearch?{answersUseSearch:true}:{answersIndex})});
+     termShards.push({id:termShardId,chunkShardId,searchCount:searchEntries.length,answerCount:answerEntries.length,searchCharacters:searchEntries.reduce((n,entry)=>n+entry.chunk.text.length,0),answerCharacters:answerEntries.reduce((n,entry)=>n+entry.chunk.text.length,0)});
      totalRecords+=batch.length;totalChunks+=raw.chunks.length;characters+=batch.reduce((n,r)=>n+r.text.length,0);options.onProgress?.({phase:'indexing',name:file.name,records:totalRecords,chunks:totalChunks,bytes:file.size});await pause();
     }
    }
@@ -118,7 +122,7 @@ async function createCaseCollection({vault}={}){
    const pageCoverage=[...pages.values()].sort((a,b)=>a.page-b.page),unreadPages=pageCoverage.filter(p=>p.nativeText==='skipped'||!p.nativeRecords&&!p.ocrRecords).map(p=>p.page);
    if(unreadPages.length)warnings.add('Pages without extracted text: '+unreadPages.slice(0,50).join(', ')+(unreadPages.length>50?`; and ${unreadPages.length-50} more`:'')+'. Their content cannot supply answers. Check the original and add a text layer or import those pages separately.');
    if(format==='pdf')warnings.add('PDF text layers may come from Adobe OCR. Native text does not prove that image content was read. Check original pages when needed.');
-   const headerRow=/\.(csv|tsv)$/i.test(file.name)?headerRows.get(file.name):undefined,result={profile:PROFILE,ready:true,format,records:totalRecords,chunks:totalChunks,characters,warnings:[...warnings],pageCoverage,coverageComplete:!unreadPages.length,unreadPages,headerRow:headerRow??null,tableNames:[...tableNames],tableHeaders:choices,tablePreviews:[...tablePreviews].map(([tableName,records])=>({tableName,records})),preview};
+   const headerRow=/\.(csv|tsv)$/i.test(file.name)?headerRows.get(file.name):undefined,result={profile:PROFILE,ready:true,termIndexProfile,normalizationProfile,chunkerProfile:chunkProfile(),termShards,format,records:totalRecords,chunks:totalChunks,characters,warnings:[...warnings],pageCoverage,coverageComplete:!unreadPages.length,unreadPages,headerRow:headerRow??null,tableNames:[...tableNames],tableHeaders:choices,tablePreviews:[...tablePreviews].map(([tableName,records])=>({tableName,records})),preview};
    await saveShard('records','summary',result);
    if(options.replaceId&&typeof vault.pruneSourceGeneration==='function')try{const cleaned=await vault.pruneSourceGeneration(caseId,id,{keepGeneration:generation,expectedRevision:caseRevision,signal:options.signal});caseRevision=cleaned.caseRevision;}catch(error){const message='The rebuilt index is saved. Older temporary passages could not be removed: '+String(error.message||error);result.warnings.push(message);options.onProgress?.({phase:'cleanup-warning',message});}
    return{source,summary:{...result,generation},duplicate:false};
@@ -130,33 +134,91 @@ async function createCaseCollection({vault}={}){
  }
  async function search(caseId,question,options={}){
   if(typeof question!=='string'||!question.trim()||question.length>COLLECTION_LIMITS.questionCharacters)throw Error('Use a question with 1–1,000 characters.');abort(options.signal);
+  const terms=[...new Set(api().normalizeQuestionTopics?api().normalizeQuestionTopics(question):question.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[])];if(!terms.length)throw Error('Use a question with a searchable subject.');if(terms.some(term=>term.length>1000))throw Error('A normalized question word exceeds the search limit. Use shorter words.');
   const before=await vault.getCase(caseId,options.signal);if(!before)throw Error('Select a large case first.');const metadata=await sources(caseId,options.signal),allowed=options.sourceIds===undefined?null:new Set(options.sourceIds);
   if(allowed&&(!allowed.size||[...allowed].some(id=>!metadata.some(s=>s.id===id))))throw Error('The selected document is unavailable. Choose it again.');
-  const ready=new Set(),generations=new Map(),incomplete=[],partialSources=[];for(const source of metadata){if(allowed&&!allowed.has(source.id))continue;const info=await summary(caseId,source.id,options.signal);if(info?.ready&&typeof info.generation==='string'){ready.add(source.id);generations.set(source.id,info.generation);if(info.coverageComplete===false)partialSources.push({sourceId:source.id,unreadPages:info.unreadPages});}else incomplete.push(source.id);}
-  const terms=[...new Set(api().normalizeQuestionTopics?api().normalizeQuestionTopics(question):question.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[])];if(!terms.length)throw Error('Use a question with a searchable subject.');
-  const strong=[],partial=[];let strongCount=0,scanned=0,scannedCharacters=0,eligible=0;
-  const add=(list,item,maximum)=>{list.push(item);list.sort((a,b)=>b.score-a.score||a.chunk.id.localeCompare(b.chunk.id));if(list.length>maximum)list.length=maximum;};
-  async function* selectedShards(){if(allowed){for(const sourceId of ready)yield* vault.iterateShards(caseId,{kind:'chunks',sourceId,signal:options.signal});}else yield* vault.iterateShards(caseId,{kind:'chunks',signal:options.signal});}
-  for await(const shard of selectedShards()){
-   if(!ready.has(shard.sourceId))continue;const payload=requireAuthenticated(shard);if(payload.generation!==generations.get(shard.sourceId))continue;
-   if(payload.chunkerProfile!==chunkProfile())throw Error('The passage algorithm changed. Reimport this source before searching.');
-   const entries=options.forAnswers?(payload.answersUseSearch?payload.search:payload.answers):payload.search;
-   if(!Array.isArray(entries))throw Error('Stored passage list is invalid. Reimport the source.');
-   for(const entry of entries){abort(options.signal);const chunk=entry.chunk;if(!chunk||typeof chunk.text!=='string'||chunk.sourceHash!==shard.sourceHash||chunk.sourceId!==shard.sourceId||!Array.isArray(entry.terms))throw Error('Stored passage source binding is invalid.');
-    const available=new Set(entry.terms),matches=terms.filter(t=>available.has(t)).length;scanned++;scannedCharacters+=chunk.text.length;eligible++;
-    if(matches){const item={chunk,score:matches/terms.length,shardId:shard.id};if(matches===terms.length){strongCount++;add(strong,item,COLLECTION_LIMITS.candidates);}else add(partial,item,COLLECTION_LIMITS.candidates);}
+  const ready=new Set(),generations=new Map(),indexed=new Map(),legacy=new Map(),incomplete=[],partialSources=[];
+  const inventoryFailure=()=>{throw Error('Stored passage term inventory is incomplete or invalid. Remove and reimport the source.');};
+  const nonnegative=value=>Number.isSafeInteger(value)&&value>=0;
+  for(const source of metadata){
+   if(allowed&&!allowed.has(source.id))continue;const info=await summary(caseId,source.id,options.signal);
+   if(!info?.ready||typeof info.generation!=='string'){incomplete.push(source.id);continue;}
+   ready.add(source.id);generations.set(source.id,info.generation);if(info.coverageComplete===false)partialSources.push({sourceId:source.id,unreadPages:info.unreadPages});
+   if(info.termIndexProfile===undefined){legacy.set(source.id,{source,info});continue;}
+   const profile=requireTermApi();if(info.termIndexProfile!==profile||info.normalizationProfile!==api().RAG_TOPIC_PROFILE||info.chunkerProfile!==chunkProfile())throw Error('The passage or term algorithm changed. Reimport this source before searching.');
+   if(!Array.isArray(info.termShards)||info.termShards.length>200000||!nonnegative(info.chunks))inventoryFailure();
+   const expected=new Map(),chunkIds=new Set();let count=0;
+   for(const binding of info.termShards){
+    if(!binding||typeof binding!=='object'||Array.isArray(binding)||Object.keys(binding).length!==6||Object.keys(binding).some(key=>!['id','chunkShardId','searchCount','answerCount','searchCharacters','answerCharacters'].includes(key))||typeof binding.id!=='string'||binding.id.length>200||!binding.id.startsWith('t-'+info.generation+'-')||typeof binding.chunkShardId!=='string'||binding.chunkShardId.length>200||!binding.chunkShardId.startsWith('c-'+info.generation+'-')||expected.has(binding.id)||chunkIds.has(binding.chunkShardId)||!['searchCount','answerCount','searchCharacters','answerCharacters'].every(key=>nonnegative(binding[key]))||binding.searchCount>4000||binding.answerCount>4000)inventoryFailure();
+    expected.set(binding.id,binding);chunkIds.add(binding.chunkShardId);count+=binding.searchCount;
    }
+   if(count!==info.chunks)inventoryFailure();indexed.set(source.id,{source,info,expected,seen:new Set()});
+  }
+  const strong=[],partial=[];let strongCount=0,scanned=0,scannedCharacters=0,eligible=0,termIndexBytes=0,loadedPassageShards=0,loadedPassageChunks=0;
+  const add=(list,item)=>{const worst=list.at(-1);if(list.length===COLLECTION_LIMITS.candidates&&(item.score<worst.score||item.score===worst.score&&item.chunkId.localeCompare(worst.chunkId)>=0))return;list.push(item);list.sort((a,b)=>b.score-a.score||a.chunkId.localeCompare(b.chunkId));if(list.length>COLLECTION_LIMITS.candidates)list.length=COLLECTION_LIMITS.candidates;};
+  const candidate=item=>{if(item.matches===terms.length){strongCount++;add(strong,item);}else add(partial,item);};
+  const passageEntries=payload=>{
+   if(payload.chunkerProfile!==chunkProfile())throw Error('The passage algorithm changed. Reimport this source before searching.');
+   if(!Array.isArray(payload.search)||payload.answersUseSearch!==true&&!Array.isArray(payload.answers))throw Error('Stored passage list is invalid. Reimport the source.');
+   return options.forAnswers?(payload.answersUseSearch?payload.search:payload.answers):payload.search;
+  };
+  const checkedChunk=(entry,sourceId,sourceHash)=>{const chunk=entry?.chunk;if(!chunk||typeof chunk.id!=='string'||typeof chunk.text!=='string'||chunk.sourceHash!==sourceHash||chunk.sourceId!==sourceId||!Array.isArray(entry.terms))throw Error('Stored passage source binding is invalid.');return chunk;};
+  async function* termPayloads(){if(allowed){for(const sourceId of indexed.keys())yield* vault.iterateShards(caseId,{kind:'terms',sourceId,signal:options.signal});}else yield* vault.iterateShards(caseId,{kind:'terms',signal:options.signal});}
+  // Every selected compact shard is authenticated and checked before the top
+  // candidates load any full passage. The signed summary detects deleted shards.
+  for await(const shard of termPayloads()){
+   const selected=indexed.get(shard.sourceId);if(!selected)continue;const payload=requireAuthenticated(shard);if(payload.generation!==selected.info.generation)continue;
+   const binding=selected.expected.get(shard.id);if(!binding||selected.seen.has(shard.id)||shard.sourceHash!==selected.source.hash||payload.chunkShardId!==binding.chunkShardId||payload.chunkerProfile!==chunkProfile()||payload.termIndexProfile!==api().CASE_TERM_INDEX_PROFILE||payload.normalizationProfile!==api().RAG_TOPIC_PROFILE)inventoryFailure();
+   selected.seen.add(shard.id);
+   if(payload.answersUseSearch===true){if(payload.answersIndex!==undefined||binding.answerCount!==binding.searchCount||binding.answerCharacters!==binding.searchCharacters)inventoryFailure();}
+   else if(payload.answersUseSearch!==undefined)inventoryFailure();
+   const answerIndex=payload.answersUseSearch?payload.searchIndex:payload.answersIndex;
+   if(!payload.searchIndex||!answerIndex)inventoryFailure();
+   if(payload.searchIndex.count!==binding.searchCount||answerIndex.count!==binding.answerCount)inventoryFailure();
+   if(!payload.answersUseSearch)api().validateCaseTermIndex(options.forAnswers?payload.searchIndex:answerIndex);
+   const index=options.forAnswers?answerIndex:payload.searchIndex,queried=api().queryCaseTermIndex(index,terms);
+   scanned+=index.count;eligible+=index.count;scannedCharacters+=options.forAnswers?binding.answerCharacters:binding.searchCharacters;termIndexBytes+=shard.bytes||0;
+   for(const match of queried.results)candidate({chunkId:match.chunkId,score:match.score,matches:match.matches,sourceId:shard.sourceId,sourceHash:shard.sourceHash,shardId:binding.chunkShardId,generation:payload.generation,ordinal:match.ordinal,indexIds:index.chunkIds,binding});
    options.onProgress?.({phase:'searching',scanned,scannedCharacters});await pause();
   }
+  for(const selected of indexed.values())if(selected.seen.size!==selected.expected.size)inventoryFailure();
+  // Older locally-created indexes retain their complete passage scan until the
+  // user reimports the same verified original and upgrades their derived index.
+  for(const [sourceId,selected]of legacy){
+   let rawCount=0;
+   for await(const shard of vault.iterateShards(caseId,{kind:'chunks',sourceId,signal:options.signal})){
+    const payload=requireAuthenticated(shard);if(payload.generation!==selected.info.generation)continue;if(shard.sourceHash!==selected.source.hash)inventoryFailure();
+    const entries=passageEntries(payload);rawCount+=payload.search.length;loadedPassageShards++;loadedPassageChunks+=payload.search.length+(payload.answersUseSearch?0:payload.answers.length);
+    for(const entry of entries){abort(options.signal);const chunk=checkedChunk(entry,sourceId,shard.sourceHash),available=new Set(entry.terms),matches=terms.filter(term=>available.has(term)).length;scanned++;eligible++;scannedCharacters+=chunk.text.length;if(matches)candidate({chunk,chunkId:chunk.id,score:matches/terms.length,matches,legacy:true});}
+    options.onProgress?.({phase:'searching',scanned,scannedCharacters});await pause();
+   }
+   if(rawCount!==selected.info.chunks)inventoryFailure();
+  }
+  const selected=strong.length?strong:partial,groups=new Map();
+  for(const item of selected){if(item.legacy)continue;const key=JSON.stringify([item.sourceId,item.shardId]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}
+  // Load one full shard at a time, retaining only its selected chunk objects.
+  // A broad query must not keep 64 complete passage payloads in memory.
+  for(const group of groups.values()){
+   abort(options.signal);const item=group[0],shard=await vault.getShard(caseId,item.sourceId,'chunks',item.shardId,{signal:options.signal}),payload=requireAuthenticated(shard);
+   if(shard.sourceId!==item.sourceId||shard.sourceHash!==item.sourceHash||payload.generation!==item.generation)inventoryFailure();const entries=passageEntries(payload);
+   const expectedCount=options.forAnswers?item.binding.answerCount:item.binding.searchCount;if(entries.length!==expectedCount||entries.length!==item.indexIds.length)inventoryFailure();
+   let characters=0;for(let ordinal=0;ordinal<entries.length;ordinal++){const chunk=checkedChunk(entries[ordinal],item.sourceId,item.sourceHash);if(chunk.id!==item.indexIds[ordinal])throw Error('Stored passage identity does not bind to its term index. Remove and reimport the source.');characters+=chunk.text.length;}
+   if(characters!==(options.forAnswers?item.binding.answerCharacters:item.binding.searchCharacters))inventoryFailure();
+   loadedPassageShards++;loadedPassageChunks+=payload.search.length+(payload.answersUseSearch?0:payload.answers.length);
+   for(const candidate of group){
+    const chunk=checkedChunk(entries[candidate.ordinal],candidate.sourceId,candidate.sourceHash),available=new Set(evidenceTerms(chunk.text)),matches=terms.filter(term=>available.has(term)).length;
+    if(chunk.id!==candidate.chunkId||matches!==candidate.matches||matches/terms.length!==candidate.score)throw Error('Stored term candidates do not match their source passages. Remove and reimport the source.');candidate.chunk=chunk;
+   }
+  }
   abort(options.signal);const after=await vault.getCase(caseId,options.signal);if(after?.revision!==before.revision)throw Error('This case changed during search. Ask again.');
-  const selected=strong.length?strong:partial;return{results:selected.map(x=>({...x.chunk,score:x.score})),diagnostics:{method:'full-case-lexical-candidates',weak:!selected.length,indexedChunks:eligible,scannedChunks:scanned,scannedCharacters,strongMatches:strongCount,overflow:strongCount>COLLECTION_LIMITS.candidates,incompleteSources:incomplete,partialSources,caseRevision:before.revision,sourceIds:[...ready],candidateLimit:COLLECTION_LIMITS.candidates,notice:'Every selected authenticated passage shard was searched. Learned reranking, when enabled, covers the bounded lexical shortlist rather than a global dense index.'}};
+  return{results:selected.map(item=>({...item.chunk,score:item.score})),diagnostics:{method:'full-case-lexical-candidates',candidateIndex:indexed.size?(legacy.size?'mixed-authenticated-exact-term-postings-and-legacy':'authenticated-exact-term-postings'):'legacy-passage-scan',weak:!selected.length,indexedChunks:eligible,scannedChunks:scanned,scannedCharacters,strongMatches:strongCount,overflow:strongCount>COLLECTION_LIMITS.candidates,incompleteSources:incomplete,partialSources,caseRevision:before.revision,sourceIds:[...ready],candidateLimit:COLLECTION_LIMITS.candidates,termIndexBytes,loadedPassageShards,loadedPassageChunks,notice:'Every selected authenticated term or legacy passage shard was searched. Full passages were loaded for selected candidates. Learned reranking covers the bounded lexical shortlist rather than a global dense index.'}};
  }
  async function answer(caseId,question,options={}){
   const found=await search(caseId,question,{...options,forAnswers:true});if(found.diagnostics.overflow||found.diagnostics.incompleteSources.length)return{status:'abstained',answer:found.diagnostics.overflow?'Too many passages match this question. Choose a document or ask a more specific question.':'Some documents were not fully imported. Reimport them before asking for a written answer.',citations:[],retrieved:found.results,diagnostics:found.diagnostics};
   if(!found.results.length)return{status:'abstained',answer:'No matching answer-ready passages were found. Check table column names or use source search.',citations:[],retrieved:[],diagnostics:found.diagnostics};
   let retrieval={results:found.results.slice(0,6),diagnostics:{...found.diagnostics,weak:false}};
   if(options.embedding){let candidates=found.results;if(typeof options.embedding.inspectTextCoverage==='function'){const coverage=await options.embedding.inspectTextCoverage(candidates.map(c=>c.text),{signal:options.signal});candidates=candidates.filter((_,i)=>coverage[i]?.embeddable);if(!candidates.length)return{status:'abstained',answer:'The local encoder cannot read these passage tokens. Use source search and check the originals.',citations:[],retrieved:found.results,diagnostics:found.diagnostics};}const index=await api().buildSemanticIndex(candidates,options.embedding,{signal:options.signal});retrieval=question.length>500?await api().retrieveSemantic(index,question,options.embedding,{signal:options.signal,topK:6}):await api().retrieveHybrid(index,question,options.embedding,{signal:options.signal,topK:6});}
-  const model=options.model,provider=model?{id:model.id,answerFormat:'auto-grounded-v2',generate:request=>model.generate(request)}:undefined;
+  const model=options.model,provider=model?{id:model.id,answerFormat:'source-selection-grounded-v1',generate:request=>model.generate(request)}:undefined;
   const result=await api().answerQuestion({question,chunks:found.results,retrieval,provider,signal:options.signal,options:{contextCharacters:2600,maxChunks:3,maxTokens:384,timeoutMs:120000}});
   const current=await vault.getCase(caseId,options.signal);if(current?.revision!==found.diagnostics.caseRevision)throw Error('This case changed while the answer was being checked. Ask again.');
   for(const citation of result.citations||[]){const original=await vault.getSource(caseId,citation.sourceId,{signal:options.signal});if(!original||original.hash!==citation.sourceHash)throw Error('An answer source changed. No answer was released.');}

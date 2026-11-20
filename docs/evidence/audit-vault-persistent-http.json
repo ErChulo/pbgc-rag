@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-rag-persistent-profile-verification",
+  "profile": "supplementary HTTP only",
+  "status": "PASS",
+  "startedAt": "2026-11-19T16:18:04.974Z",
+  "commit": "8cb887306267d7e4a069b9136fdd4ca8c1e8d61f",
+  "runtimeSha256": {
+    "assets/case-vault.js": "429dd87e0d7a45ac9515a67959a9feb1276aa91b8eba01f671d4c676676b3a23",
+    "assets/case-collection.js": "b38e393c4a8dfb66552a8c84729aa24739f29ce2e0113b33381368d85240daff",
+    "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+    "assets/rag.js": "560874d46d66fbd1d1fa82be9bb1a6648a2e390740633ca9c606a521563cebf1",
+    "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+    "tests/case-vault-persistence-browser.test.js": "6b389e63fda98ff577bb00be3aaf340dc40349c77d11b41c41f0ca536a92d424"
+  },
+  "scope": "Five MiB text source imported through the real collection/parser/chunker/vault. Original bytes, source metadata, authenticated derived passages and the nonextractable authentication key must survive closing the entire browser and opening the same on-disk profile. This is not the one GiB durability gate.",
+  "sourceBytes": 5242880,
+  "sourceSha256": "74be2ae1ced61b54fe2a00cf52942990413917fee5e9a4a6f88c3321e0bf3d5a",
+  "externalRequests": 0,
+  "browserPids": [
+    29671,
+    29906
+  ],
+  "import": {
+    "results": [
+      {
+        "status": "imported",
+        "hash": "74be2ae1ced61b54fe2a00cf52942990413917fee5e9a4a6f88c3321e0bf3d5a"
+      }
+    ],
+    "manifest": {
+      "schemaVersion": 1,
+      "kind": "pbgc-case-vault",
+      "id": "persistent-case",
+      "name": "Synthetic persistent collection",
+      "revision": 41,
+      "sourceCount": 1,
+      "originalBytes": 5242880,
+      "derivedBytes": 25339577,
+      "shardCount": 39,
+      "createdAt": "2026-11-19T16:18:06.520Z",
+      "updatedAt": "2026-11-19T16:18:10.789Z"
+    }
+  },
+  "reopened": {
+    "manifest": {
+      "schemaVersion": 1,
+      "kind": "pbgc-case-vault",
+      "id": "persistent-case",
+      "name": "Synthetic persistent collection",
+      "revision": 41,
+      "sourceCount": 1,
+      "originalBytes": 5242880,
+      "derivedBytes": 25339577,
+      "shardCount": 39,
+      "createdAt": "2026-11-19T16:18:06.520Z",
+      "updatedAt": "2026-11-19T16:18:10.789Z"
+    },
+    "source": {
+      "hash": "74be2ae1ced61b54fe2a00cf52942990413917fee5e9a4a6f88c3321e0bf3d5a",
+      "bytes": 5242880
+    },
+    "summaryVerification": "authenticated-local-derived-v1",
+    "results": [
+      {
+        "hash": "74be2ae1ced61b54fe2a00cf52942990413917fee5e9a4a6f88c3321e0bf3d5a",
+        "text": " benefit form before applying a provision. Source quotations identify documentary statements. They do not establish legal applicability or external truth. The original file remains available for review. This paragraph is synthetic workload text only.\nSynthetic plan archive. The administrator retains the signed instrument and each dated amendment. A reviewer checks the participant group, effective date and benefit form before applying a provision. Source quotations identify documentary statements. They do not establish legal applicability or external truth. The original file remains available for review. This paragraph is synthetic workload text only.\nSynthetic plan archive. The administrator retains the signed instrument and each dated amendment. A reviewer checks the participant group, effective date and benefit form before applying a provision. Source quotations identify documentary statements. They do not establish legal applicability or external truth. The original file remains available for review. This paragraph is synthetic workload text only.\nSynthetic plan archive. The administrator retains the signed instrument and each dated amendment. A reviewer checks the participant group, effective date and benefit form before applying a provision. Source quotations identify documentary statements. They do not establish legal applicability or external truth. The original file remains available for review. This paragraph is synthetic workload text only.\nSynthetic plan archive. The \nThe persistentclosinganchor amount is 875 dollars.",
+        "locators": [
+          {
+            "length": 407,
+            "line": 12847,
+            "offset": 5241168,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          },
+          {
+            "length": 407,
+            "line": 12848,
+            "offset": 5241576,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          },
+          {
+            "length": 407,
+            "line": 12849,
+            "offset": 5241984,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          },
+          {
+            "length": 407,
+            "line": 12850,
+            "offset": 5242392,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          },
+          {
+            "length": 28,
+            "line": 12851,
+            "offset": 5242800,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          },
+          {
+            "length": 50,
+            "line": 12852,
+            "offset": 5242829,
+            "offsetUnit": "UTF-16 code units",
+            "type": "text-line"
+          }
+        ]
+      }
+    ],
+    "diagnostics": {
+      "method": "full-case-lexical-candidates",
+      "weak": false,
+      "indexedChunks": 4286,
+      "scannedChunks": 4286,
+      "scannedCharacters": 6309611,
+      "strongMatches": 1,
+      "overflow": false,
+      "incompleteSources": [],
+      "partialSources": [],
+      "caseRevision": 41,
+      "sourceIds": [
+        "b415b841-916b-4a39-af0c-59eb24aabfb4"
+      ],
+      "candidateLimit": 64,
+      "notice": "Every selected authenticated passage shard was searched. Learned reranking, when enabled, covers the bounded lexical shortlist rather than a global dense index."
+    }
+  },
+  "runtimeSha256After": {
+    "assets/case-vault.js": "429dd87e0d7a45ac9515a67959a9feb1276aa91b8eba01f671d4c676676b3a23",
+    "assets/case-collection.js": "b38e393c4a8dfb66552a8c84729aa24739f29ce2e0113b33381368d85240daff",
+    "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+    "assets/rag.js": "560874d46d66fbd1d1fa82be9bb1a6648a2e390740633ca9c606a521563cebf1",
+    "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+    "tests/case-vault-persistence-browser.test.js": "6b389e63fda98ff577bb00be3aaf340dc40349c77d11b41c41f0ca536a92d424"
+  },
+  "finishedAt": "2026-11-19T16:18:13.560Z"
+}

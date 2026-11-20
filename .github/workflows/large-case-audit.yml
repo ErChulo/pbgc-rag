@@ -56,11 +56,20 @@ jobs:
           python tools/build-ingest-worker.py --check
           python vendor/pdfjs/build-worker-source.py --check
           python vendor/pdfjs/build-ocr-worker.py --check
-      - name: Measure actual offline file import, search, reopen and backup
-        # No model is downloaded or loaded. Model quality is a separate gate.
+      - name: Prepare the pinned local model outside the office
+        run: |
+          python tools/build-model-profile.py --check
+          python tools/prepare-models.py
+      - name: Measure actual offline file import, search, one Qwen answer, reopen and backup
+        # One grounded synthetic fact checks integration, not general quality.
         run: |
           mkdir -p test-results
-          node tools/measure-large-case.js --file --mib "$CASE_MIB" --timeout-ms 7000000 --out test-results/large-case-file.json 2>&1 | tee test-results/large-case-file.log
+          node tools/measure-large-case.js --file --mib "$CASE_MIB" --with-model --timeout-ms 7000000 --out test-results/large-case-file.json 2>&1 | tee test-results/large-case-file.log
+      - name: Annotate bounded synthetic workload diagnostics
+        if: ${{ always() }}
+        # Public job annotations stay useful even when full logs require sign-in.
+        # This allowlist excludes source text and arbitrary exception messages.
+        run: node tools/large-case-ci-summary.js
       - name: Preserve exact workload and process-resource evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

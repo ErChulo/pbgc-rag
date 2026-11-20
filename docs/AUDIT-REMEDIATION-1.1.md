@@ -102,4 +102,26 @@ Preserved historical RC1 evidence: [exact runtime/package record](evidence/habem
 
 Browser evidence above is supplementary HTTP only. Actual local file navigation is BLOCKED by administrator policy in this managed environment; no policy bypass was used. The Windows/Ubuntu actual-file workflows must verify the new branch. The full HTTP integration run found an immutable question-set snapshot that omitted new provenance fields; this was repaired without relaxing source equality, and its actual-chunker regression passes. A real-Qwen run also exceeded its unchanged deadline while the 1 GiB benchmark ran concurrently; it must be repeated in isolation before acceptance.
 
-The 1 GiB workload is still running. Its result, timing, memory, exact runtime fingerprints and backup coverage must be recorded separately. No new release candidate claim or publication follows from these development checks.
+The 1 GiB baseline finished with a failed backup-sample assertion and full-case searches of 214–225 seconds. All 256 originals imported, original hashes and three exact marker locations were recovered, and the case reopened. The failed harness confused random source-ID archive order with corpus order. Its correction needs a full rerun; the original failed result is retained in the [baseline disposition](evidence/audit-large-case-baseline-1gib.json). No new release candidate claim or publication follows from these checks.
+
+## Verification after the first audit commit
+
+Commit `8cb887306267d7e4a069b9136fdd4ca8c1e8d61f` is saved and pushed on the isolated audit branch. Its source and complete-package workflows passed on Windows and Ubuntu: [four exact job links](evidence/audit-8cb-public-ci-status.json). These include real model, OCR and actual-file browser checks at their bounded workloads. The separate large-case jobs failed and do not earn a passing large-case badge.
+
+A quiet, serialized real-Qwen UI rerun passed both checks with the unchanged 120-second generation deadline, zero external requests and exact source citations. The earlier concurrent-load timeout remains a recorded failure: [quiet rerun](evidence/audit-qwen-quiet-http.json). This is one generated synthetic fact, not a broad quality certificate.
+
+A full persistent-browser restart retained a real 5 MiB original, its verified hash, authenticated derived data and the nonextractable HMAC key: [persistence evidence](evidence/audit-vault-persistent-http.json). This is distinct from the 1 GiB database/page reopen test.
+
+The larger model now has a second pinned asset path: the existing permanent office ZIP. Its 777,132,222 bytes, archive hash, 91 model parts and reconstructed 760,944,640-byte GGUF were checked. Twenty-one Python supply tests pass. This adds **asset redundancy on GitHub**, not a second hosting provider: [actual secondary-asset verification](evidence/audit-model-secondary-asset-verified.json).
+
+Compact exact term postings are being integrated to avoid rereading all passage bodies per query. Candidate ranking must retain complete source/generation inventories, count broad matches before limiting candidates, reject missing cache shards and bind selected IDs back to original passage payloads. This remains lexical candidate search followed by optional learned reranking, not a global dense index. The new implementation requires fresh browser, 1 GiB and actual-file CI results.
+
+## Compact-index development checks
+
+The compact index keeps exact normalized term postings separately from full passages. It verifies every selected inventory before choosing candidates, then checks complete ordered chunk IDs and source bindings when loading matching payloads. Missing compact shards, wrong generations, stale normalization profiles and mismatched candidate payloads fail closed. Older passage-only caches also check their signed passage count.
+
+The latest Node suite has **455 passing checks, zero failures and seven explicit skips**. Thirty targeted real-Chromium collection, persistence and visible question-flow checks pass, with zero external requests. Additional joined-condition regressions preserve full benefit wording and complete `and`, `or` and comma conditions; irrelevant rates cannot supply an age answer.
+
+Intermediate measurements are in the [compact-search development evidence](evidence/audit-compact-development.json): 32 MiB full-case queries took 834/857/785 ms, compared with the earlier several-second scans. A 4 MiB run with actual Qwen returned the exact 731 fact and citation inside the unchanged 120-second generation deadline. Generation took about 97 seconds on this host; the 70-second automated file handoff is recorded separately from model hash/load. No claim of 30-second model answers follows from this result.
+
+The app now uses verified source selection for single facts as well as compound/table answers. The prompt contains complete relevant source statements while conflict, applicability, injection and grounding checks still cover the full retrieved evidence. External auto/plain provider contracts retain their earlier behavior. A new complete 1 GiB run with the pinned model and final-head Windows/Ubuntu CI remain required.

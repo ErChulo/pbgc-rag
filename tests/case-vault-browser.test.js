@@ -179,11 +179,40 @@ test(`${profile} real IndexedDB Blob storage, authenticated shards and bounded c
       assert.ok(result.sizes.every(size=>size<100));assert.ok(result.verifications.every(value=>value==='authenticated-local-derived-v1'));assert.deepEqual(result.selected,['records:3']);assert.equal(result.invalid.code,'INVALID_INPUT');assert.equal(result.getAllCalls,0);
     });
 
+    await t.test('term postings are source-bound authenticated shards with indexed iteration and tamper rejection',async()=>{
+      const result=await page.evaluate(async()=>{
+        const vault=await PBGCRag.createCaseVault();await vault.createCase({id:'term-bindings',name:'Authenticated term postings'});const source=await vaultTest.source(vault,'term-bindings','plan');
+        const payload={profile:'large-case-corpus-v1',generation:'active',chunkerProfile:'source-boundary-v3',termIndexProfile:'exact-terms-v1',chunkShardId:'c-active-00000000',search:{schemaVersion:1,kind:'case-term-postings',profile:'exact-terms-v1',count:1,chunkIds:['chunk:synthetic'],postings:[{term:'age',encoding:'sparse',ordinals:[0]}]},answersUseSearch:true};
+        const input={id:'t-active-00000000',kind:'terms',sourceHash:source.hash,sourceRevision:source.revision,payload};
+        const saved=await vault.putShard('term-bindings','plan',input),trusted=await vault.getShard('term-bindings','plan','terms',input.id),rows=[];
+        for await(const shard of vault.iterateShards('term-bindings',{sourceId:'plan',kind:'terms'}))rows.push({kind:shard.kind,id:shard.id,verification:shard.verification});
+        const stale=await vaultTest.code(()=>vault.putShard('term-bindings','plan',{...input,id:'stale',sourceRevision:source.revision+1}));
+        await vaultTest.mutate('shards',['term-bindings','plan','terms',input.id],row=>({...row,payload:{...row.payload,chunkShardId:'c-forged-00000000'}}));
+        const changed=await vaultTest.code(()=>vault.getShard('term-bindings','plan','terms',input.id));
+        await vault.putShard('term-bindings','plan',input);await vaultTest.mutate('shards',['term-bindings','plan','terms',input.id],row=>{delete row.signature;return row;});
+        const unsigned=await vaultTest.code(()=>vault.getShard('term-bindings','plan','terms',input.id));vault.close();return{saved,trusted,rows,stale,changed,unsigned};
+      });
+      assert.equal(result.saved.kind,'terms');assert.equal(result.trusted.verification,'authenticated-local-derived-v1');assert.equal(result.trusted.payload.chunkShardId,'c-active-00000000');
+      assert.deepEqual(result.rows,[{kind:'terms',id:'t-active-00000000',verification:'authenticated-local-derived-v1'}]);assert.equal(result.stale.code,'CONFLICT');assert.equal(result.changed.code,'INTEGRITY');assert.equal(result.unsigned.code,'INTEGRITY');
+    });
+
+    await t.test('generation cleanup authenticates old term postings before deleting any source cache row',async()=>{
+      const result=await page.evaluate(async()=>{
+        const vault=await PBGCRag.createCaseVault();await vault.createCase({id:'term-prune-tamper',name:'Term cleanup authentication'});const source=await vaultTest.source(vault,'term-prune-tamper','plan');
+        for(const kind of ['records','chunks','terms'])await vault.putShard('term-prune-tamper','plan',{id:'old-'+kind,kind,sourceHash:source.hash,sourceRevision:source.revision,payload:{generation:'old',text:'Original metadata'}});
+        await vault.putShard('term-prune-tamper','plan',{id:'summary',kind:'records',sourceHash:source.hash,sourceRevision:source.revision,payload:{generation:'active',ready:true}});
+        const before=await vault.getCase('term-prune-tamper');await vaultTest.mutate('shards',['term-prune-tamper','plan','terms','old-terms'],row=>({...row,payload:{generation:'old',text:'Modified metadata'}}));
+        const rejected=await vaultTest.code(()=>vault.pruneSourceGeneration('term-prune-tamper','plan',{keepGeneration:'active',expectedRevision:before.revision})),after=await vault.getCase('term-prune-tamper');
+        const oldRecord=await vault.getShard('term-prune-tamper','plan','records','old-records'),oldChunk=await vault.getShard('term-prune-tamper','plan','chunks','old-chunks');vault.close();return{before,after,rejected,oldRecord,oldChunk};
+      });
+      assert.equal(result.rejected.code,'INTEGRITY');assert.deepEqual(result.after,result.before);assert.equal(result.oldRecord.payload.generation,'old');assert.equal(result.oldChunk.payload.generation,'old');
+    });
+
     await t.test('generation cleanup keeps the authenticated active index, originals and other sources',async()=>{
       const result=await page.evaluate(async()=>{
         const vault=await PBGCRag.createCaseVault();await vault.createCase({id:'prune-good',name:'Generation cleanup'});
         const source=await vaultTest.source(vault,'prune-good','plan'),other=await vaultTest.source(vault,'prune-good','other');let oldBytes=0;
-        for(const generation of ['old','active'])for(const kind of ['records','chunks']){const saved=await vault.putShard('prune-good','plan',{id:generation+'-'+kind,kind,sourceHash:source.hash,sourceRevision:source.revision,payload:{generation,text:generation+' synthetic '+kind}});if(generation==='old')oldBytes+=saved.bytes;}
+        for(const generation of ['old','active'])for(const kind of ['records','chunks','terms']){const saved=await vault.putShard('prune-good','plan',{id:generation+'-'+kind,kind,sourceHash:source.hash,sourceRevision:source.revision,payload:{generation,text:generation+' synthetic '+kind}});if(generation==='old')oldBytes+=saved.bytes;}
         await vault.putShard('prune-good','plan',{id:'vectors',kind:'vectors',sourceHash:source.hash,sourceRevision:source.revision,payload:{unversioned:'separate vector cache'}});
         await vault.putShard('prune-good','other',{id:'old-other',kind:'chunks',sourceHash:other.hash,sourceRevision:other.revision,payload:{generation:'old',text:'Other source stays'}});
         await vault.putShard('prune-good','plan',{id:'summary',kind:'records',sourceHash:source.hash,sourceRevision:source.revision,payload:{generation:'active',ready:true}});
@@ -191,10 +220,10 @@ test(`${profile} real IndexedDB Blob storage, authenticated shards and bounded c
         const remaining=[];for await(const shard of vault.iterateShards('prune-good'))remaining.push(shard.sourceId+':'+shard.kind+':'+shard.id);
         const second=await vault.pruneSourceGeneration('prune-good','plan',{keepGeneration:'active',expectedRevision:after.revision}),original=await vault.getSource('prune-good','plan');vault.close();return{before,beforeSource,pruned,after,afterSource,remaining,second,oldBytes,original:await original.blob.text()};
       });
-      assert.equal(result.pruned.removedShards,2);assert.equal(result.pruned.removedBytes,result.oldBytes);assert.equal(result.pruned.caseRevision,result.before.revision+1);
-      assert.equal(result.after.derivedBytes,result.before.derivedBytes-result.oldBytes);assert.equal(result.after.shardCount,result.before.shardCount-2);assert.equal(result.afterSource.derivedBytes,result.beforeSource.derivedBytes-result.oldBytes);assert.equal(result.afterSource.shardCount,result.beforeSource.shardCount-2);
+      assert.equal(result.pruned.removedShards,3);assert.equal(result.pruned.removedBytes,result.oldBytes);assert.equal(result.pruned.caseRevision,result.before.revision+1);
+      assert.equal(result.after.derivedBytes,result.before.derivedBytes-result.oldBytes);assert.equal(result.after.shardCount,result.before.shardCount-3);assert.equal(result.afterSource.derivedBytes,result.beforeSource.derivedBytes-result.oldBytes);assert.equal(result.afterSource.shardCount,result.beforeSource.shardCount-3);
       assert.equal(result.after.originalBytes,result.before.originalBytes);assert.match(result.original,/normal retirement age is 65/);
-      assert.deepEqual(result.remaining.sort(),['other:chunks:old-other','plan:chunks:active-chunks','plan:records:active-records','plan:records:summary','plan:vectors:vectors'].sort());
+      assert.deepEqual(result.remaining.sort(),['other:chunks:old-other','plan:chunks:active-chunks','plan:records:active-records','plan:records:summary','plan:terms:active-terms','plan:vectors:vectors'].sort());
       assert.deepEqual(result.second,{removedShards:0,removedBytes:0,caseRevision:result.after.revision});
     });
 

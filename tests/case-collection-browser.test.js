@@ -12,7 +12,7 @@ const scripts=[
  'vendor/pdfjs/parser-worker-source.js','assets/pdf.js','assets/ocr.js','assets/pdf-ocr.js','assets/image-source.js',
  'assets/core.js','assets/formats.js','vendor/ingest-worker-source.js','assets/ingest.js',
  'assets/ranking.js','assets/table-query.js','assets/table-evidence.js','assets/chunking.js','assets/rag-corpus.js',
- 'assets/semantic.js','assets/answer-selection.js','assets/rag.js','assets/case-vault.js','assets/case-collection.js','assets/case-archive.js'
+ 'assets/semantic.js','assets/answer-selection.js','assets/rag.js','assets/case-vault.js','assets/case-term-index.js','assets/case-collection.js','assets/case-archive.js'
 ];
 function multiPagePdf(count){
  const objects=['<< /Type /Catalog /Pages 2 0 R >>','', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'],kids=[];
@@ -216,11 +216,75 @@ test(`${profile} real case collection imports, searches, reparses backups and re
    assert.match(result.stale,/changed during search/);
   });
 
+  await t.test('compact search covers every indexed passage and loads only matching payload shards',async()=>{
+   const result=await page.evaluate(async()=>{
+    const id='compact-passages';await collectionVault.createCase({id,name:'Compact candidates'});
+    const prefix='This synthetic archive paragraph records correspondence and review history. '.repeat(30)+'\n',body=prefix.repeat(450);
+    await collection.importFiles(id,[new File([body,'\nThe zirconiumcompactmarker amount is 815 dollars.\n'],'compact.txt'),new File([body,'\nA separate document has no matching marker.\n'],'other.txt')]);
+    let reads=0;const counted=await PBGCRag.createCaseCollection({vault:{...collectionVault,getShard:async(...args)=>{if(args[2]==='chunks')reads++;return collectionVault.getShard(...args);}}});
+    const found=await counted.search(id,'zirconiumcompactmarker amount'),metadata=await collection.sources(id),summaries=await Promise.all(metadata.map(source=>collection.summary(id,source.id)));
+    return{found,reads,totalShards:summaries.reduce((n,s)=>n+s.termShards.length,0),totalChunks:summaries.reduce((n,s)=>n+s.chunks,0)};
+   });
+   assert.equal(result.found.diagnostics.candidateIndex,'authenticated-exact-term-postings');assert.ok(result.found.results.some(c=>c.text.includes('815 dollars')));
+   assert.equal(result.found.diagnostics.scannedChunks,result.totalChunks);assert.ok(result.reads>0&&result.reads<result.totalShards);
+   assert.equal(result.reads,result.found.diagnostics.loadedPassageShards);assert.ok(result.found.diagnostics.loadedPassageChunks<result.totalChunks);
+  });
+
+  await t.test('a deleted active term shard fails closed instead of shrinking the searched corpus',async()=>{
+   const result=await page.evaluate(async()=>{
+    const id='missing-term-shard';await collectionVault.createCase({id,name:'Missing compact metadata'});
+    const [created]=await collection.importFiles(id,[new File(['Normal retirement age is 65.'],'plan.txt')]);
+    const info=await collection.summary(id,created.source.id),binding=info.termShards[0];
+    const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('pbgc-rag-case-vault',2);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+    await new Promise((resolve,reject)=>{const tx=db.transaction('shards','readwrite');tx.objectStore('shards').delete([id,created.source.id,'terms',binding.id]);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+    try{await collection.search(id,'retirement age');return'unexpected success';}catch(error){return error.message;}
+   });
+   assert.match(result,/missing|inventory|incomplete/i);
+  });
+
+  await t.test('authenticated compact metadata still must match its complete passage ID list',async()=>{
+   const result=await page.evaluate(async()=>{
+    const id='term-protocol-drift';await collectionVault.createCase({id,name:'Term protocol guard'});
+    const [created]=await collection.importFiles(id,[new File(['Normal retirement age is 65.'],'plan.txt')]),info=await collection.summary(id,created.source.id),binding=info.termShards[0];
+    const shard=await collectionVault.getShard(id,created.source.id,'terms',binding.id),payload=structuredClone(shard.payload);payload.searchIndex.chunkIds[0]='chunk:changed-protocol-identity';
+    await collectionVault.putShard(id,created.source.id,{id:binding.id,kind:'terms',sourceHash:created.source.hash,sourceRevision:created.source.revision,payload});
+    try{await collection.search(id,'retirement age');return'unexpected success';}catch(error){return error.message;}
+   });
+   assert.match(result,/bind|identity|passage.*index|passage.*shard/i);
+  });
+
+  await t.test('a legacy cache cannot silently omit an active passage shard',async()=>{
+   const result=await page.evaluate(async()=>{
+    const id='legacy-inventory';await collectionVault.createCase({id,name:'Legacy inventory guard'});
+    const line='Synthetic archive correspondence records remain available for later review.\n',body='The zirconiumlegacy amount is 815 dollars.\n'+line.repeat(9000);
+    const [created]=await collection.importFiles(id,[new File([body],'legacy-plan.txt')]);
+    const summary=await collectionVault.getShard(id,created.source.id,'records','summary'),payload=structuredClone(summary.payload);delete payload.termIndexProfile;
+    await collectionVault.putShard(id,created.source.id,{id:'summary',kind:'records',sourceHash:created.source.hash,sourceRevision:created.source.revision,payload});
+    const control=await collection.search(id,'zirconiumlegacy amount');
+    const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('pbgc-rag-case-vault',2);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+    const remove=payload.termShards.at(-1).chunkShardId;
+    await new Promise((resolve,reject)=>{const tx=db.transaction('shards','readwrite');tx.objectStore('shards').delete([id,created.source.id,'chunks',remove]);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+    let rejected;try{await collection.search(id,'zirconiumlegacy amount');}catch(error){rejected=error.message;}return{rejected,count:control.diagnostics.scannedChunks,expected:payload.chunks,shards:payload.termShards.length};
+   });
+   assert.ok(result.shards>1);assert.equal(result.count,result.expected);assert.match(result.rejected,/inventory|incomplete/i);
+  });
+
+  await t.test('an authenticated term index cannot use a stale topic normalization profile',async()=>{
+   const result=await page.evaluate(async()=>{
+    const id='term-normalization';await collectionVault.createCase({id,name:'Topic profile guard'});
+    const [created]=await collection.importFiles(id,[new File(['Normal retirement age is 65.'],'plan.txt')]),info=await collection.summary(id,created.source.id),binding=info.termShards[0];
+    const shard=await collectionVault.getShard(id,created.source.id,'terms',binding.id),payload=structuredClone(shard.payload);payload.normalizationProfile='obsolete-topics-v0';
+    await collectionVault.putShard(id,created.source.id,{id:binding.id,kind:'terms',sourceHash:created.source.hash,sourceRevision:created.source.revision,payload});
+    try{await collection.search(id,'retirement age');return'unexpected success';}catch(error){return error.message;}
+   });
+   assert.match(result,/inventory|profile|invalid/i);
+  });
+
   await t.test('source attribution remains explicit and a concurrent change during final original verification blocks release',async()=>{
    const result=await page.evaluate(async()=>{
     const id='answer-release-race';await collectionVault.createCase({id,name:'Synthetic answer release protocol'});
     await collection.importFiles(id,[new File(['Normal retirement age is 99.'],'single-statement.txt')]);
-    let calls=0;const model={id:'MOCK-release-protocol-not-model-quality',generate:async()=>{calls++;return 'Normal retirement age is 99.';}};
+    let calls=0;const model={id:'MOCK-release-protocol-not-model-quality',generate:async()=>{calls++;return 'S1';}};
     const control=await collection.answer(id,'What is the normal retirement age?',{model});let changed=false,rejected;
     const concurrent=await PBGCRag.createCaseCollection({vault:{...collectionVault,getSource:async(...args)=>{const original=await collectionVault.getSource(...args);if(!changed){changed=true;await collection.importFiles(id,[new File(['Concurrent new source.'],'added-during-verification.txt')]);}return original;}}});
     try{await concurrent.answer(id,'What is the normal retirement age?',{model});}catch(error){rejected=error.message;}

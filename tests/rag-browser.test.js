@@ -75,7 +75,7 @@ test(`${profile} REAL Qwen grounded generation UI, cancellation and model memory
     assert.match(await page.locator('#rag-answer').innerText(),/65/,(await page.locator('#rag-status').innerText())+'; real model output: '+await page.evaluate(()=>globalThis.__realQwenOutput));
     assert.match(await page.locator('#rag-citations').innerText(),/Normal retirement age is 65\./);
     assert.match(await page.locator('#rag-status').innerText(),/^Generated answer\./);
-    const raw=await page.evaluate(()=>globalThis.__realQwenOutput);assert.equal(typeof raw,'string');assert.match(raw,/65/);assert.doesNotMatch(raw,/^[{\[]|```/,'local model emits a plain answer; code selects its exact supporting source sentence');
+    const raw=await page.evaluate(()=>globalThis.__realQwenOutput);assert.equal(typeof raw,'string');assert.match(raw.trim(),/^S(?:[1-9]|1[0-2])(?:\s*,\s*S(?:[1-9]|1[0-2]))*$/,'local model emits only verified source-choice IDs; code copies the exact supporting sentence');
     fs.mkdirSync(path.resolve(__dirname,'../test-results'),{recursive:true});await page.screenshot({path:path.resolve(__dirname,'../test-results/rag-ui.png'),fullPage:true});
     t.diagnostic(JSON.stringify({model:MODEL_MANIFEST.id,loadAndAnswerMs:Math.round(performance.now()-started),profile,scope:'One synthetic factual answer; not production actuarial quality.'}));
     await page.locator('#rag-question').fill('What is the normal retirement age?');await page.locator('#ask-question').click();

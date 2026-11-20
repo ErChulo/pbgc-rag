@@ -23,6 +23,11 @@ BASE = 'https://github.com/rtynbirf/singulyar-llm/releases/download/weights-v1/'
 RECOVERY_URL = 'https://github.com/ErChulo/pbgc-rag/releases/download/office-v0.7.0/PBGC-RAG-0.7-office.zip'
 RECOVERY_BYTES = 504833381
 RECOVERY_SHA256 = '7b32a3646f481baf225a580325c9b42584aa5509a35184f0d90441288c2de440'
+# An independently uploaded, permanent asset from the previously verified
+# larger-model package. This is asset redundancy on GitHub, not another host.
+LARGER_RECOVERY_URL = 'https://github.com/ErChulo/pbgc-rag/releases/download/larger-model-v0.8.0/PBGC-RAG-0.8-larger-model-office.zip'
+LARGER_RECOVERY_BYTES = 777132222
+LARGER_RECOVERY_SHA256 = '6056683de128295f11a457d2becb004e65a89c11fa741f75ee4c24944d6c58de'
 DOWNLOAD_ERRORS = (urllib.error.URLError, TimeoutError, OSError, ValueError)
 
 def download_pinned(url, output, byte_count, sha256, attempts=2):
@@ -116,13 +121,26 @@ def download_recovery(output, spec):
         download_pinned(RECOVERY_URL, archive, RECOVERY_BYTES, RECOVERY_SHA256)
     restore_office_model(archive, output, spec, RECOVERY_SHA256)
 
+def download_larger_recovery(output, spec):
+    """Recover identical model bytes from a separately pinned release asset."""
+    archive = output.parent / '.office-larger-model-v0.8.0.zip'
+    if not (archive.is_file() and archive.stat().st_size == LARGER_RECOVERY_BYTES
+            and digest(archive) == LARGER_RECOVERY_SHA256):
+        download_pinned(LARGER_RECOVERY_URL, archive,
+                        LARGER_RECOVERY_BYTES, LARGER_RECOVERY_SHA256)
+    restore_office_model(archive, output, spec, LARGER_RECOVERY_SHA256)
+
 def download_larger_model(output, spec):
     """Fetch the separate experimental pack during development, never at office runtime."""
     if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*\.gguf', spec['name'])
             or not 491400032 < spec['bytes'] <= 768 * 1024 * 1024):
         raise ValueError('Experimental model must be larger than stable and within 768 MiB')
     url = 'https://github.com/ErChulo/pbgc-rag/releases/download/larger-model-weights-v1/' + spec['name']
-    download_pinned(url, output, spec['bytes'], spec['sha256'])
+    try:
+        download_pinned(url, output, spec['bytes'], spec['sha256'])
+    except DOWNLOAD_ERRORS:
+        print('Pinned larger-model asset is unavailable; recovering identical weights from the verified larger-model office release.', flush=True)
+        download_larger_recovery(output, spec)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

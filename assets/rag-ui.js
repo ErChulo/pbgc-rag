@@ -142,14 +142,14 @@ $('ask-question').addEventListener('click',()=>run(async signal=>{
   $('rag-status').textContent='Finding related passages…';const retrieval=await API.retrieveHybrid(index,questions[0],embedding,{signal,topK:6});
   if(!requestStillCurrent(scopeKey,signature,signal))return;
   modelStatus();$('rag-status').textContent=generated?'Drafting and checking the answer against its sources…':'Preparing source passages…';
-  const result=await API.answerQuestion({question:questions[0],chunks,retrieval,provider:generated?{id:model.id,answerFormat:'auto-grounded-v2',generate:request=>model.generate(request)}:undefined,signal,options});
+  const result=await API.answerQuestion({question:questions[0],chunks,retrieval,provider:generated?{id:model.id,answerFormat:'source-selection-grounded-v1',generate:request=>model.generate(request)}:undefined,signal,options});
   if(!requestStillCurrent(scopeKey,signature,signal))return;
   const selection=el('p',searchSummary(currentSearchSources()));selection.className='question-source-scope';$('rag-answer').append(selection);
   appendAnswer($('rag-answer'),result,!generated&&result.diagnostics?.reason==='generation-provider-unavailable'?'Here are the source passages related to your question. Open the evidence to read more.':undefined);
   showCitations(result.citations.length?result.citations:result.retrieved);
   $('rag-status').textContent=result.status==='answered'?'Generated answer. Check each claim against its cited source.':result.status==='conflict'?'Possible source conflict. Review the excerpts.':generated?'No grounded answer was released.':'Source excerpts only. No answer was generated.';
  }else{
-  const batch=await API.answerQuestions({questions,questionScopes,chunks,provider:generated?{id:model.id,answerFormat:'auto-grounded-v2',generate:request=>model.generate(request)}:undefined,signal,options,retrieve:({question,scope,searchedSources,signal})=>API.retrieveHybrid(index,question,embedding,{signal,topK:6,...(scope.sourceIds||scope.sourceHashes?{sourceIds:searchedSources.map(source=>source.sourceId)}:{})}),onProgress:progress=>{
+  const batch=await API.answerQuestions({questions,questionScopes,chunks,provider:generated?{id:model.id,answerFormat:'source-selection-grounded-v1',generate:request=>model.generate(request)}:undefined,signal,options,retrieve:({question,scope,searchedSources,signal})=>API.retrieveHybrid(index,question,embedding,{signal,topK:6,...(scope.sourceIds||scope.sourceHashes?{sourceIds:searchedSources.map(source=>source.sourceId)}:{})}),onProgress:progress=>{
    if(progress.phase==='complete')return;
    $('rag-status').textContent=`Question ${progress.index+1} of ${progress.total} · ${progress.phase==='retrieving'?'Finding related passages…':generated?'Drafting and checking the answer…':'Preparing source passages…'}`;
   }});

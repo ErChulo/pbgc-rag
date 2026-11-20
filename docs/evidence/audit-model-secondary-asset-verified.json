@@ -1,0 +1,16 @@
+{
+  "kind": "pbgc-model-secondary-asset-verification",
+  "scope": "Actual pinned public ZIP download, bounded JSON-part extraction and exact whole-GGUF verification. Asset redundancy on GitHub, not an independent hosting provider.",
+  "url": "https://github.com/ErChulo/pbgc-rag/releases/download/larger-model-v0.8.0/PBGC-RAG-0.8-larger-model-office.zip",
+  "archiveBytes": 777132222,
+  "archiveSha256": "6056683de128295f11a457d2becb004e65a89c11fa741f75ee4c24944d6c58de",
+  "status": "PASS",
+  "modelBytes": 760944640,
+  "modelSha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+  "modelSpec": {
+    "name": "qwen2.5-1.5b-instruct-q3_k_s.gguf",
+    "bytes": 760944640,
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d"
+  },
+  "elapsedMs": 50581
+}

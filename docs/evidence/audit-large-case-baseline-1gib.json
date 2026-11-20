@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-large-case-baseline-disposition",
+  "status": "FAIL",
+  "scope": "Measured components of the failed 1 GiB supplementary HTTP baseline; not a release or complete benchmark PASS. Original report is retained unchanged.",
+  "rawEvidenceSha256": "1606098f5f9d4431efdd372c182a9e40653c172e8f758af16912fde67fe07c6a",
+  "rawEvidenceBytes": 407042,
+  "startedAt": "2026-11-19T16:07:07.037Z",
+  "finishedAt": "2026-11-19T16:33:33.461Z",
+  "commitAtStart": "d28733f73469c5dbc91ab5f5680825d8121bcaab",
+  "trackedSourceDirtyAtStart": true,
+  "runtimeSha256": {
+    "assets/case-vault.js": "429dd87e0d7a45ac9515a67959a9feb1276aa91b8eba01f671d4c676676b3a23",
+    "assets/case-collection.js": "b38e393c4a8dfb66552a8c84729aa24739f29ce2e0113b33381368d85240daff",
+    "assets/case-archive.js": "3b3739cdb05a832924fcdd30524b182550886da5907703e26c6fcc0b7eb149f5",
+    "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+    "assets/rag.js": "560874d46d66fbd1d1fa82be9bb1a6648a2e390740633ca9c606a521563cebf1",
+    "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+    "tools/measure-large-case.js": "61b90fd4ec54a7094dbcf674d764ff8133a0b69126eba96a6fb81deaecf5c9f5"
+  },
+  "runtimeUnchanged": true,
+  "workload": {
+    "sourceBytes": 1073741824,
+    "sourceFileBytes": 4194304,
+    "sourceCount": 256,
+    "synthetic": true,
+    "content": "UTF-8 multi-paragraph plan/archive prose with distinct source/paragraph IDs and three factual markers per source. No sparse files, binary padding or blank filler.",
+    "retrieval": "Full-case authenticated lexical passage scan. No global dense index or model-quality claim.",
+    "indexedChunks": 1219840,
+    "records": 1222400,
+    "derivedBytes": 5444647680,
+    "derivedToOriginalRatio": 5.070723295211792
+  },
+  "totalMs": 1586424,
+  "stageMs": {
+    "generateCorpus": 10462,
+    "browserEntry": 2813,
+    "cancelAndRollback": 508,
+    "import": 802599,
+    "reopen": 785,
+    "threeFullCaseSearches": 654108,
+    "selectedSourceSearch": 843
+  },
+  "resources": {
+    "samples": 3163,
+    "measurementMs": 1586252,
+    "effectiveSampleIntervalMs": 502,
+    "maximumSampleGapMs": 996,
+    "peak": {
+      "rssBytes": 3974045696,
+      "pssBytes": 3687366656,
+      "privateBytes": 3573325824,
+      "browserRssBytes": 3626041344,
+      "browserPssBytes": 3340930048,
+      "processCount": 10,
+      "budgetMetricBytes": 3687366656
+    },
+    "cpuMs": 2395280,
+    "browserCpuMs": 1766250,
+    "collector": null,
+    "pssComplete": true,
+    "missingProcessSamples": 3,
+    "exceeded": false,
+    "errors": [],
+    "errorCount": 0,
+    "warnings": [],
+    "warningCount": 0
+  },
+  "componentChecks": {
+    "originalImportCount": 256,
+    "allOriginalsImported": true,
+    "databasePageReopen": true,
+    "fullCaseSearches": [
+      {
+        "position": "opening",
+        "ms": 214490,
+        "source": "synthetic-plan-0000.txt",
+        "locator": {
+          "length": 61,
+          "line": 1,
+          "offset": 0,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      },
+      {
+        "position": "middle",
+        "ms": 225428,
+        "source": "synthetic-plan-0128.txt",
+        "locator": {
+          "length": 60,
+          "line": 2388,
+          "offset": 2097153,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      },
+      {
+        "position": "closing",
+        "ms": 214190,
+        "source": "synthetic-plan-0255.txt",
+        "locator": {
+          "length": 61,
+          "line": 4775,
+          "offset": 4194242,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      }
+    ],
+    "backupOriginalCount": 256,
+    "backupOriginalHashesMatchImport": true,
+    "reparsedSampleCount": 3,
+    "postRunSamplesMatchTheirOwnOriginals": true
+  },
+  "failureDisposition": "The test selected restored samples by archive position, then compared them with unrelated corpus positions. Archive order follows random source IDs. The harness now selects and checks samples by their independent original names and hashes; the full workload must be rerun.",
+  "limits": [
+    "Full-case queries took 214\u2013225 seconds; selected-source query took 843 ms. Compact exact term indexes are under integration to avoid rereading all passage bodies.",
+    "This run reopened a database and page in one browser context. A separate 5 MiB test verifies full browser restart and persisted HMAC keys.",
+    "This run did not load Qwen and did not reparse a full second 1 GiB copy.",
+    "Actual local file navigation is blocked by the managed browser; actual-file CI results are a separate gate."
+  ],
+  "publishedRuntimeComparison": {
+    "commit": "8cb887306267d7e4a069b9136fdd4ca8c1e8d61f",
+    "allFingerprintedFilesMatch": true,
+    "files": {
+      "assets/case-vault.js": true,
+      "assets/case-collection.js": true,
+      "assets/case-archive.js": true,
+      "assets/chunking.js": true,
+      "assets/rag.js": true,
+      "assets/core.js": true,
+      "tools/measure-large-case.js": true
+    }
+  }
+}

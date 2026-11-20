@@ -4,6 +4,9 @@
 const selection=typeof module==='object'&&module.exports?require('./answer-selection.js'):root.PBGCAnswerSelection;
 const tableApi=()=>typeof module==='object'&&module.exports?require('./table-evidence.js'):root.PBGCRag;
 const RAG_LIMITS=Object.freeze({chunks:10000,totalCharacters:20000000,chunkCharacters:12000,questionCharacters:1000,contextCharacters:2600,contextChunks:3,maxContextCharacters:12000,maxContextChunks:6,outputTokens:512,outputCharacters:16000,claims:6,timeoutMs:120000});
+// Bump when topic aliases, acronym/plural handling or question frames change.
+// Persisted term postings bind this normalization version separately from text.
+const RAG_TOPIC_PROFILE='pbgc-topics-v1';
 const HASH=/^[a-f0-9]{64}$/,STOP=new Set('a an and are as at be by can do does for from how i in is it of on or that the their there these this to was were what when where which who will with would'.split(' '));
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value),fail=message=>{throw Error(message);};
 function abortError(){const error=Error('Question answering cancelled. No model answer was released.');error.name='AbortError';return error;}
@@ -327,7 +330,7 @@ function bindChoice(question,choice){
   // An explicit ID is checked against the actual identity cell above; its
   // number cannot be supplied by an unrelated focus value or header spelling.
   bindQuestion(tableIdReferences(question).propertyQuestion,[source]);
- }else{if(!completeSourceStatements(item,choice.text).includes(choice.text))fail('A source choice touches a cut sentence or omits its complete qualifications.');bindQuestion(question,[source]);}
+ }else{if(!completeSourceStatements(item,choice.text).includes(choice.text))fail('A source choice touches a cut sentence or omits its complete qualifications.');if(!relevantStatement(choice.text,question,true))fail('The source statement does not give the requested property and unit.');bindQuestion(question,[source]);}
  return true;
 }
 function acceptedClaimChoices(validated,context,plan){
@@ -380,13 +383,14 @@ async function answerQuestion(input){if(!object(input)||typeof input.question!==
  const possible=[...analysis.conflicts,...tableIssues.conflicts].slice(0,10);if(possible.length){diagnostics.conflicts=possible;return response('conflict','Possible conflicting source provisions were retrieved. Authority and applicability require review.','possible-source-conflict',issueEvidence(possible));}if(tableIssues.ambiguities.length){diagnostics.tableAmbiguities=tableIssues.ambiguities;return response('abstained','More than one source row matches this person and property. Include the row ID in the question.','ambiguous-table-row',issueEvidence(tableIssues.ambiguities));}if(analysis.applicabilityReasons.length)return response('abstained','The source dates, groups or priority are not verified for this question. Review the source excerpts and applicability.','unverified-source-applicability',context.map(citation));if(!topicMatch(question,candidates.map(item=>guardText(item.chunk)).join(' '))){diagnostics.questionTopics=[...questionTopics(question)];return response('abstained','The retrieved source text does not establish the topic asked about. Review or add relevant documents.','question-topic-not-supported');}if(provider===undefined||provider===null){diagnostics.mode='extractive';return response('abstained','No local generation provider is loaded. Retrieved source excerpts are available for review.','generation-provider-unavailable',context.map(citation));}if(!object(provider)||typeof provider.id!=='string'||!provider.id.trim()||provider.id.length>200||typeof provider.generate!=='function')fail('Provide a local generation provider with id and generate().');const auto=provider.answerFormat==='auto-grounded-v2',legacyPlain=provider.answerFormat==='plain-grounded-v1';
  if(auto&&!selection)fail('Source-selection support is unavailable.');
  const plan=selection?.planFactualQuestion(question),hasTables=context.some(item=>item.chunk.evidenceKind==='table-field-v1');
- const choose=auto&&(plan?.kind==='compound'||hasTables),plain=legacyPlain||auto&&!choose;
+ const forcedSelection=provider.answerFormat==='source-selection-grounded-v1';
+ const choose=(auto||forcedSelection)&&(forcedSelection||plan?.kind==='compound'||hasTables),plain=legacyPlain||auto&&!choose;
  if(legacyPlain&&plainMultiPartQuestion(question)){
   diagnostics.answerProfile={format:'plain-grounded-v1',maxStatements:1};
   return response('abstained','The local answer profile checks one factual statement at a time. Ask one specific question or review the matched source excerpts.','plain-multi-part-question-unsupported');
  }
- if(auto&&plan?.kind==='unsupported'){
-  diagnostics.answerProfile={format:'auto-grounded-v2',partCount:0,completeCoverage:false};
+ if((auto||forcedSelection)&&plan?.kind==='unsupported'){
+  diagnostics.answerProfile={format:forcedSelection?'source-selection-grounded-v1':'auto-grounded-v2',partCount:0,completeCoverage:false};
   return response('abstained',plan.reason||'Write each question in full.','compound-question-needs-explicit-parts');
  }
  if(hasTables&&sourceChunks===null)fail('Table answers require a verified source chunk corpus.');
@@ -436,5 +440,5 @@ async function answerQuestion(input){if(!object(input)||typeof input.question!==
  diagnostics.mode=groundingMode==='synthesis'?'grounded-synthesis':'model-guided-extractive';if(groundingMode==='synthesis')diagnostics.warnings.push('Citation, overlap, entity and numerical checks do not prove entailment or factual truth. Verify every generated claim against its quoted evidence.');diagnostics.modelOutputAccepted=true;const supportingDocuments=new Set(validated.citations.map(item=>item.sourceHash));diagnostics.sourceSupport={citedDocumentCount:supportingDocuments.size,singleSource:supportingDocuments.size===1,message:supportingDocuments.size===1?'Only one source is cited. Check the source.':'Citations identify source support, not independent verification of truth.'};if(onToken)onToken(validated.answer);return response('answered',validated.answer,groundingMode==='synthesis'?'cited-synthesis-guarded':'grounded-source-quotations',validated.citations);}
 function normalizeQuestionTopics(question){if(typeof question!=='string'||!question.trim()||question.length>RAG_LIMITS.questionCharacters)fail('Provide a question of at most 1,000 characters.');return [...questionTopics(question)];}
 function normalizeEvidenceTopics(text){if(typeof text!=='string'||text.length>RAG_LIMITS.chunkCharacters)fail('Evidence topic text exceeds its bounded chunk budget.');return [...topicWords(text)];}
-return{answerQuestion,RAG_LIMITS,normalizeQuestionTopics,normalizeEvidenceTopics};
+return{answerQuestion,RAG_LIMITS,RAG_TOPIC_PROFILE,normalizeQuestionTopics,normalizeEvidenceTopics};
 });

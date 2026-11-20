@@ -1,5 +1,16 @@
 # Progress
 
+## Audit checkpoint — November 19, 2026
+
+- Saved and pushed `8cb8873` on `codex/rag-audit-remediation-1.1`; main and the prior office ZIP are preserved.
+- Source + complete office-package Windows/Ubuntu jobs pass at that commit. Large-case acceptance does not pass.
+- Real Chromium collection13 checks, visible26-document backup/reopen, and quiet real-Qwen2 checks pass.
+- The 1 GiB baseline imported256 originals, reloaded the database/page and found exact opening/middle/closing facts. Full-case search took214–225 seconds; a backup test incorrectly compared archive UUID order with corpus order. Raw status remains FAIL.
+- Compact exact term postings, benchmark sample identity checks and verified single-fact source selection are implemented. Latest Node: 455 pass, zero failures, seven explicit skips. Targeted browser flow: 30 pass. Full 1 GiB model-enabled rerun and final-head CI are next; no RC claim.
+- Secondary model supply: pinned permanent ZIP downloaded and reassembled;21 supply tests pass. Persistent5 MiB full browser restart passes.
+- See `docs/AUDIT-REMEDIATION-1.1.md` and its evidence links for scope and remaining gates.
+
+
 ## 1.1 audit remediation — November 18, 2026
 
 **Current branch: `codex/rag-audit-remediation-1.1`; development, not a new release candidate.** The audit used `main` at `c429b8f`. This increment starts from the later documented candidate `d28733f` / tested runtime `d3ce073`, preserving `main` and the prior office ZIP. Earlier pilot claims covered bounded workloads and were too broad for the user's clarified hundreds-of-documents, approximately 1 GB case requirement.

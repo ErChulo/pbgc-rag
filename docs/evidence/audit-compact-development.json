@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-compact-search-development-evidence",
+  "scope": "Intermediate development smoke measurements. These are not 1 GiB or final-head acceptance. Ordinary joined-condition and legacy-cache corrections were added afterward and have separate regressions.",
+  "nodeSuite": {
+    "tests": 462,
+    "pass": 455,
+    "fail": 0,
+    "skipped": 7
+  },
+  "nodeLogSha256": "7c1cbdbc5d6df50cce68d1db6c2734bee7a6e30fee8bf8b3ba64d1b0a49d1760",
+  "browserChecks": {
+    "collectionAndNonGeneratedUi": 30,
+    "failures": 0,
+    "externalRequests": 0
+  },
+  "reports": [
+    {
+      "file": "large-case-4mib-compact-selection-model-http.json",
+      "sha256": "ce742f8cbac571785e1fc18142af9287b597e7dc8495ecd46cd09d9585f10993",
+      "status": "PASS",
+      "profile": "supplementary HTTP only",
+      "scope": "Import actual browser Files through the collection parser/chunker and IndexedDB vault; cancel/rollback; close/reopen the database and page; search across the whole case; export and parse an original-file ZIP; verify all backup original hashes and reparse first/middle/last distinct sources. Pinned single-thread CPU Qwen and the real local encoder must answer one source-bound synthetic opening fact. This is an integration test, not general answer-quality evidence. PDF/OCR, a full persistent-browser restart and a full second-copy restore are separate tests.",
+      "runtimeSha256": {
+        "assets/case-vault.js": "948ce5fe9338e8bd1ea8562e425fbc765ab1c6418b7174e90f8bf76c41f04042",
+        "assets/case-collection.js": "eb6ac636914b003eb1fd460f79f8728c46c443ff50e29d1276b0d5e5c9c97d13",
+        "assets/case-archive.js": "3b3739cdb05a832924fcdd30524b182550886da5907703e26c6fcc0b7eb149f5",
+        "assets/case-term-index.js": "7c521e083e975eb203546a958b615b2f8f7a521bf081558e84662b27ce2c3a79",
+        "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+        "assets/rag.js": "a6146dccf0d3f8ffee7021ecf37100ed2024180aef75c69c982d2c8c39da5881",
+        "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+        "tools/measure-large-case.js": "6a8d8f5aa831cf9bfba05a19297e99048a1bb663d923e8d79e88827b244eb565",
+        "assets/embeddings.js": "bba305de89e0f30e3e526a0ebf86817c3b86bbf3d0571f7743879340ff495351",
+        "assets/semantic.js": "56e93de5935ff631ecdc737fceefb5f49f7781ba124972b81488299fbf396085",
+        "assets/local-llm.js": "c9995898356852d9ab7c8ecce6a76084d77c6c6852a271b3e06478b7d0cd6ade",
+        "assets/answer-selection.js": "d1cafe1a013136622848b815e2151218ecdc663e1906d88c358233ed918cd71b",
+        "vendor/local-llm/wllama-classic.js": "800c37902920446882bf8e737e17e00d2a5baf50d1d4b7d287a8d6a674e358e6",
+        "vendor/local-llm/bundled.manifest.json": "a5a1a5b373c8b7039730db43408182d249aac373fb623747d870e7ef797325b6"
+      },
+      "runtimeUnchanged": true,
+      "workload": {
+        "sourceBytes": 4194304,
+        "sourceFileBytes": 4194304,
+        "sourceCount": 1,
+        "synthetic": true,
+        "realModelRequired": true,
+        "content": "UTF-8 multi-paragraph plan/archive prose with distinct source/paragraph IDs and three factual markers per source. No sparse files, binary padding or blank filler.",
+        "retrieval": "Full-case authenticated lexical candidates. No global dense index.",
+        "indexedChunks": 4765,
+        "termShards": 15,
+        "records": 4775,
+        "derivedBytes": 22014826,
+        "derivedToOriginalRatio": 5.248743534088135
+      },
+      "stagesMs": {
+        "generateCorpus": 81,
+        "browserEntry": 1600,
+        "cancelAndRollback": 623,
+        "import": 2972,
+        "reopen": 334,
+        "threeFullCaseSearches": 463,
+        "selectedSourceSearch": 365,
+        "modelFileSelection": 70223,
+        "modelHashAndLoad": 5642,
+        "embeddingLoad": 379,
+        "realQwenAnswerAndGrounding": 97513,
+        "backupParseAndSampleReparse": 3307
+      },
+      "resources": {
+        "samples": 369,
+        "measurementMs": 184402,
+        "effectiveSampleIntervalMs": 501,
+        "maximumSampleGapMs": 679,
+        "peak": {
+          "rssBytes": 2808393728,
+          "pssBytes": 2522119168,
+          "privateBytes": 2407264256,
+          "browserRssBytes": 2453741568,
+          "browserPssBytes": 2169033728,
+          "processCount": 10,
+          "budgetMetricBytes": 2522119168
+        },
+        "cpuMs": 244070,
+        "browserCpuMs": 122590,
+        "collector": null,
+        "pssComplete": true,
+        "missingProcessSamples": 0,
+        "exceeded": false,
+        "errors": [],
+        "errorCount": 0,
+        "warnings": [],
+        "warningCount": 0
+      },
+      "externalRequests": 0,
+      "model": {
+        "id": "local-gguf:qwen2.5-1.5b-instruct-q3-k-s:39feb79d0c05e409",
+        "model": "Qwen2.5 1.5B Instruct Q3_K_S",
+        "license": "Apache-2.0",
+        "source": "https://github.com/ErChulo/pbgc-rag/releases/tag/larger-model-weights-v1",
+        "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+        "modelBytes": 760944640,
+        "runtime": "wllama-2.3.7",
+        "llamaCpp": "b7179-4abef75",
+        "cpuOnly": true,
+        "threads": 1,
+        "contextSize": 2048,
+        "loaded": true,
+        "disposed": false,
+        "hparams": {
+          "nVocab": 151936,
+          "nCtxTrain": 32768,
+          "nEmbd": 1536,
+          "nLayer": 28
+        }
+      },
+      "answerCheck": {
+        "status": "answered",
+        "sourceSupport": {
+          "citedDocumentCount": 1,
+          "singleSource": true,
+          "message": "Only one source is cited. Check the source."
+        },
+        "calls": [
+          {
+            "promptCharacters": 327,
+            "outputTokenBudget": 64,
+            "responseFormat": "source-selection-v1",
+            "firstTokenMs": 94810.69999999553,
+            "emittedCharacters": 2,
+            "returnedCharacters": 2,
+            "elapsedMs": 96750.09999999404
+          }
+        ]
+      }
+    },
+    {
+      "file": "large-case-32mib-compact-selection-http.json",
+      "sha256": "77b9ce56713e07e9c0034cfda05821ee9c6c32054c4ac19b689f8d32d9d7bda2",
+      "status": "PASS",
+      "profile": "supplementary HTTP only",
+      "scope": "Import actual browser Files through the collection parser/chunker and IndexedDB vault; cancel/rollback; close/reopen the database and page; search across the whole case; export and parse an original-file ZIP; verify all backup original hashes and reparse first/middle/last distinct sources. No model is loaded; model generation and learned reranking are separate tests. PDF/OCR, a full persistent-browser restart and a full second-copy restore are separate tests.",
+      "runtimeSha256": {
+        "assets/case-vault.js": "948ce5fe9338e8bd1ea8562e425fbc765ab1c6418b7174e90f8bf76c41f04042",
+        "assets/case-collection.js": "eb6ac636914b003eb1fd460f79f8728c46c443ff50e29d1276b0d5e5c9c97d13",
+        "assets/case-archive.js": "3b3739cdb05a832924fcdd30524b182550886da5907703e26c6fcc0b7eb149f5",
+        "assets/case-term-index.js": "7c521e083e975eb203546a958b615b2f8f7a521bf081558e84662b27ce2c3a79",
+        "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+        "assets/rag.js": "a6146dccf0d3f8ffee7021ecf37100ed2024180aef75c69c982d2c8c39da5881",
+        "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+        "tools/measure-large-case.js": "6a8d8f5aa831cf9bfba05a19297e99048a1bb663d923e8d79e88827b244eb565"
+      },
+      "runtimeUnchanged": true,
+      "workload": {
+        "sourceBytes": 33554432,
+        "sourceFileBytes": 4194304,
+        "sourceCount": 8,
+        "synthetic": true,
+        "realModelRequired": false,
+        "content": "UTF-8 multi-paragraph plan/archive prose with distinct source/paragraph IDs and three factual markers per source. No sparse files, binary padding or blank filler.",
+        "retrieval": "Full-case authenticated lexical candidates. No global dense index.",
+        "indexedChunks": 38120,
+        "termShards": 120,
+        "records": 38200,
+        "derivedBytes": 176118608,
+        "derivedToOriginalRatio": 5.248743534088135
+      },
+      "stagesMs": {
+        "generateCorpus": 426,
+        "browserEntry": 1183,
+        "cancelAndRollback": 723,
+        "import": 20463,
+        "reopen": 231,
+        "threeFullCaseSearches": 2476,
+        "selectedSourceSearch": 271,
+        "backupParseAndSampleReparse": 8394
+      },
+      "resources": {
+        "samples": 73,
+        "measurementMs": 36411,
+        "effectiveSampleIntervalMs": 506,
+        "maximumSampleGapMs": 917,
+        "peak": {
+          "rssBytes": 1224744960,
+          "pssBytes": 938377216,
+          "privateBytes": 823181312,
+          "browserRssBytes": 956993536,
+          "browserPssBytes": 672192512,
+          "processCount": 10,
+          "budgetMetricBytes": 938377216
+        },
+        "cpuMs": 56870,
+        "browserCpuMs": 42970,
+        "collector": null,
+        "pssComplete": true,
+        "missingProcessSamples": 0,
+        "exceeded": false,
+        "errors": [],
+        "errorCount": 0,
+        "warnings": [],
+        "warningCount": 0
+      },
+      "externalRequests": 0,
+      "model": null
+    }
+  ]
+}

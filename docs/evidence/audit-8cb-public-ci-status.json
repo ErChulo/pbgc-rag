@@ -1,0 +1,27 @@
+{
+  "kind": "public-github-run-page-status",
+  "reports": [
+    {
+      "run": "44564058070",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44564058070",
+      "commit": "8cb887306267d7e4a069b9136fdd4ca8c1e8d61f",
+      "publicStatus": "Success",
+      "publicStatusExcerpt": "Status Success Total duration 28m 3s Artifacts 2 verify.yml on: push Matrix: verification 2 jobs completed Show all jobs Oh hello! Nice to see you. Made with \u2764\ufe0f by humans.txt Fit to window Zoom out Zoom in Annotations 8 notices Synthetic model verifi",
+      "jobs": [
+        "/actions/runs/44564058070/job/135700851387",
+        "/actions/runs/44564058070/job/135700851954"
+      ]
+    },
+    {
+      "run": "44564058136",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44564058136",
+      "commit": "8cb887306267d7e4a069b9136fdd4ca8c1e8d61f",
+      "publicStatus": "Success",
+      "publicStatusExcerpt": "Status Success Total duration 14m 8s Artifacts 2 rag-audit-remediation.yml on: push Matrix: office-candidate 2 jobs completed Show all jobs Oh hello! Nice to see you. Made with \u2764\ufe0f by humans.txt Fit to window Zoom out Zoom in Annotations 20 notices Bu",
+      "jobs": [
+        "/actions/runs/44564058136/job/135700851433",
+        "/actions/runs/44564058136/job/135700852005"
+      ]
+    }
+  ]
+}

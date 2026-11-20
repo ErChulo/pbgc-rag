@@ -118,6 +118,58 @@ class RecoverOfficeModel(unittest.TestCase):
         self.build(pack=pack)
         self.assert_rejected()
 
+    def larger_recovery_settings(self):
+        archive_bytes = self.archive.read_bytes()
+        return mock.patch.multiple(PREPARE,
+            LARGER_RECOVERY_URL='https://example.invalid/pinned-office.zip',
+            LARGER_RECOVERY_BYTES=len(archive_bytes),
+            LARGER_RECOVERY_SHA256=sha(archive_bytes))
+
+    def test_larger_release_fallback_downloads_and_reconstructs_exact_synthetic_model(self):
+        self.build()
+        archive_bytes = self.archive.read_bytes()
+        cached = self.root / '.office-larger-model-v0.8.0.zip'
+        cached.write_bytes(b'corrupt previous archive cache')
+        with self.larger_recovery_settings(), mock.patch.object(PREPARE.urllib.request, 'urlopen', return_value=io.BytesIO(archive_bytes)) as opened:
+            PREPARE.download_larger_recovery(self.output, self.spec)
+        self.assertEqual(opened.call_count, 1)
+        self.assertEqual(cached.read_bytes(), archive_bytes)
+        self.assertEqual(self.output.read_bytes(), self.model)
+
+    def test_larger_release_verified_cache_recovers_without_network(self):
+        self.build()
+        cached = self.root / '.office-larger-model-v0.8.0.zip'
+        cached.write_bytes(self.archive.read_bytes())
+        with self.larger_recovery_settings(), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=AssertionError('No network allowed')):
+            PREPARE.download_larger_recovery(self.output, self.spec)
+        self.assertEqual(self.output.read_bytes(), self.model)
+
+    def test_pinned_larger_archive_with_forged_inner_model_never_replaces_output(self):
+        pack = copy.deepcopy(self.pack)
+        pack['chunks'][0]['sha256'] = '0' * 64
+        self.build(pack=pack)
+        cached = self.root / '.office-larger-model-v0.8.0.zip'
+        cached.write_bytes(self.archive.read_bytes())
+        self.output.write_bytes(b'previous verified model')
+        with self.larger_recovery_settings(), self.assertRaisesRegex(ValueError, 'chunk integrity'):
+            PREPARE.download_larger_recovery(self.output, self.spec)
+        self.assertEqual(self.output.read_bytes(), b'previous verified model')
+        self.assertFalse(self.output.with_suffix('.partial').exists())
+
+    def test_corrupt_larger_archive_download_preserves_previous_cache_and_model(self):
+        self.build()
+        archive_bytes = self.archive.read_bytes()
+        cached = self.root / '.office-larger-model-v0.8.0.zip'
+        cached.write_bytes(b'previous archive cache')
+        self.output.write_bytes(b'previous verified model')
+        with self.larger_recovery_settings(), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=lambda *_args, **_kwargs: io.BytesIO(archive_bytes[:-1] + b'!')) as opened:
+            with self.assertRaisesRegex(ValueError, 'integrity'):
+                PREPARE.download_larger_recovery(self.output, self.spec)
+        self.assertEqual(opened.call_count, 2)
+        self.assertEqual(cached.read_bytes(), b'previous archive cache')
+        self.assertEqual(self.output.read_bytes(), b'previous verified model')
+        self.assertFalse(cached.with_suffix('.download').exists())
+
 
 class BoundedDownloads(unittest.TestCase):
     def setUp(self):
@@ -179,6 +231,35 @@ class BoundedDownloads(unittest.TestCase):
         with mock.patch.object(PREPARE, 'ROOT', self.root), mock.patch('sys.argv', ['prepare-models', '--out', str(self.root), '--model-file', str(local)]), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=AssertionError('No network allowed')):
             PREPARE.main()
         self.assertEqual((self.root / 'synthetic.gguf').read_bytes(), self.data)
+
+    def test_larger_primary_network_failures_retry_before_separate_archive_recovery(self):
+        spec = {'name':'synthetic-larger.gguf', 'bytes':500000000, 'sha256':'1' * 64}
+        failures = [urllib.error.HTTPError('https://example.invalid', code, 'failed', None, None)
+                    for code in [403, 404, 500]] + [TimeoutError('timeout'), urllib.error.URLError('reset')]
+        for failure in failures:
+            with self.subTest(failure=str(failure)), mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=failure) as opened, mock.patch.object(PREPARE, 'download_larger_recovery') as recovery, mock.patch.object(PREPARE, 'download_recovery', side_effect=AssertionError('Stable model recovery must not be used')):
+                PREPARE.download_larger_model(self.output, spec)
+            self.assertEqual(opened.call_count, 2)
+            recovery.assert_called_once_with(self.output, spec)
+            self.assertFalse(self.output.with_suffix('.download').exists())
+
+    def test_larger_primary_integrity_failure_uses_archive_and_preserves_existing_model(self):
+        spec = {'name':'synthetic-larger.gguf', 'bytes':500000000, 'sha256':'1' * 64}
+        self.output.write_bytes(b'previous verified model')
+        with mock.patch.object(PREPARE, 'download_pinned', side_effect=ValueError('Download integrity check failed')), mock.patch.object(PREPARE, 'download_larger_recovery') as recovery:
+            PREPARE.download_larger_model(self.output, spec)
+        recovery.assert_called_once_with(self.output, spec)
+        self.assertEqual(self.output.read_bytes(), b'previous verified model')
+
+    def test_both_larger_sources_failing_never_replace_existing_model(self):
+        spec = {'name':'synthetic-larger.gguf', 'bytes':500000000, 'sha256':'1' * 64}
+        self.output.write_bytes(b'previous verified model')
+        with mock.patch.object(PREPARE.urllib.request, 'urlopen', side_effect=urllib.error.URLError('offline')) as opened:
+            with self.assertRaises(urllib.error.URLError):
+                PREPARE.download_larger_model(self.output, spec)
+        self.assertEqual(opened.call_count, 4)
+        self.assertEqual(self.output.read_bytes(), b'previous verified model')
+        self.assertFalse(self.output.with_suffix('.download').exists())
 
 
 if __name__ == '__main__':

@@ -89,7 +89,7 @@ jobs:
               'assets/pdf-ocr.js', 'assets/pdf-preview.js',
               'assets/rag.js', 'assets/rag-questions.js', 'OFFICE-START.md',
               'assets/case-vault.js', 'assets/case-collection.js', 'assets/case-archive.js',
-              'assets/collection-ui.js', 'assets/image-source.js',
+              'assets/collection-ui.js', 'assets/image-source.js', 'assets/case-term-index.js',
           }
           entries = {entry['path']: entry for entry in manifest['files']}
           if not required <= entries.keys():
