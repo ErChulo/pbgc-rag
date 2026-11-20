@@ -1,12 +1,14 @@
 # Progress
 
-## Audit checkpoint — November 19, 2026
+## Audit checkpoint — November 20, 2026
 
-- Saved and pushed `8cb8873` on `codex/rag-audit-remediation-1.1`; main and the prior office ZIP are preserved.
-- Source + complete office-package Windows/Ubuntu jobs pass at that commit. Large-case acceptance does not pass.
+- Saved and pushed `8cb8873` and `ac68c7f` on `codex/rag-audit-remediation-1.1`; main and the prior office ZIP are preserved.
+- Source + complete office-package Windows/Ubuntu jobs pass at both commits. The older incognito large-case CI jobs failed during import; the persistent-profile harness records quota and disk evidence for diagnosis.
 - Real Chromium collection13 checks, visible26-document backup/reopen, and quiet real-Qwen2 checks pass.
 - The 1 GiB baseline imported256 originals, reloaded the database/page and found exact opening/middle/closing facts. Full-case search took214–225 seconds; a backup test incorrectly compared archive UUID order with corpus order. Raw status remains FAIL.
-- Compact exact term postings, benchmark sample identity checks and verified single-fact source selection are implemented. Latest Node: 455 pass, zero failures, seven explicit skips. Targeted browser flow: 30 pass. Full 1 GiB model-enabled rerun and final-head CI are next; no RC claim.
+- Compact exact term postings, benchmark sample identity checks and verified single-fact source selection are implemented. The clean `ac68c7f` supplementary HTTP run passed at 1 GiB: 256 originals, 1.22 million chunks, real Qwen, all backup hashes and three sample reparses. Searches took 27–34 seconds and peak process PSS was 5.31 GB. This intermediate run did not restart the entire browser or restore a complete second case.
+- Subsequent review repairs retain every exact candidate for conflict analysis, bind named subjects to their property, and preserve ambiguous wrapped qualifications. The final full Node suite passes 558 checks with zero failures and seven skips. Targeted browser integration passes 31 checks; the last definite-head refinement followed that run and passed the Node suite. Final committed-runtime platform and scale checks remain pending; no RC claim.
+- Normal persistent-profile 4 MiB and 32 MiB smokes passed full browser restart and complete second-case restore: exact stored original hashes, header bindings, searchable source locations, original-case invariance and zero external requests. The 32 MiB run took 55.3 seconds, with 756 MB peak PSS. Complete 1 GiB browser restart, real-model integration and restore are separate gates.
 - Secondary model supply: pinned permanent ZIP downloaded and reassembled;21 supply tests pass. Persistent5 MiB full browser restart passes.
 - See `docs/AUDIT-REMEDIATION-1.1.md` and its evidence links for scope and remaining gates.
 

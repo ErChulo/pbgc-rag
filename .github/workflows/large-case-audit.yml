@@ -60,11 +60,14 @@ jobs:
         run: |
           python tools/build-model-profile.py --check
           python tools/prepare-models.py
-      - name: Measure actual offline file import, search, one Qwen answer, reopen and backup
+      - name: Check bounded quota and workload diagnostics
+        run: node tests/large-case-benchmark.test.js
+      - name: Measure actual offline file import, search, Qwen, full browser restart and complete backup restore
         # One grounded synthetic fact checks integration, not general quality.
+        # Use a normal persistent browser profile; never override storage quotas.
         run: |
           mkdir -p test-results
-          node tools/measure-large-case.js --file --mib "$CASE_MIB" --with-model --timeout-ms 7000000 --out test-results/large-case-file.json 2>&1 | tee test-results/large-case-file.log
+          node tools/measure-large-case.js --file --mib "$CASE_MIB" --with-model --full-restore --timeout-ms 7000000 --out test-results/large-case-file.json 2>&1 | tee test-results/large-case-file.log
       - name: Annotate bounded synthetic workload diagnostics
         if: ${{ always() }}
         # Public job annotations stay useful even when full logs require sign-in.

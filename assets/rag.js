@@ -6,7 +6,7 @@ const tableApi=()=>typeof module==='object'&&module.exports?require('./table-evi
 const RAG_LIMITS=Object.freeze({chunks:10000,totalCharacters:20000000,chunkCharacters:12000,questionCharacters:1000,contextCharacters:2600,contextChunks:3,maxContextCharacters:12000,maxContextChunks:6,outputTokens:512,outputCharacters:16000,claims:6,timeoutMs:120000});
 // Bump when topic aliases, acronym/plural handling or question frames change.
 // Persisted term postings bind this normalization version separately from text.
-const RAG_TOPIC_PROFILE='pbgc-topics-v1';
+const RAG_TOPIC_PROFILE='pbgc-topics-v2';
 const HASH=/^[a-f0-9]{64}$/,STOP=new Set('a an and are as at be by can do does for from how i in is it of on or that the their there these this to was were what when where which who will with would'.split(' '));
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value),fail=message=>{throw Error(message);};
 function abortError(){const error=Error('Question answering cancelled. No model answer was released.');error.name='AbortError';return error;}
@@ -55,7 +55,7 @@ function injection(text){return /(?:ignore|disregard|override)\s+(?:(?:all|any|t
 const COPULAS=new Set('a an the is are was were be been being equals equal'.split(' '));
 const NON_ENTITIES=new Set(('a an the this these that it normal early retirement age participants participant members member employees employee benefits benefit plan source sources document documents what which how when where who why do does did can could should would will is are was were please tell explain summarize compare list calculate identify describe give show according under for in at on to as').split(' '));
 const QUALIFIERS=/\b(?:if|unless|only|except|before|after|effective|applicable|applies|group|class|category|hourly|salaried|union|nonunion|non-union|hired|born|employed|terminated|vested|nonvested)\b/i;
-function statements(text){return text.split(/(?<=[.!?])\s+|\n+/u).map(value=>value.trim()).filter(Boolean);}
+function statements(text){if(typeof selection?.splitSourceStatements!=='function')fail('Source-statement assets are unavailable. Keep the complete app folder together.');return selection.splitSourceStatements(text);}
 function relationTokens(text){return(text.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(word=>!COPULAS.has(word));}
 function subsequence(needles,haystack){let next=0;for(const word of haystack)if(word===needles[next])next++;return next===needles.length;}
 function entityWords(text){text=text.replace(/['’]s\b/g,'').replace(/’/g,"'");return[...new Set((text.match(/\b(?:[A-Z][A-Za-z]*|[A-Z]{2,})(?:[-'][A-Za-z]+)?\b/g)||[]).map(word=>word.toLowerCase()).filter(word=>!NON_ENTITIES.has(word)&&!Object.hasOwn(TOPIC_ACRONYMS,word)))];}
@@ -296,12 +296,103 @@ function topicWords(text){
  return result;
 }
 function questionTopics(question){
- let framed=question;if(/\b(?:age|retire(?:ment)?)\b/i.test(question)&&/\b(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/i.test(question)){framed=framed.replace(/\b(?:to\s+)?(?:receive|get|draw|receives|receiving)\s+(?:a\s+|the\s+)?(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/gi,' ').replace(/\b(?:with|for)\s+(?:a\s+|the\s+)?(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/gi,' ').replace(/\bparticipants?\b/gi,' ');}const words=topicWords(framed);for(const word of [...words])if(QUESTION_FRAMES.has(word)||STOP.has(word))words.delete(word);
+ let framed=question;if(/\b(?:age|retire(?:ment)?)\b/i.test(question)&&/\b(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/i.test(question)){framed=framed.replace(/\b(?:to\s+)?(?:receive|get|draw|receives|receiving)\s+(?:a\s+|the\s+)?(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/gi,' ').replace(/\b(?:with|for)\s+(?:a\s+|the\s+)?(?:full|unreduced)\s+(?:retirement\s+)?(?:benefit|pension)\b/gi,' ').replace(/\bparticipants?\b/gi,' ');}const words=topicWords(framed),actor=extractQuestionActor(question),actorTerms=new Set(actor?topicWords(actor.name):[]);for(const word of [...words])if((QUESTION_FRAMES.has(word)||STOP.has(word))&&!actorTerms.has(word))words.delete(word);
  // Beginning at an age is a question frame; beginning a payment remains a substantive predicate.
  if(words.has('age')){words.delete('begin');words.delete('begins');}
  return words;
 }
 function topicMatch(question,evidence){const available=topicWords(evidence);return[...questionTopics(question)].every(word=>available.has(word));}
+// Conservative actor matching for bounded documentary fact questions.
+// Use alongside existing topic, unit, scope and complete-quotation checks.
+// This does not prove semantic entailment. It never rewrites displayed evidence.
+const ROLE_WORD=/[\p{L}][\p{L}'’\-]*/gu;
+const ACTOR_BOUNDARIES=new Set(('what which who whom how when where why is are was were be does do did can could would should must the a an for of under in within from to age normal early late retirement monthly annual weekly daily income benefit amount payment pension receive receives receiving have has had at erf lrf bfcf aftap nrd arf').split(' '));
+const PROPERTY_HEAD_WORDS=new Set(('the a an normal early late retirement age monthly annual weekly daily income benefit benefits amount payment pension participant employee member reported documented stated value').split(' '));
+const OWNERSHIP_RELATIONS=new Set(('father mother parent parents spouse husband wife son daughter child children sibling brother sister grandfather grandmother grandparent grandparents grandson granddaughter grandchild grandchildren').split(' '));
+const OWNED_PROPERTIES=new Set(('age retirement income benefit benefits amount payment pension address name').split(' '));
+const QUESTION_SUBJECT_VERBS='receiv(?:e|es|ing)|get(?:s|ting)?|hav(?:e|ing)|has|retir(?:e|es|ing)|earn(?:s|ing)?|pay(?:s|ing)?|retain(?:s|ing)?|keep(?:s|ing)?';
+const SOURCE_FINITE=/\b(?:is|are|was|were|equals?|receiv(?:e|es)|gets?|has|have|had|retir(?:e|es)|earns?|pays?|retains?|keeps?|starts?|begins?|ends?|lists?|states?|shows?|documents?|provides?|requires?|can|could|may|might|must|shall|should|will|would)\b|[-+]?\d/u;
+const normalize=value=>String(value).normalize('NFKC').replace(/’/g,"'").replace(/\s+/gu,' ').trim();
+const words=value=>(normalize(value).toLowerCase().match(ROLE_WORD)||[]);
+function actorName(value){
+ const list=words(value);while(list.length&&['the','a','an','participant','employee','member'].includes(list[0]))list.shift();
+ if(!list.length||list.length>4||list.some(word=>ACTOR_BOUNDARIES.has(word)))return null;
+ return list.join(' ');
+}
+function beforePossessive(value){
+ const list=words(value),tail=[];for(let index=list.length-1;index>=0&&tail.length<4;index--){if(ACTOR_BOUNDARIES.has(list[index]))break;tail.unshift(list[index]);}
+ return actorName(tail.join(' '));
+}
+function ownershipRelations(value){
+ const result=[];for(const word of words(value.replace(/['’]s\b/gu,''))){if(OWNED_PROPERTIES.has(word))break;if(OWNERSHIP_RELATIONS.has(word))result.push(word);}return result;
+}
+function extractQuestionActor(question){
+ const text=normalize(question);if(/^\s*(?:who|whom)\b/i.test(text))return null; // Existing WHO/WHOM guard owns these.
+ const possessive=/['’]s\b/i.exec(text);
+ if(possessive){const name=beforePossessive(text.slice(0,possessive.index));if(name)return{name,kind:'possessive',ownershipRelations:ownershipRelations(text.slice(possessive.index+possessive[0].length))};}
+ const active=new RegExp('\\b(?:does|do|did|can|could|will|would|should|must|may|is|are)\\s+(.+?)\\s+(?:'+QUESTION_SUBJECT_VERBS+')\\b','iu').exec(text);
+ if(active){const name=actorName(active[1]);if(name)return{name,kind:'active'};}
+ const targets=[...text.matchAll(/\b(?:for|of)\s+([^?;]+?)(?=\s+\b(?:under|within|according|before|after|during|if|unless|only|from)\b|[?;]|$)/giu)];
+ for(const target of targets.reverse()){const name=actorName(target[1]);if(name&&!/^plan\b/i.test(name))return{name,kind:'target'};}
+ // A name in an explicit plan/context clause is context, rather than a person
+ // whose property may be borrowed. Explicit possessives above can own a plan.
+ if(!/\b(?:age|income|benefits?|amounts?|payments?|pension|address)\b/iu.test(text)||/\b(?:between|and|versus|vs)\b/iu.test(text))return null;
+ const withoutContext=text.replace(/\b(?:under|within|in)\s+(?:the\s+)?plan\b[^?;]*/giu,'').replace(/\b(?:according\s+to|(?:as\s+)?(?:reported|stated|documented)\s+by|per)\b[^?;]*/giu,'');
+ const named=(withoutContext.match(/\b[\p{Lu}][\p{L}'’\-]*\b/gu)||[]).filter(word=>!ACTOR_BOUNDARIES.has(word.toLowerCase())&&!PROPERTY_HEAD_WORDS.has(word.toLowerCase())&&!['Plan','According','Under'].includes(word));
+ if(named.length&&named.length<=4){const name=actorName(named.join(' '));if(name)return{name,kind:'named'};}
+ return null;
+}
+function roleView(text){
+ let view=normalize(text);
+ // Attribution is ignored only in this comparison view. Never use this string
+ // as a quotation, prompt source, citation, condition or factual claim.
+ view=view.replace(/^(?:according\s+to|as\s+(?:reported|stated|documented)\s+by|per)\b[^,;]*[,;]\s*/iu,'');
+ view=view.replace(/\b(?:according\s+to|(?:as\s+)?(?:reported|stated|documented)\s+by)\b.*$/iu,'');
+ view=view.replace(/^(?:(?:under|within|in)\s+(?:the\s+)?plan\b[^,;:]*[,;:]\s*)+/iu,'');
+ return view;
+}
+function nameAt(haystack,name){
+ const need=words(name),have=words(haystack);for(let start=0;start<=have.length-need.length;start++)if(need.every((word,index)=>have[start+index]===word))return start;return-1;
+}
+function sourceBindsActor(text,actor){
+ if(!actor)return true;const view=roleView(text),lower=view.toLowerCase();
+ const escapedName=actor.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+');
+ const actorOccurrence=new RegExp('(?:^|[^\\p{L}])('+escapedName+')(?=$|[^\\p{L}])','iu').exec(view);
+ const actorStart=actorOccurrence?actorOccurrence.index+actorOccurrence[0].length-actorOccurrence[1].length:-1,actorEnd=actorOccurrence?actorStart+actorOccurrence[1].length:-1;
+ let finite=null;for(const candidate of lower.matchAll(new RegExp(SOURCE_FINITE.source,'gu'))){
+  // Will and May can be names. Skip a modal-looking word only inside an
+  // explicitly requested actor at the subject position, never in 'Bob will…'.
+  if(candidate.index>=actorStart&&candidate.index<actorEnd&&words(view.slice(0,actorStart)).every(word=>PROPERTY_HEAD_WORDS.has(word)))continue;
+  finite=candidate;break;
+ }
+ const head=finite?view.slice(0,finite.index):view;
+ const cleanHead=head.replace(/['’]s\b/gu,''),present=nameAt(cleanHead,actor.name)>=0;
+ if(present){
+  // A counterparty's possessive modifier is not the receiving subject.
+  const escaped=actor.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+');
+  if(actor.kind==='active'&&new RegExp('(?:^|[^\\p{L}])'+escaped+"'s\\b",'iu').test(head))return false;
+  const firstPossessive=/['’]s\b/iu.exec(head);
+  if(firstPossessive){
+   const primary=beforePossessive(head.slice(0,firstPossessive.index));if(primary&&primary!==actor.name)return false;
+   // Explicit family ownership before the requested property is another
+   // subject: Alice's father's age is not Alice's age. A family word after the
+   // predicate/inside a condition does not change the primary property owner.
+   const actual=ownershipRelations(head.slice(firstPossessive.index+firstPossessive[0].length)),asked=actor.ownershipRelations||[];
+   if(actual.length!==asked.length||actual.some((role,index)=>role!==asked[index]))return false;
+  }
+  return true;
+ }
+ // Value-first prose such as "Age is 65 for Alice" is permitted only when its
+ // primary head contains property words and has no other person/owner.
+ if(words(cleanHead).some(word=>!PROPERTY_HEAD_WORDS.has(word)))return false;
+ const owner=new RegExp('\\b(?:for|of)\\s+'+actor.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+')+"(?=$|[^\\p{L}'’])",'iu');
+ return owner.test(lower);
+}
+function questionSubjectRoleMatch(question,citations){
+ const actor=extractQuestionActor(question);if(!actor)return true;
+ return citations.every(item=>item.evidenceKind==='table-field-v1'||(item.quotes?.length?item.quotes:[item.excerpt]).every(text=>typeof text==='string'&&sourceBindsActor(text,actor)));
+}
+
 function questionRoleMatch(question,citations){
  if(!/^\s*(?:who|whom)\b/i.test(question))return true;
  const frames=new Set('who whom should would could can does do did is are was were a an the of to what which'.split(' '));
@@ -312,6 +403,7 @@ function questionRoleMatch(question,citations){
 }
 
 function bindQuestion(question,citations){
+ if(!questionSubjectRoleMatch(question,citations))fail('The cited statement assigns the requested property to another subject.');
  const evidence=citations.map(item=>item.evidenceKind==='table-field-v1'?tableLiteralText(item):item.quotes?.length?item.quotes.join(' '):item.excerpt).join(' '),groups=groupWords(evidence),words=new Set(evidence.replace(/['’]s\b/g,'').replace(/’/g,"'").toLowerCase().match(/[a-z]+(?:[-'][a-z]+)*/g)||[]);
  if(!topicMatch(question,evidence))fail('The cited source sentence does not support the topics asked about.');
  if(!questionRoleMatch(question,citations))fail('The cited statement assigns the requested relationship to another subject or object.');

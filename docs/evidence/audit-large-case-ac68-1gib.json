@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "kind": "pbgc-large-case-intermediate-benchmark-evidence",
+  "status": "PASS",
+  "scope": "One synthetic 1 GiB collection integration benchmark on clean intermediate commit ac68c7f, using supplementary Linux HTTP. This is not latest-head, actual-file, persistent full-browser restart, or general answer-quality acceptance.",
+  "rawEvidence": {
+    "path": "test-results/large-case-1024mib-compact-selection-model-http.json",
+    "bytes": 445879,
+    "sha256": "d9565ac8b456c50e035d8672490f23914ca9df79c0ed1d93e6ca9b626e1883a9",
+    "logPath": "test-results/large-case-1024mib-compact-selection-model-http.log",
+    "logBytes": 36407,
+    "logSha256": "96d70016b2b43b4a8a6bb5e7193b118b7a3502bf83a99de6fd56bc240e77b2da"
+  },
+  "startedAt": "2026-11-20T04:46:26.259Z",
+  "finishedAt": "2026-11-20T05:03:59.443Z",
+  "commit": "ac68c7fd198f5edd40548343e780e553f729f50a",
+  "trackedSourceDirty": false,
+  "runtimeUnchanged": true,
+  "fingerprintedRuntimeFiles": 71,
+  "selectedRuntimeSha256": {
+    "assets/answer-selection.js": "d3645f9d3d0bb65bb708eb77451ec7d2575166e30c98dfb98ca179d7eccd4c8b",
+    "assets/case-vault.js": "948ce5fe9338e8bd1ea8562e425fbc765ab1c6418b7174e90f8bf76c41f04042",
+    "assets/case-collection.js": "8a25bea043abca4c405a5a9ea34f1b41306e3749a05cc69dd54ac5b269f9dee9",
+    "assets/case-term-index.js": "7c521e083e975eb203546a958b615b2f8f7a521bf081558e84662b27ce2c3a79",
+    "assets/rag.js": "d11082fa5c799cb24e29631276e20e53e175609a1465f5d7ad0e92d5c7a7c621",
+    "assets/local-llm.js": "c9995898356852d9ab7c8ecce6a76084d77c6c6852a271b3e06478b7d0cd6ade",
+    "assets/embeddings.js": "bba305de89e0f30e3e526a0ebf86817c3b86bbf3d0571f7743879340ff495351",
+    "tools/measure-large-case.js": "e6d7997fe98b182a25438220f1ec53b9f8e509ecc51a9b9f73fef52ab908f97a",
+    "tools/measure-resources.js": "75fe7074b4953cc5278560bd9345e27b697968b44e58991484b850bb2f29df15",
+    "index.html": "1928e2368ebede1d1895103d5c944db631875f4bd9ea95b06b402db4a7d22c3f"
+  },
+  "profile": "supplementary HTTP only",
+  "browserStorageProfile": "Incognito browser context. Database and page closed/reopened in that context; browser process/profile was not restarted.",
+  "hardware": {
+    "platform": "linux",
+    "release": "6.18.57",
+    "cpus": 5,
+    "totalMemoryBytes": 35743748096
+  },
+  "workload": {
+    "sourceBytes": 1073741824,
+    "sourceFileBytes": 4194304,
+    "sourceCount": 256,
+    "synthetic": true,
+    "realModelRequired": true,
+    "content": "UTF-8 multi-paragraph plan/archive prose with distinct source/paragraph IDs and three factual markers per source. No sparse files, binary padding or blank filler.",
+    "retrieval": "Full-case authenticated lexical candidates. No global dense index.",
+    "indexedChunks": 1219840,
+    "termShards": 3840,
+    "records": 1222400,
+    "derivedBytes": 5635959296,
+    "derivedToOriginalRatio": 5.24889612197876
+  },
+  "budgets": {
+    "workloadMemoryBytes": 12000000000,
+    "totalTimeMs": 3600000,
+    "sampleIntervalMs": 500
+  },
+  "totalMs": 1053184,
+  "stagesMs": {
+    "generateCorpus": 7109,
+    "browserEntry": 1226,
+    "cancelAndRollback": 406,
+    "import": 643692,
+    "reopen": 463,
+    "threeFullCaseSearches": 89679,
+    "selectedSourceSearch": 448,
+    "modelFileSelection": 79451,
+    "modelHashAndLoad": 17999,
+    "embeddingLoad": 525,
+    "realQwenAnswerAndGrounding": 127259,
+    "backupParseAndSampleReparse": 41708
+  },
+  "componentChecks": {
+    "cancelAndRollback": {
+      "rejected": "AbortError",
+      "sourceCount": 0,
+      "originalBytes": 0,
+      "derivedBytes": 0
+    },
+    "importedOriginals": 256,
+    "databasePageReopenOriginals": 256,
+    "fullCaseSearches": [
+      {
+        "position": "opening",
+        "source": "synthetic-plan-0000.txt",
+        "ms": 28356,
+        "verifiedLocator": {
+          "length": 61,
+          "line": 1,
+          "offset": 0,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      },
+      {
+        "position": "middle",
+        "source": "synthetic-plan-0128.txt",
+        "ms": 27004,
+        "verifiedLocator": {
+          "length": 60,
+          "line": 2388,
+          "offset": 2097153,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      },
+      {
+        "position": "closing",
+        "source": "synthetic-plan-0255.txt",
+        "ms": 34319,
+        "verifiedLocator": {
+          "length": 61,
+          "line": 4775,
+          "offset": 4194242,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      }
+    ],
+    "selectedSourceSearchMs": 448,
+    "backupArchiveBytes": 1073867328,
+    "backupOriginals": 256,
+    "allBackupOriginalHashesMatchImport": true,
+    "reparsedSampleOriginals": 3,
+    "allReparsedSamplesMatchIndependentOriginalNamesAndHashes": true,
+    "fullSecondCopyRestore": false,
+    "externalRequests": 0
+  },
+  "model": {
+    "id": "local-gguf:qwen2.5-1.5b-instruct-q3-k-s:39feb79d0c05e409",
+    "model": "Qwen2.5 1.5B Instruct Q3_K_S",
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+    "modelBytes": 760944640,
+    "runtime": "wllama-2.3.7",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048
+  },
+  "answerCheck": {
+    "status": "answered",
+    "answer": "The benchmarkanchordocument0000opening amount is 731 dollars. [C1]",
+    "sourceSupport": {
+      "citedDocumentCount": 1,
+      "singleSource": true,
+      "message": "Only one source is cited. Check the source."
+    },
+    "citation": {
+      "label": "C1",
+      "sourceName": "synthetic-plan-0000.txt",
+      "sourceHash": "648f684db839449b46f12f64a191080d9b73cbd7058d3edd0b4bb07f2ee8f0a9",
+      "locators": [
+        {
+          "length": 61,
+          "line": 1,
+          "offset": 0,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        },
+        {
+          "length": 878,
+          "line": 2,
+          "offset": 62,
+          "offsetUnit": "UTF-16 code units",
+          "type": "text-line"
+        }
+      ],
+      "quotes": [
+        "The benchmarkanchordocument0000opening amount is 731 dollars."
+      ]
+    },
+    "providerCalls": [
+      {
+        "promptCharacters": 327,
+        "outputTokenBudget": 64,
+        "responseFormat": "source-selection-v1",
+        "firstTokenMs": 96822.39999999851,
+        "emittedCharacters": 2,
+        "returnedCharacters": 2,
+        "elapsedMs": 99140.39999999851
+      }
+    ],
+    "generationDeadlineMs": 120000,
+    "deadlineRelaxed": false,
+    "integrationStageIncludesRetrieval": true,
+    "answerQualitySampleCount": 1
+  },
+  "resources": {
+    "samples": 2102,
+    "measurementMs": 1052646,
+    "effectiveSampleIntervalMs": 501,
+    "maximumSampleGapMs": 912,
+    "peak": {
+      "rssBytes": 5593047040,
+      "pssBytes": 5306892288,
+      "privateBytes": 5192220672,
+      "browserRssBytes": 5217226752,
+      "browserPssBytes": 4932639744,
+      "processCount": 10,
+      "budgetMetricBytes": 5306892288
+    },
+    "cpuMs": 1584880,
+    "browserCpuMs": 1090380,
+    "collector": null,
+    "pssComplete": true,
+    "missingProcessSamples": 1,
+    "exceeded": false,
+    "errors": [],
+    "errorCount": 0,
+    "warnings": [],
+    "warningCount": 0
+  },
+  "limits": [
+    "This is synthetic UTF-8 prose. It does not measure arbitrary PDF/OCR/Office corpora or all parser-specific document limits.",
+    "One distinctive synthetic fact and exact citation passed. This does not certify general Qwen answer quality, semantic entailment, or source factual truth.",
+    "Compact authenticated exact-term candidate search covers selected stored passages. Learned reranking is bounded to the lexical shortlist, not a global dense index.",
+    "The full 1 GiB workload used an incognito context and database/page reopening. Full browser-process restart at this scale is a later independent gate.",
+    "Backup checked all 256 original hashes, then reparsed three distinct named samples. It did not import a full second 1 GiB case.",
+    "The model file handoff is a remote Playwright driver cost and is reported separately; it is not a measured office file-picker delay.",
+    "Post-ac68 source-role, wrapped-qualification, complete-candidate safety, and persistent-harness fixes are not included in this runtime evidence.",
+    "Supplementary HTTP evidence does not substitute for Windows/Ubuntu actual-file CI or actual workplace browser acceptance.",
+    "Original failed benchmark reports remain unchanged and retain FAIL status."
+  ]
+}

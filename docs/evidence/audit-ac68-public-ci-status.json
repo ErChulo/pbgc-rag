@@ -1,0 +1,38 @@
+{
+  "kind": "public-github-run-page-status",
+  "reports": [
+    {
+      "run": "44676622114",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44676622114",
+      "commit": "ac68c7fd198f5edd40548343e780e553f729f50a",
+      "publicStatus": "Success",
+      "publicStatusExcerpt": "Status Success Total duration 23m 8s Artifacts 2 verify.yml on: push Matrix: verification 2 jobs completed Show all jobs Oh hello! Nice to see you. Made with \u2764\ufe0f by humans.txt Fit t",
+      "jobs": [
+        "/ErChulo/pbgc-rag/actions/runs/44676622114/job/136089868139",
+        "/ErChulo/pbgc-rag/actions/runs/44676622114/job/136089868488"
+      ]
+    },
+    {
+      "run": "44676622087",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44676622087",
+      "commit": "ac68c7fd198f5edd40548343e780e553f729f50a",
+      "publicStatus": "Success",
+      "publicStatusExcerpt": "Status Success Total duration 16m 3s Artifacts 2 rag-audit-remediation.yml on: push Matrix: office-candidate 2 jobs completed Show all jobs Oh hello! Nice to see you. Made with \u2764\ufe0f ",
+      "jobs": [
+        "/ErChulo/pbgc-rag/actions/runs/44676622087/job/136089868221",
+        "/ErChulo/pbgc-rag/actions/runs/44676622087/job/136089868367"
+      ]
+    },
+    {
+      "run": "44676622116",
+      "url": "https://github.com/ErChulo/pbgc-rag/actions/runs/44676622116",
+      "commit": "ac68c7fd198f5edd40548343e780e553f729f50a",
+      "publicStatus": "Failure",
+      "publicStatusExcerpt": "Status Failure Total duration 7m 42s Artifacts 2 large-case-audit.yml on: push Matrix: large-case 2 jobs completed Show all jobs Oh hello! Nice to see you. Made with \u2764\ufe0f by humans.t",
+      "jobs": [
+        "/ErChulo/pbgc-rag/actions/runs/44676622116/job/136089867935",
+        "/ErChulo/pbgc-rag/actions/runs/44676622116/job/136089868225"
+      ]
+    }
+  ]
+}

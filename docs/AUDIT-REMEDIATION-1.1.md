@@ -1,6 +1,6 @@
 # Audit remediation 1.1
 
-Status: **development; not a release candidate for an approximately 1 GB case.** Updated November 18, 2026, Eastern time.
+Status: **development; not a release candidate for an approximately 1 GB case.** Updated November 20, 2026, Eastern time.
 
 The independent audit examined `main` at `c429b8f`. This work is isolated on `codex/rag-audit-remediation-1.1`, based on `d28733f`, whose application runtime was `d3ce073`. `main`, published releases and the earlier complete office ZIP remain preserved. No new release or environment publication is authorized by this increment.
 
@@ -59,9 +59,9 @@ The new **Large case workspace** is separate:
 - Configured bounds are 1 GiB of original bytes, 2,000 documents, 64 MiB per source and 8 GiB of derived cache. Browser quotas can reject a write below those limits. These are guards, not accepted workload measurements.
 - Original writes and reads verify SHA-256. Locally generated shards are HMAC-bound to case/source/hash/revision/parser identity using a persisted nonextractable browser key. This protects cache integrity; it does not encrypt case data or establish document truth.
 - Header reconfiguration stages a new derived generation before switching the summary. Backup ZIPs contain originals and explicit column choices. Reopen verifies original bytes and reparses them; imported cached records/vectors never supply trusted evidence.
-- Full-case text candidate search scans selected authenticated passage shards. Learned embedding reranking covers its bounded shortlist. It is not global dense retrieval over the whole case. Broad matches can require a narrower question or document selection.
+- Full-case text candidate search verifies compact authenticated term indexes, then loads matching passage shards. Learned embedding reranking covers its bounded shortlist. It is not global dense retrieval over the whole case. Broad matches can require a narrower question or document selection.
 
-Primitive storage and archive tests are useful but do not accept the collection controller, UI, 1 GiB workload or complete offline package. That integration is in progress. The largest prior published resource test used an approximately 1 MiB corpus, not a 1 GiB case.
+Primitive storage and archive tests alone do not accept the collection controller, UI, 1 GiB workload or complete offline package. A later intermediate synthetic 1 GiB run passed as recorded below; final-head scale and platform gates remain separate.
 
 ## Storage decision
 
@@ -125,3 +125,13 @@ The latest Node suite has **455 passing checks, zero failures and seven explicit
 Intermediate measurements are in the [compact-search development evidence](evidence/audit-compact-development.json): 32 MiB full-case queries took 834/857/785 ms, compared with the earlier several-second scans. A 4 MiB run with actual Qwen returned the exact 731 fact and citation inside the unchanged 120-second generation deadline. Generation took about 97 seconds on this host; the 70-second automated file handoff is recorded separately from model hash/load. No claim of 30-second model answers follows from this result.
 
 The app now uses verified source selection for single facts as well as compound/table answers. The prompt contains complete relevant source statements while conflict, applicability, injection and grounding checks still cover the full retrieved evidence. External auto/plain provider contracts retain their earlier behavior. A new complete 1 GiB run with the pinned model and final-head Windows/Ubuntu CI remain required.
+
+## Persistent restore and final safeguard checks, November 20
+
+The clean intermediate `ac68c7f` runtime passed the [1 GiB supplementary benchmark](evidence/audit-large-case-ac68-1gib.json): 256 original files, 1,219,840 chunks, a real cited Qwen answer, all original backup hashes and three distinct sample reparses. The 17 minute 33 second run had a 5.31 GB process PSS peak. Its incognito context only reopened the database/page; it did not restart the browser or restore a complete second case. Source and complete-package checks also [passed on Windows and Ubuntu](evidence/audit-ac68-public-ci-status.json) at that commit. Its separate scale CI jobs failed at import and remain recorded failures.
+
+Later review fixes retain every bounded exact candidate through reranking safety checks, reject facts assigned to another named subject, and share exact source-statement parsing between choice creation and validation. Ambiguous newline conditions, scope, reference clauses and definite-head qualifications remain attached to their source fact. Complete direct numeric conflicts still block before generation. [Review scope and limits](evidence/audit-final-review-notes.md).
+
+The final Node suite passed **558 checks, zero failures and seven explicit skips**. Targeted Chromium integration passed **31 checks**, including native PDF headers/wrapped conditions, full persistent-browser restart, visible 26-original backup/restore, and selected-document questions. The final definite-head refinement followed that browser run and passed the complete Node suite; committed-runtime CI and the full scale run must verify the combined version.
+
+The scale harness now uses a normal on-disk browser profile, records a changed browser PID on restart, captures quota/free-disk evidence and supports mandatory complete second-case restore. Both 4 MiB and 32 MiB full-restore smokes passed with exact stored bytes, every original/header binding, three restored source-location queries, original-case invariance and cleanup. The 32 MiB run took 55.3 seconds with a 756 MB PSS peak and zero external requests. These smokes used no model. The full 1 GiB restart, real-Qwen and complete-restore run, plus final Windows/Ubuntu actual-file checks, remain pending.

@@ -21,7 +21,7 @@ The configured bounds are 1 GiB of originals, 2,000 documents and 64 MiB per fil
 3. Keep **Find source passages** selected. Choose **Search large case**.
 4. Read the excerpts and their locations. Use **Save original** to check the file. For a PDF citation, choose **Original PDF page**.
 
-Search checks stored passages in the selected documents. The local encoder can rank a bounded text-search shortlist. This is not a dense semantic index of the full case. A broad question can match too many passages; choose a document or make the question more specific. Full-case searches at 1 GiB can be much slower than a search in one document.
+Search checks authenticated term indexes for the selected documents, then reads matching passage text. The local encoder can rank a bounded text-search shortlist. This is not a dense semantic index of the full case. A broad question can match too many passages; choose a document or make the question more specific. In the intermediate synthetic 1 GiB test, full-case searches took 27–34 seconds; one-document search took less than a second. Your documents can take longer.
 
 To write an answer, choose **Start included Qwen**, then **Write an answer with sources**. Qwen must be included in the complete office package. Check each citation. **Only one source is cited** means that the answer has no independent cited support. A quotation does not prove that a document is correct or applies to the person in the question.
 

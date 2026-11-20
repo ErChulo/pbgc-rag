@@ -218,6 +218,11 @@ async function createCaseCollection({vault}={}){
   if(!found.results.length)return{status:'abstained',answer:'No matching answer-ready passages were found. Check table column names or use source search.',citations:[],retrieved:[],diagnostics:found.diagnostics};
   let retrieval={results:found.results.slice(0,6),diagnostics:{...found.diagnostics,weak:false}};
   if(options.embedding){let candidates=found.results;if(typeof options.embedding.inspectTextCoverage==='function'){const coverage=await options.embedding.inspectTextCoverage(candidates.map(c=>c.text),{signal:options.signal});candidates=candidates.filter((_,i)=>coverage[i]?.embeddable);if(!candidates.length)return{status:'abstained',answer:'The local encoder cannot read these passage tokens. Use source search and check the originals.',citations:[],retrieved:found.results,diagnostics:found.diagnostics};}const index=await api().buildSemanticIndex(candidates,options.embedding,{signal:options.signal});retrieval=question.length>500?await api().retrieveSemantic(index,question,options.embedding,{signal:options.signal,topK:6}):await api().retrieveHybrid(index,question,options.embedding,{signal:options.signal,topK:6});}
+  // Reranking controls prompt order, not the safety inventory. Preserve every
+  // exact candidate, including text the encoder cannot represent, so a seventh
+  // conflicting source cannot vanish behind a six-result model shortlist.
+  const ranked=retrieval.results||[],seen=new Set(ranked.map(entry=>(entry.chunk||entry).id));
+  retrieval={...retrieval,results:[...ranked,...found.results.filter(chunk=>!seen.has(chunk.id))],diagnostics:{...retrieval.diagnostics,exactEvidenceCandidates:found.results.length,rankedCandidates:ranked.length}};
   const model=options.model,provider=model?{id:model.id,answerFormat:'source-selection-grounded-v1',generate:request=>model.generate(request)}:undefined;
   const result=await api().answerQuestion({question,chunks:found.results,retrieval,provider,signal:options.signal,options:{contextCharacters:2600,maxChunks:3,maxTokens:384,timeoutMs:120000}});
   const current=await vault.getCase(caseId,options.signal);if(current?.revision!==found.diagnostics.caseRevision)throw Error('This case changed while the answer was being checked. Ask again.');

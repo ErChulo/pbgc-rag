@@ -14,10 +14,10 @@ const scripts=[
  'assets/ranking.js','assets/table-query.js','assets/table-evidence.js','assets/chunking.js','assets/rag-corpus.js',
  'assets/semantic.js','assets/answer-selection.js','assets/rag.js','assets/case-vault.js','assets/case-term-index.js','assets/case-collection.js','assets/case-archive.js'
 ];
-function multiPagePdf(count){
+function multiPagePdf(count,contentForPage){
  const objects=['<< /Type /Catalog /Pages 2 0 R >>','', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'],kids=[];
  for(let page=1;page<=count;page++){
-  const id=objects.length+1,stream=`BT /F1 12 Tf 72 720 Td (Synthetic collection page ${page}) Tj ET`;
+  const id=objects.length+1,stream=contentForPage?contentForPage(page):`BT /F1 12 Tf 72 720 Td (Synthetic collection page ${page}) Tj ET`;
   kids.push(id+' 0 R');objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${id+1} 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
  }
  objects[1]=`<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${count} >>`;
@@ -278,6 +278,19 @@ test(`${profile} real case collection imports, searches, reparses backups and re
     try{await collection.search(id,'retirement age');return'unexpected success';}catch(error){return error.message;}
    });
    assert.match(result,/inventory|profile|invalid/i);
+  });
+
+  await t.test('real native PDF headers and wrapped qualifications retain the complete supported answer',async()=>{
+   const bytes=multiPagePdf(1,()=> 'BT /F1 12 Tf 72 720 Td (PLAN HEADER) Tj 0 -18 Td (1) Tj 0 -18 Td (Normal retirement age is) Tj 0 -18 Td (65) Tj 0 -18 Td (only if service is at least 10 years and the participant is vested.) Tj ET');
+   const result=await page.evaluate(async bytes=>{
+    const id='pdf-qualification';await collectionVault.createCase({id,name:'Native PDF complete qualification'});
+    const imported=await collection.importFiles(id,[new File([new Uint8Array(bytes)],'qualified-plan.pdf')]);
+    const model={id:'MOCK-native-PDF-grounding-not-model-quality',generate:async()=> 'S1'};
+    return{imported:imported.map(s=>({status:s.status,error:s.error})),answer:await collection.answer(id,'What is the normal retirement age?',{model})};
+   },bytes);
+   assert.equal(result.imported[0].status,'imported',JSON.stringify(result.imported));assert.equal(result.answer.status,'answered',JSON.stringify(result.answer.diagnostics));
+   assert.match(result.answer.answer,/65/);assert.match(result.answer.answer,/only if service is at least 10 years and the participant is vested/);
+   assert.equal(result.answer.citations[0].hasUnverifiedTextLayer,true);assert.ok(result.answer.citations[0].locators.every(locator=>locator.type==='pdf-text-item'&&locator.page===1));
   });
 
   await t.test('source attribution remains explicit and a concurrent change during final original verification blocks release',async()=>{

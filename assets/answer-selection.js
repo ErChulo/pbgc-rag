@@ -57,11 +57,44 @@ function plainStatement(text){
  if(finite.length>1)return false;
  return true;
 }
-function completeStatements(text){
- const result=[];let start=0;const boundaries=/(?<=[.!?])\s+/gu;let match;
- while((match=boundaries.exec(text))){
-  const prefix=text.slice(start,match.index),last=/\b([A-Za-z]+)\.$/.exec(prefix);
+const SOURCE_LINK_WORD=/\b(?:and|or|but|if|unless|except|provided|for|from|to|before|after|until|through|when|while|since|as|on|at|in|under|within|with|without|this|that|than|only|of|who|whose|which|including|excluding)\b/iu;
+const SOURCE_FINITE_WORD=/\b(?:is|are|was|were|has|have|had|receives?|pays?|retires?|begins?|ends?|starts?|lists?|retains?|keeps?|lasts?|remains?|requires?|contains?|provides?|equals?|gets?|gives?|goes|sends?|mails?|delivers?|specifies|shows?|states?|includes?|documents?)\b/iu;
+const SOURCE_HEADING_WORD=/^(?:plan|header|normal|early|late|retirement|age|monthly|annual|weekly|daily|benefit|benefits|pension|income|factor|rate|table|section|chapter|appendix|contents|index)$/iu;
+const SOURCE_LITERAL_VALUE=/^(?:[$£€]\s*)?(?:[-+]?\d|(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\b)/iu;
+function standaloneSourceRecord(value){
+ const text=value.trim();if(/[\r\n,;:]|\d/.test(text))return /^(?:page\s+)?\d+(?:\s*(?:of|\/)\s*\d+)?$/iu.test(text);
+ // Uppercase headings contain no finite assertion or dependent scope. A
+ // property heading and its following page number must not invent an age.
+ const terms=text.match(/\p{L}+/gu)||[];
+ return /\p{Lu}/u.test(text)&&!/[\p{Ll}]/u.test(text)&&terms.every(term=>SOURCE_HEADING_WORD.test(term));
+}
+function independentSourceClause(value){
+ const text=value.trim();if(!text||/[,;:]$/.test(text))return false;
+ const finite=SOURCE_FINITE_WORD.exec(text);if(!finite)return false;
+ const head=text.slice(0,finite.index),tail=text.slice(finite.index+finite[0].length),last=/[\p{L}]+$/u.exec(text);
+ // A definite subject can refer back to the preceding fact. Only a direct
+ // literal value proves a separate bounded assertion; a number later inside
+ // its qualification does not. Keep ambiguous documentary context whole.
+ if(/^\s*the\b/iu.test(head)&&!SOURCE_LITERAL_VALUE.test(tail.trimStart()))return false;
+ return /\p{L}/u.test(head)&&!SOURCE_LINK_WORD.test(head)&&!REFERENTIAL.test(head)&&/[\p{L}\p{N}]/u.test(tail)&&!(last&&SOURCE_LINK_WORD.test(last[0]));
+}
+function sourceLineContinues(left,right){
+ // A newline is not a sentence terminator. Split only explicit standalone
+ // records or two complete independent clauses; retain every ambiguous span.
+ // These comparisons never change the original source whitespace.
+ if(standaloneSourceRecord(left))return false;
+ const nextLine=right.split(/[\r\n]/u,1)[0];
+ return !(independentSourceClause(left)&&independentSourceClause(nextLine));
+}
+function splitSourceStatements(text){
+ if(typeof text!=='string')throw Error('Source statements require text.');
+ const result=[];let start=0;const whitespace=/\s+/gu;let match;
+ while((match=whitespace.exec(text))){
+  const prefix=text.slice(start,match.index),punctuated=/[.!?]$/.test(prefix),newline=/[\r\n]/.test(match[0]);
+  if(!punctuated&&!newline)continue;
+  const last=/\b([A-Za-z]+)\.$/.exec(prefix);
   if(last&&(/^(?:dr|mr|mrs|ms|prof|sr|jr|st|no|sec|art|inc|ltd|co|etc|vs|pp)$/i.test(last[1])||/^[A-Z]$/.test(last[1])))continue;
+  if(!punctuated&&sourceLineContinues(prefix,text.slice(match.index+match[0].length)))continue;
   const statement=prefix.trim();if(statement)result.push(statement);start=match.index+match[0].length;
  }
  const tail=text.slice(start).trim();if(tail)result.push(tail);return result;
@@ -83,10 +116,15 @@ function createAnswerChoices(context,{plan,bind}={}){
  for(const item of context){
   if(!item||!item.chunk||typeof item.chunk.text!=='string'||item.chunk.text.length>12000||typeof item.excerpt!=='string'||!/^C[1-6]$/.test(item.label))continue;
   const table=item.chunk.evidenceKind==='table-field-v1'&&item.chunk.tableEvidence&&item.chunk.tableEvidence.schemaVersion===1;
+  // Only the chunk's typed profile may authorize table handling. A malformed
+  // chunk hint or top-level imitation must not downgrade into answer prose.
+  if(!table&&[item,item.chunk].some(value=>Object.hasOwn(value,'tableEvidence')||Object.hasOwn(value,'evidenceKind')))continue;
   // Split the complete chunk, never the clipped prompt excerpt. A wrapped condition stays whole.
-  const statements=table?[item.chunk.text]:completeStatements(item.chunk.text);
+  const statements=table?[item.chunk.text]:splitSourceStatements(item.chunk.text);
   for(const text of statements){
    if(choices.length===SELECTION_LIMITS.choices)return choices;
+   // Standalone headings/page labels provide navigation, not factual answers.
+   if(!table&&standaloneSourceRecord(text))continue;
    // A single factual answer can need the entire joined condition or benefit
    // qualifier. Keep that complete source sentence; compound question parts
    // retain their stricter atomic-statement isolation.
@@ -118,5 +156,5 @@ function validateChoiceCoverage(plan,selected,bind){
  const irrelevantIds=selected.filter((_,index)=>!matrix[index].some(Boolean)).map(choice=>choice.id);
  return{complete:missingParts.length===0&&irrelevantIds.length===0,missingParts,irrelevantIds};
 }
-return{SELECTION_LIMITS,planFactualQuestion,createAnswerChoices,buildSelectionPrompt,parseSelectionIds,validateChoiceCoverage};
+return{SELECTION_LIMITS,planFactualQuestion,splitSourceStatements,createAnswerChoices,buildSelectionPrompt,parseSelectionIds,validateChoiceCoverage};
 });

@@ -12,7 +12,7 @@ The earlier **1.0 RC1** package and `main` are preserved. Its Windows/Ubuntu che
 
 [![8cb8873 source and office checks: four jobs pass](https://img.shields.io/badge/8cb8873%20source%20%2B%20office-4%20jobs%20pass-008065)](docs/evidence/audit-8cb-public-ci-status.json)
 
-The four Windows/Ubuntu source and complete-package checks passed for `8cb8873`. The separate 1 GiB benchmark remains unaccepted; the current compact-index changes need their own checks.
+The four Windows/Ubuntu source and complete-package checks passed for `8cb8873` and `ac68c7f`. The compact-index runtime at `ac68c7f` also passed a supplementary Linux 1 GiB import/search/Qwen/backup run. Its full-case searches took 27–34 seconds and its sampled process-memory peak was 5.31 GB. [Exact workload and limits](docs/evidence/audit-large-case-ac68-1gib.json). Final safeguards, a full browser restart at that scale and actual-file scale checks still need their own evidence.
 
 ## Large-case development path
 
@@ -26,9 +26,9 @@ The **Large case workspace** control opens a separate document store. It keeps o
 4. For a written answer, start the included Qwen and select **Write an answer with sources**. Check each quoted source. A single cited document is marked for review.
 5. Choose **Save large case backup**. Reopen that ZIP with **Open a large case backup**. Restore verifies original bytes and rebuilds passages; imported derived evidence is not trusted.
 
-The configured large-case bounds are **1 GiB of originals, 2,000 documents and 64 MiB per document**, with additional parser, cache and browser-storage limits. A full 1 GiB import → search → answer → backup → reopen benchmark has **not yet passed**. This control is for development validation until that evidence is recorded.
+The configured large-case bounds are **1 GiB of originals, 2,000 documents and 64 MiB per document**, with additional parser, cache and browser-storage limits. The intermediate 1 GiB test used 256 synthetic text documents and checked all backup hashes, with three original files reparsed. It did not measure arbitrary PDF/Office collections or a second full-case restore. Final-head acceptance is pending.
 
-Large-case candidate search scans all selected stored passage shards. The learned encoder reranks a bounded text-search shortlist; it is not a global dense index of the entire case. A very broad question may require a document, participant name or ID. Browser storage and case backups are **unencrypted**. Keep the original files and a portable backup. Optional passphrase encryption remains work to do.
+Large-case search checks authenticated term indexes for all selected passages, then loads matching passage text. The learned encoder reranks a bounded text-search shortlist; it is not a global dense index of the entire case. A very broad question may require a document, participant name or ID. Browser storage and case backups are **unencrypted**. Keep the original files and a portable backup. Optional passphrase encryption remains work to do.
 
 ## Existing 1.0 RC1 checks
 
