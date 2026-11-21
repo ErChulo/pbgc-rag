@@ -72,7 +72,7 @@ Browser storage and case backups are **unencrypted**. Browser data can be cleare
 
 ## Earlier versions
 
-`main`, earlier releases and downloaded packages remain preserved. [1.0 RC1 evidence](docs/evidence/habemus-1.0-rc1-verified.json), [8cb source/package evidence](docs/evidence/audit-8cb-public-ci-status.json), [the ac68 intermediate benchmark](docs/evidence/audit-large-case-ac68-1gib.json) and [the six a987 CI checks](docs/evidence/audit-a987-public-ci-status.json) apply only to their named runtimes and workloads. Use the **1.1 RC1** download above for this candidate. Keep different app versions in separate folders. This branch has not replaced `main` or published a new permanent release.
+`main` now contains **1.1 RC1**. Earlier releases and downloaded packages remain preserved. [1.0 RC1 evidence](docs/evidence/habemus-1.0-rc1-verified.json), [8cb source/package evidence](docs/evidence/audit-8cb-public-ci-status.json), [the ac68 intermediate benchmark](docs/evidence/audit-large-case-ac68-1gib.json) and [the six a987 CI checks](docs/evidence/audit-a987-public-ci-status.json) apply only to their named runtimes and workloads. Use the **1.1 RC1** download above for this candidate. Keep different app versions in separate folders. This integration does not create a new permanent release or publish the cloud environment.
 
 ## Verified 1.1 RC1 checks
 

@@ -1,5 +1,9 @@
 # Progress
 
+## Main integration — November 21, 2026
+
+The user explicitly requested pushing and merging the verified candidate. Main fast-forwards from `c429b8f` through audit-branch commit `56ea403`, preserving the existing history. Application, vendor, test, build-tool and workflow files remain identical to the six-job verified runtime `5236770`; this follow-up updates integration documentation only. Latest version: **1.1 RC1**. Maturity: **release candidate, ready for controlled office pilot testing**. Earlier office archives and published releases remain intact; no cloud environment or new release is published.
+
 ## HABEMUS — 1.1 RC1, November 21, 2026
 
 Runtime `5236770cbf10f13ea00b9dada3a7fc89ee8f381b` passed all six Windows/Ubuntu source, complete-office-package and 1 GiB actual-file jobs. Each scale run included real Qwen, full browser restart and complete second-case restore of all 256 originals, exact source checks and cleanup. Both source jobs passed the corrected real-Qwen multi-paragraph probe. [Exact platform evidence](docs/evidence/audit-5236-public-ci-status.json).

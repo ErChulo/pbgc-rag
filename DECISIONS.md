@@ -1,5 +1,9 @@
 # Decisions
 
+## Verified 1.1 RC1 main integration — November 21, 2026
+
+The user explicitly authorized pushing and merging the verified RC into main. This supersedes the earlier requirement to keep the experimental work separate from main. Use a non-force fast-forward, preserve existing history and prior office archives, and keep the six-job tested runtime `5236770` unchanged. The integration follow-up changes documentation only. Version **1.1 RC1** is a release candidate for controlled office pilot testing; no new permanent release or cloud-environment publication is part of this action.
+
 - 2026-10-30: Start from the actual documentation-only repository; no earlier implementation was present to reapply.
 - Use classic local scripts, not ES modules or fetch, for the workplace shell. No runtime dependencies or remote assets.
 - Schema v1 stores original source bytes as base64 plus SHA-256 and parsed records. Restore discards supplied derived records and reparses verified bytes. Export is a case package, never an official artifact.
