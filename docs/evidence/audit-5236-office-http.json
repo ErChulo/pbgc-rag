@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-rc-office-package-supplementary-check",
+  "status": "PASS",
+  "runtimeCommit": "5236770cbf10f13ea00b9dada3a7fc89ee8f381b",
+  "profile": "supplementary HTTP only",
+  "package": {
+    "path": "/workspace/pbgc-rag/dist/PBGC-RAG-1.1-rc1-office.zip",
+    "distribution": "complete-offline-office",
+    "files": 270,
+    "bytes": 777323434,
+    "sha256": "8de79cda97d265406fb19c55b1612a02b2354d2b26f926a3cc964cf3cd009e45"
+  },
+  "scope": "Independent locally built complete ZIP, extracted to a path with spaces. All manifest bytes verified, bundled Qwen startup without model picker, exact cited answer, local English OCR and original PDF-page reading. This is not the Windows CI archive.",
+  "manifestFilesVerified": 270,
+  "modelBytes": 760944640,
+  "modelSha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+  "outsideRequests": 0,
+  "loadAndAnswerMs": 105016,
+  "resources": {
+    "status": "PASS",
+    "scope": "Harness Node and full Chromium descendant tree: bundled Qwen script reconstruction, verified model load, one generated answer and scanned PDF OCR",
+    "budgetBytes": 12000000000,
+    "samples": 495,
+    "measurementMs": 106024,
+    "effectiveSampleIntervalMs": 215,
+    "maximumSampleGapMs": 6712,
+    "peak": {
+      "rssBytes": 4720693248,
+      "pssBytes": 4434307072,
+      "privateBytes": 4319080448,
+      "browserRssBytes": 0,
+      "browserPssBytes": 0,
+      "processCount": 10,
+      "budgetMetricBytes": 4434307072
+    },
+    "cpuMs": 165820,
+    "browserCpuMs": 0,
+    "collector": null,
+    "pssComplete": true,
+    "missingProcessSamples": 0,
+    "exceeded": false,
+    "errors": [],
+    "errorCount": 0,
+    "warnings": [],
+    "warningCount": 0
+  },
+  "rawEvidence": {
+    "build": {
+      "path": "test-results/rc1-local-package-build.json",
+      "bytes": 220,
+      "sha256": "ed328fe5fe85d310be4c5877c5083bd3e85c8b7cef3b3c398011853061c8c358"
+    },
+    "log": {
+      "path": "test-results/rc1-local-office-http.log",
+      "bytes": 4044,
+      "sha256": "17c685d414cff82186b4f80a7cd31eb69bc2c73d073e2022b8fb6016ccbe79ce"
+    },
+    "resources": {
+      "path": "test-results/office-resources-http.json",
+      "bytes": 750,
+      "sha256": "46b30f9880b3d916574187e3c68a864a609c09f4d8429f4707328f0a81a7cbe0"
+    }
+  },
+  "limits": [
+    "One synthetic source-bound answer and one scanned-PDF workflow; not general model quality or maximum-case acceptance.",
+    "This local archive includes local evidence documents present at build time. Its SHA-256 identifies this ZIP only, not a GitHub CI ZIP or outer artifact.",
+    "Actual offline Windows/Ubuntu acceptance and complete-scale evidence are separate required gates."
+  ]
+}

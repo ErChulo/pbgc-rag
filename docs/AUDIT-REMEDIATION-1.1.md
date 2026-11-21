@@ -1,6 +1,8 @@
 # Audit remediation 1.1
 
-Status: **proposed 1.1 RC1; final repair-head verification pending.** Updated November 20, 2026, Eastern time.
+Status: **1.1 RC1 — accepted for controlled office pilot testing.** Updated November 21, 2026, Eastern time. Tested runtime: `5236770cbf10f13ea00b9dada3a7fc89ee8f381b`.
+
+All six Windows/Ubuntu source, complete-package and full 1 GiB actual-file jobs passed for this runtime. See the [exact verification record](evidence/audit-5236-public-ci-status.json). The history below retains earlier failures and their repairs; old pending statements describe those checkpoints, not the final status. This acceptance covers the bounded documentary RAG workflow, not general semantic entailment, source truth, official outputs or every possible document format.
 
 The independent audit examined `main` at `c429b8f`. This work is isolated on `codex/rag-audit-remediation-1.1`, based on `d28733f`, whose application runtime was `d3ce073`. `main`, published releases and the earlier complete office ZIP remain preserved. No new release or environment publication is authorized by this increment.
 
@@ -149,3 +151,15 @@ The reproducible `tools/measure-rag-multiparagraph.js` probe adds actual local Q
 The first actual multi-paragraph run at `98c1bb3` correctly blocked conflict and unsupported-topic questions, but returned `NONE` on an answerable age question. Its prompt offered the repeated, nonnumeric statement “The review does not change the normal retirement age” alongside the complete conditional age fact. No unsupported answer was released. The [original failed run](evidence/audit-98c1-real-model-failure.json) remains FAIL.
 
 Prose choices for age/factor value questions now require an assertion of the requested numeric role. Explicit definitions/explanations, WHO questions and typed table statuses remain supported. Exact duplicate prose quotations from the same verified original hash retain the first eligible citation; different originals, numbers, conditions, negations and typed table rows remain distinct. These changes affect prompt choices only. The full retrieved safety inventory, model `NONE` result, grounding checks and deadlines are unchanged. Independent review passed 41 relevant checks and confirmed that genuine conflicts still stop before generation. A fresh actual-model and exact-head platform run is required.
+
+## Final 1.1 RC1 acceptance
+
+The corrected runtime `5236770` passed all six required jobs: source, complete office ZIP and full 1 GiB workload on both Windows and Ubuntu. Both source jobs also passed the new actual-Qwen multi-paragraph check. The test corpus and 120-second generation deadline were unchanged from the failed regression. The two ordinary questions now retain the complete service/vesting and early-election conditions with exact original citations; conflict and unrelated questions stop before generation. [Local actual-model record](evidence/audit-5236-multiparagraph-http.json).
+
+Both scale jobs imported 256 originals totaling 1 GiB, searched 1,219,840 chunks, generated a real source-bound answer, restarted the full browser and rebuilt all 256 originals from backup into a second case. Original hashes, table bindings, three restored source locations and final deletion passed. The key-only deletion repair preserves the original atomic transaction, cancellation guards and 30-second storage deadline. [Platform summaries and job links](evidence/audit-5236-public-ci-status.json).
+
+The independent local complete-ZIP check also passed: 270 manifest files, automatic included-Qwen startup, one exact cited answer, English OCR, original PDF-page reading and zero external requests. Its sampled full-process PSS peak was 4.43 GB under the unchanged 12 GB budget. Its local archive digest is distinct from each CI ZIP and the outer GitHub artifact: [local package evidence](evidence/audit-5236-office-http.json).
+
+The local Node suite passed 573 checks with zero failures and seven explicit skips; the targeted Chromium workflow passed all 31 checks, and the vault suite passed all 20. Independent review covered the final source-role/qualification fixes, atomic key deletion and numeric-choice/dedup changes. Required real-model and platform gates ran separately, rather than treating skipped optional module tests as acceptance.
+
+RC maturity means readiness for controlled office testing of the documented workflow. The scale corpus is synthetic UTF-8 prose; it does not certify arbitrary PDF/OCR/Office collections, the configured 2,000-document maximum, general model accuracy or the actual office desktop. Local storage/backups remain unencrypted by the documented interim decision. Global dense retrieval, optional passphrase encryption and broader format/quality coverage remain future work. No official actuarial approval is claimed. Main, earlier packages and published environments remain preserved.

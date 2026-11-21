@@ -1,0 +1,581 @@
+{
+  "schemaVersion": 1,
+  "kind": "real-qwen-multiparagraph-documentary-probe-evidence",
+  "status": "PASS",
+  "scope": "Two actual pinned-Qwen source-selection calls on ordinary multi-paragraph synthetic documentary facts, plus two unsafe/unrelated checks blocked before generation. Supplementary Linux HTTP only; not general model quality, scale, actual-file, PDF/OCR, official applicability or complete-package acceptance.",
+  "rawEvidence": {
+    "path": "test-results/audit-5236-multiparagraph-http.json",
+    "bytes": 166808,
+    "sha256": "e1344f7faa156bd77ba59dd931a6b9d94567583467da9ec4e57910501347157d",
+    "logPath": "test-results/audit-5236-multiparagraph-http.log",
+    "logBytes": 975,
+    "logSha256": "c81ba9872cccd664e5a3514b5c4082223f4d16625b863c730b7b2c37a8a86153"
+  },
+  "commit": "5236770cbf10f13ea00b9dada3a7fc89ee8f381b",
+  "expectedCommit": "5236770cbf10f13ea00b9dada3a7fc89ee8f381b",
+  "originalProbePreparedForCommit": "a987a6e6db1aa8b4ee85e4f984e01aeafc920f91",
+  "startedAt": "2026-11-20T23:21:53.779Z",
+  "finishedAt": "2026-11-20T23:25:12.416Z",
+  "elapsedMs": 198637,
+  "profile": "supplementary HTTP only",
+  "fileProfileAcceptance": "NOT_ESTABLISHED_BY_HTTP",
+  "scriptSha256": "11c7879869f6aa34ab24775815f1c7b41da8e15103aa7b13e0648fed8dec4e12",
+  "runtimeSha256": {
+    "assets/answer-selection.js": "9c5b71495d9e15261f68d163441d823d799c6d6150eb5f1fe8ae445567b55727",
+    "assets/app.js": "dd2d196fa100d2879ff256754abeb5a9ff1bc7d29f986cd6196426ee90b029d3",
+    "assets/bundled-model.js": "35e3e293a587dca0de3aca12e615b2d2ec3c74b48743cdea1c0ad80568be6fce",
+    "assets/case-archive.js": "3b3739cdb05a832924fcdd30524b182550886da5907703e26c6fcc0b7eb149f5",
+    "assets/case-collection.js": "e070bb7dcfde96317b904a56dec5ef5c6c2bd7e0d357625148311a33d7a14fd9",
+    "assets/case-review-ui.js": "312a76ee31fd879281f71572d59f9a7efb3fcc64366d13607b73558cfd322871",
+    "assets/case-term-index.js": "7c521e083e975eb203546a958b615b2f8f7a521bf081558e84662b27ce2c3a79",
+    "assets/case-vault.js": "50c0d2d9a6d9b7e87c926be955f107d82106d613627b6b10b08f42cda7d1d9dc",
+    "assets/chunking.js": "8878576d2256d0d17a33d7bd17ce9138395bdc60006e2318df5900d8477e9bd0",
+    "assets/collection-ui.js": "02aac6ee50248bb4f8aba14fa7449ea0c75a1150d60697bdcd818aa29c8cceee",
+    "assets/core.js": "b96a0b5d6b7d649de294169ff6ceb958e125b52ceaeb1c2ec03a3922d62cffd2",
+    "assets/dictionary.js": "0012d74d04a49f8dc633e4b35680b604f53485cbf5b391b6204c3e3c64f7fa48",
+    "assets/embeddings.js": "bba305de89e0f30e3e526a0ebf86817c3b86bbf3d0571f7743879340ff495351",
+    "assets/evidence.js": "d471072298a77aa5470f9e1b3a8a5a1ac8db2051c6412098aa9dfd4fbae363da",
+    "assets/flow.js": "9226b75c5302bc15e87ad3b0c01ed6a8124110f88ea2c4ba32b6fe4624c270ad",
+    "assets/formats.js": "3d3731910186aa61a5db4c5ffda29406d19836a52a998d0463de98bad6940c0f",
+    "assets/graph.js": "382d3f3bb775f89041e29988ada7486cad5f525c7a7b0e3a192731c9c7b716a5",
+    "assets/image-source.js": "90b3b752c6ed756f996db765cc8a9a883142dee94aa2b6f010008ef2654c0366",
+    "assets/ingest.js": "64841556481ca1bfe899717dae71049e4301b703ba3b55de0203efac6d5a4101",
+    "assets/legacy.js": "c3a20000b5d2c36b93bfacd5486097aadaf520f494b54087255974a37ef9798b",
+    "assets/local-llm.js": "c9995898356852d9ab7c8ecce6a76084d77c6c6852a271b3e06478b7d0cd6ade",
+    "assets/model-profile.js": "2f2357aaf27ce34f25ba03434e10eee63c46e65699fabe75da1db32a73af1790",
+    "assets/ocr.js": "4c70c14513e8e8dbbc3a6a3207cec65c85d814b1a6eea33e08dafcd0f562e1b0",
+    "assets/pdf-ocr.js": "f6f3d4800456bdf04c6101cdc3f642e5de9736036fea63ec995854be542f6f7a",
+    "assets/pdf-preview.js": "f9f16ee90e0034eab96a21ee9d51b28b9e6972f1cf39cffade89b5dcaad41eb6",
+    "assets/pdf.js": "2e43f5aa5c7b778470aa8d9c42f86da03d4ffb12c9da4d41b4ebda09f0fbee13",
+    "assets/presentation.js": "c5fd9d0457e0d65f8c65543c4f7abf0fe406f08ea8eb77cbbd31fc4430d05eb7",
+    "assets/query.js": "b676be853d0f2cd62fef9903642aeb9a8bebe7a8b63d630c118af16ba5ba5ed1",
+    "assets/rag-corpus.js": "bbd61715582a48f73446dce085e715dc6c3d41274fea2338242b9f8b40fbdd35",
+    "assets/rag-questions.js": "4e6e1b5763abbad9262409e7a4ee07a41156f52884120e5c36699183d08617e4",
+    "assets/rag-ui.js": "ae1e84f8e58e47f0d801bddf24bdf6204382c918c8c8410201874a7477e2cdaa",
+    "assets/rag.js": "7df3c271c678146a1bc313ebd68a700461571139b96da77adc78fbec0657fa14",
+    "assets/ranking.js": "7a734ec9955913340ef877325609bbebba8de7c854b3e53265baad230d11c0e7",
+    "assets/reports.js": "724bce265a6543baabb538e61bd0170cc908591585bae718d62c31cb22fdc6b3",
+    "assets/review.js": "478ce0643b8290c2d2598eb6e27a693b2e8698214b703f185a202063455d0d4d",
+    "assets/semantic.js": "56e93de5935ff631ecdc737fceefb5f49f7781ba124972b81488299fbf396085",
+    "assets/sqlite.js": "ab23a1d5f263d5eb2f96ae11cfbc2c425df4d699a733bb2436971b4525df9417",
+    "assets/storage.js": "011aacd242ecead3315d084dd33b42d45448357e82e2be52eaa1babccea403a0",
+    "assets/style.css": "d61d25f85220c60b6341eb8088d84caaef708c023d451d9f948bf577a108d9c5",
+    "assets/table-evidence.js": "ffea69751d2c570696e8341492107a5ec2b69933b24af0d77dd29d599d60408b",
+    "assets/table-guide.js": "4582c7dc129c4a1b1f195fad27c2c80054f27d11ec37060b143a4671616d1667",
+    "assets/table-query.js": "35dafd4e9cf93ff71a24bcc5fda61f96d23fdd7c98e0a67df4e0ea7787921d72",
+    "assets/template-worker.js": "400fc1ea35bd95486da7fcd6a585759edc10b7722894cc456292844df3ca4eb7",
+    "assets/templates.js": "7ce5f20d999a55fdf6cf972e76dfaa47cf10b7d47b2be05ec9a049f0c7ecbfb4",
+    "assets/workbench.js": "828f91adc0ed5e09e5a713dd98f67e0e3ad89c12616526f06219220d4ae8d08f",
+    "index.html": "7f5c5ed5ad686cd44db529c74d3f14e8034f37d771d4f7effad93cb2470f2724",
+    "vendor/embeddings/manifest.json": "0ae57cd6970de2de2d6a5ed0a352f3ed9af61b8330557b11b9a35e1e462bd656",
+    "vendor/embeddings/model.js": "f7e7dcf03a1ff07cb260f2526b7ae2037863e835de6ff5397b365c29a3829cae",
+    "vendor/embeddings/upstream-bindgen.js": "330b974f140c1b24db4190cbad63b8d9ba5ec61911cf4eb837a55b778bb9ddc5",
+    "vendor/ingest-worker-source.js": "b18d26fe05d694115557e0efb2e5b51558bcccc529b95a0fe2e64fe91002f763",
+    "vendor/local-llm/bundled.manifest.json": "a5a1a5b373c8b7039730db43408182d249aac373fb623747d870e7ef797325b6",
+    "vendor/local-llm/larger-model.provenance.json": "b6f51f85f159116300128fcfb89bb3808470a2edcfee6720a86a1a3115538ce1",
+    "vendor/local-llm/qwen2.5-0.5b-instruct.manifest.json": "a4ec2a7677e210070233c3994c5a06925c33679657c7b151c944d843584c4fa3",
+    "vendor/local-llm/runtime-manifest.json": "db5d45539adb3d78b4277bee2be8b6770c5228e56c19947a8111e62f2bb8fead",
+    "vendor/local-llm/source-qwen2.5-1.5b.config.json": "5f24375ec7f1d1e316ac7789e5c694234810d1a9332a09f112b2095e97877d64",
+    "vendor/local-llm/source-qwen2.5-1.5b.oci-manifest.json": "b83c287163f67ba50ebebd583ae0f02fa3f9a8ebe5d4596c6d367460a75d88e6",
+    "vendor/local-llm/upstream/index.js": "1a4c0b01578eeaf6b10ab290037d34fa727b362bb27bd6a60bfa5786c8d160fc",
+    "vendor/local-llm/upstream/single-thread.wasm": "529c780d43cb57cb9ac7ef4c42e16463afb0b2dec4ecaae9a6df8179c435fd71",
+    "vendor/local-llm/wllama-classic.js": "800c37902920446882bf8e737e17e00d2a5baf50d1d4b7d287a8d6a674e358e6",
+    "vendor/ocr/manifest.json": "5327e6f18fbc21d9c8fc2be946d2fc68f24934c81fabdf7073b7cd965ee84b90",
+    "vendor/ocr/ocr-pack.js": "d591325800d34889fe3bbcccbd1b680e00fe295bdad42f24bd4ce6628480b82c",
+    "vendor/pdfjs/build-info.json": "1cb662c9c7e4f7f465762e98948e8a70733ef4bf0b947904f4e7e85a1af9106e",
+    "vendor/pdfjs/ocr-render-core.js": "3b060f75931014249ba78abf2f54249bf047b8afe5304eb330799781112bedaf",
+    "vendor/pdfjs/ocr-render-worker-source.js": "ac537424b56486e325013a56b0da263a3ecc9aabda90ca189115a7be6022f3a3",
+    "vendor/pdfjs/package.json": "8103b756525a79ec119558e9796062228290acfd5178a6b7fc93e6979511f604",
+    "vendor/pdfjs/parser-core.js": "ec60bbe07bed6a9176cda1eca7698593ef09fda72dc665766103235255d62a0c",
+    "vendor/pdfjs/parser-worker-source.js": "d14c811107c4ab62c240b850cb6bbb57d7782d87c681f1ab62cd01a682a3d008",
+    "vendor/pdfjs/pdf.js": "61367f96aa9bc61e8cecc9cb8bb1a3e3dc5a6d589cd824b11afeffd75a9c2c6d",
+    "vendor/pdfjs/pdf.worker.js": "84d300235d377d5d72b998b149103a13ac6537dcf742e02920a80d41a833068d"
+  },
+  "options": {
+    "contextCharacters": 2600,
+    "maxChunks": 3,
+    "maxTokens": 384,
+    "timeoutMs": 120000,
+    "groundingMode": "synthesis"
+  },
+  "providerGenerationDeadlineMs": 120000,
+  "modelLoadDeadlineMs": 120000,
+  "temperature": 0,
+  "realGenerationCalls": 2,
+  "externalRequestCount": 0,
+  "pageErrorCount": 0,
+  "stagesMs": {
+    "browser-entry": 494,
+    "model-file-handoff": 50,
+    "real-model-hash-and-load": 7857,
+    "learned-encoder-load": 270,
+    "real-parser-chunker-and-retrieval-index": 1229,
+    "case-conflicting-age": 40,
+    "case-unsupported-mortality": 14,
+    "case-normal-age": 86949,
+    "case-singular-erf": 99741
+  },
+  "model": {
+    "id": "local-gguf:qwen2.5-1.5b-instruct-q3-k-s:39feb79d0c05e409",
+    "model": "Qwen2.5 1.5B Instruct Q3_K_S",
+    "license": "Apache-2.0",
+    "sha256": "39feb79d0c05e4099cb928b0be0576b70dd7f166a08c8d3c756804260600df9d",
+    "modelBytes": 760944640,
+    "runtime": "wllama-2.3.7",
+    "llamaCpp": "b7179-4abef75",
+    "cpuOnly": true,
+    "threads": 1,
+    "contextSize": 2048
+  },
+  "encoder": {
+    "id": "ternlight-base-v0.1.1-27819b70b83fb24a-window-mean-v1",
+    "kind": "learned-sentence-embedding",
+    "dimension": 384,
+    "wasmSha256": "27819b70b83fb24a493792db7bdf6b9cae4a1531df408809d1e57d580a3e9087",
+    "runtimeNetwork": false
+  },
+  "corpus": {
+    "purpose": "Nine synthetic documents, including one eight-paragraph plan, unrelated numeric/unit distractions, exact 65/0.85 facts with complete conditions, and one separate contrary-age source.",
+    "positiveDocumentCount": 9,
+    "contraryDocumentCount": 1,
+    "documents": [
+      {
+        "id": "cedar-plan",
+        "name": "synthetic-cedar-plan.txt",
+        "hash": "c11feaf24c690543a4ff80b4ed8481665d99746558643a1497bef79faec71573",
+        "bytes": 1612,
+        "paragraphs": 8
+      },
+      {
+        "id": "archive",
+        "name": "synthetic-archive.txt",
+        "hash": "c0d19a12554604d8d766f8ca648e6d2827e3065275e0026801bab6e1220386a2",
+        "bytes": 200,
+        "paragraphs": 1
+      },
+      {
+        "id": "spouse",
+        "name": "synthetic-survivor-guide.txt",
+        "hash": "d6cb1ffbb3a068071f9ed699b3749e36751affc6d8784217436b42a38b785cdf",
+        "bytes": 165,
+        "paragraphs": 1
+      },
+      {
+        "id": "medical",
+        "name": "synthetic-medical-guide.txt",
+        "hash": "cdf58de2d516ea4dc2250b43d0f38f2f7a3b23e0ddfc4780ca388a909f102936",
+        "bytes": 168,
+        "paragraphs": 1
+      },
+      {
+        "id": "bank",
+        "name": "synthetic-payment-guide.txt",
+        "hash": "b0d11ed656e4ecbcd89c92d57de515b16d191c3d392094cf1c5c099335f40875",
+        "bytes": 143,
+        "paragraphs": 1
+      },
+      {
+        "id": "mail",
+        "name": "synthetic-address-guide.txt",
+        "hash": "9b986de1e68c8a17287c43113609846858294b96ba04abd434c9f7739b09c3f0",
+        "bytes": 142,
+        "paragraphs": 1
+      },
+      {
+        "id": "records",
+        "name": "synthetic-records-guide.txt",
+        "hash": "fc0ff5b7f7437efe2e86697bebe807f85622316fca60c3edc38215cce76919e4",
+        "bytes": 124,
+        "paragraphs": 1
+      },
+      {
+        "id": "service",
+        "name": "synthetic-service-guide.txt",
+        "hash": "379c7676de1c02a86dd0bcb10312862062d89afed24dded72716fc2d7ceb425c",
+        "bytes": 146,
+        "paragraphs": 1
+      },
+      {
+        "id": "contacts",
+        "name": "synthetic-contact-guide.txt",
+        "hash": "3c45dbfeff466a44fc3f2f29605829c9f07f289f8dae26e3dab97eae48a694b8",
+        "bytes": 164,
+        "paragraphs": 1
+      },
+      {
+        "id": "contrary-plan",
+        "name": "synthetic-contrary-plan.txt",
+        "hash": "8d0fcccea09933965f798f8549c3536e70bd87dcc9312a9bd9034a14aa814a86",
+        "bytes": 359,
+        "paragraphs": 3
+      }
+    ],
+    "positiveChunks": 11,
+    "conflictingChunks": 12,
+    "ageQuote": "Normal retirement age is 65 only if service is at least 10 years and the participant is vested.",
+    "factorQuote": "Early retirement factors at age 60 equal 0.85 only if the participant elects early retirement.",
+    "fixtureSha256": "8190a5c418b3802583170dc1f147cb524473dfa3580dfa61a563981990fbc022",
+    "baseFixtureSha256": "afe6d3447d144d0b5ccd3a4d9b8dd1963fd7e4a3fdd85b438b7c77376a3e4dec",
+    "chunker": {
+      "id": "source-boundary-v3",
+      "version": 3,
+      "sourceFragments": true,
+      "sentenceBoundaries": true,
+      "sourceTextMetadata": true,
+      "explicitTableHeaders": true,
+      "defaultMaxChars": 1800,
+      "defaultMaxTokens": 400
+    },
+    "topicProfile": "pbgc-topics-v2",
+    "aliases": {
+      "singular": [
+        "early",
+        "retirement",
+        "factor",
+        "age",
+        "60"
+      ],
+      "acronym": [
+        "early",
+        "retirement",
+        "factor",
+        "age",
+        "60"
+      ]
+    }
+  },
+  "unchangedFailedFixture": {
+    "priorStatus": "FAIL",
+    "priorCommit": "98c1bb3e7281d271fb223b202b95dd1e9f136098",
+    "rawEvidence": "test-results/audit-98c1-multiparagraph-http.json",
+    "rawEvidenceBytes": 150327,
+    "rawEvidenceSha256": "15f3ac1d22ec0cf85117de4cbf2c1fca72ae96d50c3e1f2e45f2fab5613333ca",
+    "fixtureSha256": "8190a5c418b3802583170dc1f147cb524473dfa3580dfa61a563981990fbc022",
+    "completeFixtureObjectMatchesPriorFailure": true,
+    "priorCaseResults": [
+      {
+        "id": "conflicting-age",
+        "status": "conflict",
+        "reason": "possible-source-conflict"
+      },
+      {
+        "id": "unsupported-mortality",
+        "status": "abstained",
+        "reason": "question-topic-not-supported"
+      },
+      {
+        "id": "normal-age",
+        "status": "abstained",
+        "reason": "model-abstained"
+      }
+    ],
+    "disposition": "The earlier 98c1 failed report is retained unchanged. The complete qualified fixture is identical; no factual number, condition or distractor was removed to obtain this PASS."
+  },
+  "cases": [
+    {
+      "id": "conflicting-age",
+      "question": "What is the normal retirement age?",
+      "expectedStatus": "conflict",
+      "status": "conflict",
+      "reason": "possible-source-conflict",
+      "answer": "Possible conflicting source provisions were retrieved. Authority and applicability require review.",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:86ba5f26a18806e91623a62b368748471b7444e38e79c53413b1c1a6aa939ae8",
+          "sourceId": "cedar-plan",
+          "sourceName": "synthetic-cedar-plan.txt",
+          "sourceHash": "c11feaf24c690543a4ff80b4ed8481665d99746558643a1497bef79faec71573",
+          "locators": [
+            {
+              "length": 149,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 249,
+              "line": 3,
+              "offset": 151,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 201,
+              "line": 5,
+              "offset": 402,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ]
+        },
+        {
+          "label": "C2",
+          "chunkId": "chunk:b365e373872a538600656491f486a5c31e1395db7a61df6cea873b9c9bed4f22",
+          "sourceId": "contrary-plan",
+          "sourceName": "synthetic-contrary-plan.txt",
+          "sourceHash": "8d0fcccea09933965f798f8549c3536e70bd87dcc9312a9bd9034a14aa814a86",
+          "locators": [
+            {
+              "length": 133,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 95,
+              "line": 3,
+              "offset": 135,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 127,
+              "line": 5,
+              "offset": 232,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ]
+        }
+      ],
+      "realGenerationCalls": 0,
+      "calls": [],
+      "elapsedMs": 34,
+      "sourceSupport": null,
+      "evidenceAnalysis": {
+        "complete": true,
+        "chunks": 12,
+        "characters": 3712,
+        "statements": 63,
+        "applicabilityReasons": []
+      },
+      "answerProfile": null,
+      "retrievalMethod": "hybrid-cosine-bm25-rrf",
+      "rankedSourceIds": [
+        "cedar-plan",
+        "cedar-plan",
+        "archive",
+        "contrary-plan",
+        "contacts",
+        "cedar-plan"
+      ]
+    },
+    {
+      "id": "unsupported-mortality",
+      "question": "Which mortality table is documented?",
+      "expectedStatus": "abstained",
+      "status": "abstained",
+      "reason": "question-topic-not-supported",
+      "answer": "The retrieved sources do not establish the topic asked about.",
+      "citations": [],
+      "realGenerationCalls": 0,
+      "calls": [],
+      "elapsedMs": 10,
+      "sourceSupport": null,
+      "evidenceAnalysis": null,
+      "answerProfile": null,
+      "retrievalMethod": "hybrid-cosine-bm25-rrf",
+      "rankedSourceIds": [
+        "cedar-plan",
+        "cedar-plan",
+        "cedar-plan",
+        "medical",
+        "spouse",
+        "bank"
+      ]
+    },
+    {
+      "id": "normal-age",
+      "question": "What is the normal retirement age?",
+      "expectedStatus": "answered",
+      "status": "answered",
+      "reason": "cited-synthesis-guarded",
+      "answer": "Normal retirement age is 65 only if service is at least 10 years and the participant is vested. [C2]",
+      "citations": [
+        {
+          "label": "C2",
+          "chunkId": "chunk:86ba5f26a18806e91623a62b368748471b7444e38e79c53413b1c1a6aa939ae8",
+          "sourceId": "cedar-plan",
+          "sourceName": "synthetic-cedar-plan.txt",
+          "sourceHash": "c11feaf24c690543a4ff80b4ed8481665d99746558643a1497bef79faec71573",
+          "locators": [
+            {
+              "length": 149,
+              "line": 1,
+              "offset": 0,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 249,
+              "line": 3,
+              "offset": 151,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 201,
+              "line": 5,
+              "offset": 402,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "quotes": [
+            "Normal retirement age is 65 only if service is at least 10 years and the participant is vested."
+          ]
+        }
+      ],
+      "realGenerationCalls": 1,
+      "calls": [
+        {
+          "responseFormat": "source-selection-v1",
+          "maxTokens": 64,
+          "temperature": 0,
+          "promptCharacters": 321,
+          "firstTokenMs": 84960,
+          "state": "completed",
+          "raw": "S1",
+          "elapsedMs": 86904
+        }
+      ],
+      "elapsedMs": 86934,
+      "sourceSupport": {
+        "citedDocumentCount": 1,
+        "singleSource": true,
+        "message": "Only one source is cited. Check the source."
+      },
+      "evidenceAnalysis": {
+        "complete": true,
+        "chunks": 11,
+        "characters": 3355,
+        "statements": 58,
+        "applicabilityReasons": []
+      },
+      "answerProfile": {
+        "format": "source-selection-v1",
+        "partCount": 1,
+        "choiceCount": 1,
+        "completeCoverage": true,
+        "modelEmittedClaims": false,
+        "modelEmittedCitations": false,
+        "selectedCount": 1
+      },
+      "retrievalMethod": "hybrid-cosine-bm25-rrf",
+      "rankedSourceIds": [
+        "cedar-plan",
+        "cedar-plan",
+        "archive",
+        "contacts",
+        "cedar-plan",
+        "bank"
+      ]
+    },
+    {
+      "id": "singular-erf",
+      "question": "What is the early retirement factor (ERF) at age 60?",
+      "expectedStatus": "answered",
+      "status": "answered",
+      "reason": "cited-synthesis-guarded",
+      "answer": "Early retirement factors at age 60 equal 0.85 only if the participant elects early retirement. [C1]",
+      "citations": [
+        {
+          "label": "C1",
+          "chunkId": "chunk:1853ce9fe34016fc7c1b99e92d70ac36b7aa8a949a7c60d94b457237ccfc1230",
+          "sourceId": "cedar-plan",
+          "sourceName": "synthetic-cedar-plan.txt",
+          "sourceHash": "c11feaf24c690543a4ff80b4ed8481665d99746558643a1497bef79faec71573",
+          "locators": [
+            {
+              "length": 249,
+              "line": 3,
+              "offset": 151,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 201,
+              "line": 5,
+              "offset": 402,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 266,
+              "line": 7,
+              "offset": 605,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            },
+            {
+              "length": 189,
+              "line": 9,
+              "offset": 873,
+              "offsetUnit": "UTF-16 code units",
+              "type": "text-line"
+            }
+          ],
+          "quotes": [
+            "Early retirement factors at age 60 equal 0.85 only if the participant elects early retirement."
+          ]
+        }
+      ],
+      "realGenerationCalls": 1,
+      "calls": [
+        {
+          "responseFormat": "source-selection-v1",
+          "maxTokens": 64,
+          "temperature": 0,
+          "promptCharacters": 356,
+          "firstTokenMs": 97713,
+          "state": "completed",
+          "raw": "S1",
+          "elapsedMs": 99671
+        }
+      ],
+      "elapsedMs": 99719,
+      "sourceSupport": {
+        "citedDocumentCount": 1,
+        "singleSource": true,
+        "message": "Only one source is cited. Check the source."
+      },
+      "evidenceAnalysis": {
+        "complete": true,
+        "chunks": 11,
+        "characters": 3355,
+        "statements": 58,
+        "applicabilityReasons": []
+      },
+      "answerProfile": {
+        "format": "source-selection-v1",
+        "partCount": 1,
+        "choiceCount": 1,
+        "completeCoverage": true,
+        "modelEmittedClaims": false,
+        "modelEmittedCitations": false,
+        "selectedCount": 1
+      },
+      "retrievalMethod": "hybrid-cosine-bm25-rrf",
+      "rankedSourceIds": [
+        "cedar-plan",
+        "cedar-plan",
+        "cedar-plan",
+        "contacts",
+        "archive",
+        "medical"
+      ]
+    }
+  ],
+  "limits": [
+    "Only two positive ordinary questions and two blocking cases were checked. These fixed synthetic results do not certify broad real-plan accuracy or factual truth.",
+    "Qwen selected an existing complete source statement by bounded source ID. The app copied the verified exact statement and retained its service, vesting or election condition; this is not unrestricted generated narrative.",
+    "The two positive answers each cite one original document and visibly require source checking. Independent corroboration is not established.",
+    "Real isolated parsing, source-bound chunking and learned hybrid retrieval were used. All verified bounded synthetic candidates stayed in safety analysis; only three ranked chunks formed the prompt context.",
+    "The report fingerprints runtime files and the probe script. This projection does not claim acceptance for a later runtime or imply a global dense 1 GiB quality evaluation.",
+    "HTTP is supplementary. Exact-commit Windows/Ubuntu actual-file, complete ZIP and full-scale checks have separate evidence and gates.",
+    "No official actuarial interpretation, PBGC approval or workplace desktop certification is asserted."
+  ]
+}

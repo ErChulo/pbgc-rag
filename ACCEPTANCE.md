@@ -1,20 +1,20 @@
 # Acceptance evidence
 
-## Current gate: proposed 1.1 RC1
+## Current gate: 1.1 RC1 accepted for office pilot testing
 
-**Final verification pending.** Commit `a987a6e` passed all six Windows/Ubuntu source, office-package and full 1 GiB actual-file checks. A separate local run found a whole-case deletion timeout. The key-only deletion repair passes its real IndexedDB regressions and now needs exact-current-head platform and scale checks before RC maturity is accepted.
+**PASS — 1.1 RC1.** Runtime `5236770cbf10f13ea00b9dada3a7fc89ee8f381b` passed all six Windows/Ubuntu source, complete-office-package and full 1 GiB actual-file jobs. The corrected multi-paragraph Qwen check also passed. The [exact runtime, jobs and workload record](docs/evidence/audit-5236-public-ci-status.json) defines this acceptance; it does not certify arbitrary documents or general answer accuracy. Historical failed runs remain failed and are retained in the audit record.
 
 | Requirement | Current status | Evidence or remaining work |
 | --- | --- | --- |
 | Ordinary multi-paragraph fact questions; units, scope and number words | PASS, synthetic module scope | `tests/rag-multiparagraph-audit.test.js`: 12 passing checks, including retained real-conflict/unsupported-topic guards |
-| Actual Qwen on multi-paragraph qualified facts | CORRECTIVE RERUN PENDING | The `98c1bb3` local probe abstained on an answerable age question. Numeric-only value choices and exact overlap dedup now require fresh real-model verification; the original [FAIL record](docs/evidence/audit-98c1-real-model-failure.json) is preserved |
+| Actual Qwen on multi-paragraph qualified facts | PASS, bounded real-model scope | Two qualified factual answers retained complete conditions and exact citations; conflict and unrelated questions made zero generation calls. Both actual-file source jobs passed; [supplementary local evidence](docs/evidence/audit-5236-multiparagraph-http.json). The prior [FAIL](docs/evidence/audit-98c1-real-model-failure.json) is preserved |
 | Corrupt current/previous recovery snapshots are isolated | PASS, module scope | `tests/storage.test.js`: 13 passing checks; explicit prior-snapshot selection required before rollback save |
 | Mixed-page OCR coverage and low-confidence provenance | PASS, synthetic module scope | `tests/ocr-coverage-audit.test.js`: 7 passing checks; native/unknown external OCR origin stays unverified |
 | PDF parent protocol, worker integrity and explicit page windows | PASS, module scope | `tests/pdf-native-protocol.test.js`: 5 passing checks; real browser integration is a separate gate |
 | Single-document answers disclose source dependence | PASS, bounded integration scope | One original SHA counts as one source. Citation does not certify factual truth |
-| Large original-document store, bounded shards, portable ZIP | PASS at `a987a6e`, 1 GiB synthetic workload | Both platforms imported and fully restored 256 originals; all hashes, header bindings and source locations checked. Arbitrary PDF/Office cases and configured 2,000-source maximum are not implied |
-| Full 1 GiB end-to-end workload and whole-process resource limits | PASS at `a987a6e`; repair-head repeat pending | [Six exact jobs and full summaries](docs/evidence/audit-a987-public-ci-status.json). Real Qwen, full browser restart, backup and complete second-case restore included |
-| Exact-current-head Windows/Ubuntu actual offline-file acceptance | PENDING after deletion repair | `a987a6e` source/package/scale all passed. Local actual-file entry remains administrator-blocked; HTTP is supplementary |
+| Large original-document store, bounded shards, portable ZIP | PASS at `5236770`, 1 GiB synthetic workload | Both platforms imported and fully restored 256 originals; all hashes, header bindings, source locations and cleanup checked. Arbitrary PDF/Office cases and configured 2,000-source maximum are not implied |
+| Full 1 GiB end-to-end workload and whole-process resource limits | PASS, both platforms | [Six exact jobs and full summaries](docs/evidence/audit-5236-public-ci-status.json). Real Qwen, full browser restart, backup and complete second-case restore included; unchanged 12 GB workload budget |
+| Windows/Ubuntu actual offline-file acceptance of tested runtime | PASS, source and complete package | All six exact-runtime jobs passed. Local actual-file entry remains administrator-blocked; HTTP is supplementary. The separate [local complete ZIP check](docs/evidence/audit-5236-office-http.json) also passed |
 | Optional passphrase encryption | NOT IMPLEMENTED | Unencrypted local storage and backup notices are visible; this is the documented interim choice |
 | Independent re-audit after integration | PASS, bounded scope | Twelve final source/qualification/ownership probes; deletion review and 20 real IndexedDB checks. Not a general semantic-entailment or factual-truth certificate |
 

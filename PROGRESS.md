@@ -1,5 +1,13 @@
 # Progress
 
+## HABEMUS — 1.1 RC1, November 21, 2026
+
+Runtime `5236770cbf10f13ea00b9dada3a7fc89ee8f381b` passed all six Windows/Ubuntu source, complete-office-package and 1 GiB actual-file jobs. Each scale run included real Qwen, full browser restart and complete second-case restore of all 256 originals, exact source checks and cleanup. Both source jobs passed the corrected real-Qwen multi-paragraph probe. [Exact platform evidence](docs/evidence/audit-5236-public-ci-status.json).
+
+The identical-corpus local rerun passed both fully qualified factual questions with exact citations, while conflict/unsupported cases made zero generation calls. The local complete ZIP passed automatic bundled-model startup, answer, English OCR and original-page reading with zero external requests. Local regression: 573 Node checks, 31 targeted browser checks and 20 real IndexedDB checks passed; the Node run had seven explicit skips, and the required model/resource/platform gates ran separately. Historical FAILs remain preserved.
+
+The candidate is ready for controlled office pilot testing of the documented bounded RAG workflow. README badges, current install/use guides and evidence identify the exact tested runtime and archive run. This documentation follow-up leaves application bytes unchanged; main, prior packages and published environments remain preserved.
+
 ## Proposed 1.1 RC1 — November 20, 2026
 
 All six source, complete-office-package and full 1 GiB actual-file checks passed on Windows and Ubuntu for `a987a6e`. Both scale jobs included real Qwen, complete browser restart and restoration of all 256 originals. Exact jobs, model timings, process memory and the separate local cleanup-timeout FAIL are recorded in [CI evidence](docs/evidence/audit-a987-public-ci-status.json).

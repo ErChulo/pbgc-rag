@@ -1,12 +1,12 @@
 # Use PBGC-RAG
 
-This guide is for **1.1 RC1**. Keep earlier app versions in their own folders. See the [large-case guide](LARGE-CASE-GUIDE.md), [full user guide](USER-GUIDE.md) and [current test record](AUDIT-REMEDIATION-1.1.md).
+This guide is for **1.1 RC1**, ready for controlled office testing at runtime `5236770`. All six Windows/Ubuntu source, package and 1 GiB checks passed. Keep earlier app versions in their own folders. See the [large-case guide](LARGE-CASE-GUIDE.md), [full user guide](USER-GUIDE.md) and [current test record](evidence/audit-5236-public-ci-status.json).
 
 PBGC-RAG helps you find information in documents and check the source of an answer. It runs on your computer. It does not send your documents or questions to a service.
 
 ## Open the app
 
-1. Open the [office candidate checks](https://github.com/ErChulo/pbgc-rag/actions/workflows/rag-audit-remediation.yml). Select the latest passed **1.1 RC1** run on the audit branch. Sign in to GitHub if asked. Under **Artifacts**, choose **audit-rc1-office-evidence-windows-latest**.
+1. Download the [tested Windows office package](https://github.com/ErChulo/pbgc-rag/actions/runs/44836222570/artifacts/14678863914). GitHub can ask you to sign in. The artifact is named **audit-rc1-office-evidence-windows-latest**.
 2. Extract that artifact ZIP. Open **dist**. Find **PBGC-RAG-1.1-rc1-office.zip** and extract this ZIP too. If you already have the app ZIP directly, extract it once.
 3. Open the extracted app folder. Keep **index.html**, **assets**, **vendor** and **models** together. Double-click **index.html** from that folder.
 4. Choose **Get started**, then **Start Qwen**.
@@ -14,7 +14,7 @@ PBGC-RAG helps you find information in documents and check the source of an answ
 
 GitHub wraps the app ZIP in an outer artifact ZIP. Extract both before opening the app. The app download is about 777 MB; allow 4 GB of free disk space for download and extraction. Your documents, local indexes and case backups need additional disk space. The target computer has 16 GB of RAM. The automated matrix uses Chromium on Windows and Ubuntu.
 
-Check the GitHub run's green result before downloading. The source, full office package and 1 GiB workload have separate checks. Historical results apply only to the named version. Artifacts remain available for seven days after their run.
+The linked package passed its checks. Historical results apply only to their named version. GitHub keeps this artifact for seven days after the run; keep the app ZIP after downloading it.
 
 Qwen is the included local assistant. You do not need to find a model file, install software, open a terminal or run a server. Model startup can take time on the local CPU. The app shows progress and lets you cancel.
 

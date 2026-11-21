@@ -1,6 +1,6 @@
 # Use a large case
 
-This guide covers the **1.1 RC1 candidate**. Keep the earlier app in its own folder. See [current test status](AUDIT-REMEDIATION-1.1.md).
+This guide covers **1.1 RC1**, accepted for controlled office pilot testing at runtime `5236770`. Its Windows/Ubuntu checks include a full 1 GiB case and complete backup restore. Keep the earlier app in its own folder. See [current test evidence](evidence/audit-5236-public-ci-status.json).
 
 ## Open the case workspace
 
